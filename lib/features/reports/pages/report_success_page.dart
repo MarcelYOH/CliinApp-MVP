@@ -2,7 +2,7 @@
 // Confirmation de publication (étape 5) — branché sur ReportStore
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import '../../../../core/utils/clipboard_helper.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
@@ -12,7 +12,7 @@ import '../data/report_dummy_data.dart';
 import '../widgets/report_stepper.dart';
 import 'report_camera_page.dart';
 import '../../../../shared/store/report_store.dart';
-import '../../../../features/home/models/report_model.dart' as home;
+import '../../../../features/home/models/home_report_model.dart' as home;
 
 class ReportSuccessPage extends StatefulWidget {
   final ReportModel report;
@@ -56,14 +56,23 @@ class _ReportSuccessPageState extends State<ReportSuccessPage>
       final r = widget.report;
       final homeReport = home.HomeReportModel(
         id: r.id ?? 'report_${DateTime.now().millisecondsSinceEpoch}',
-        reference: r.reportCode ?? '#CLN-0000',
+        // ✅ CORRECTION — fallback défensif sur chaîne vide (et non un code
+        // factice en dur comme '#CLN-0000'). À ce stade, r.reportCode est
+        // normalement déjà renseigné par report_upload_page.dart (génération
+        // réelle du code). Si jamais il était vide, MockReportRepository
+        // .addReport() détecte reference.isEmpty et génère un vrai code
+        // unique au lieu d'écraser tous les signalements avec la même valeur.
+        reference: r.reportCode ?? '',
         title: r.title ?? r.category?.label ?? 'Signalement',
         location: r.address ?? '',
         description: r.description ?? '',
         severity: r.severity ?? ReportSeverity.moyen,
         category: r.category ?? ReportCategory.depotsSauvages,
         imageAsset: r.imagePath ?? 'assets/images/depot.jpg',
-        distance: '< 1 km',
+        // ✅ CORRECTION — '< 1 km' laissait penser à une vraie mesure même
+        // quand le GPS échoue totalement. Repli neutre en attendant que
+        // UserLocationService calcule la vraie distance à l'affichage.
+        distance: '—',
         latitude: r.latitude,
         longitude: r.longitude,
         timeAgo: 'À l\'instant',
@@ -83,8 +92,14 @@ class _ReportSuccessPageState extends State<ReportSuccessPage>
     }
   }
 
-  void _copyCode() {
-    Clipboard.setData(ClipboardData(text: widget.report.reportCode ?? ''));
+  // ✅ CORRECTION — copie réellement fonctionnelle, sans message d'échec.
+  // copyTextToClipboard() (lib/core/utils/clipboard_helper.dart) retombe
+  // automatiquement sur execCommand('copy') si l'API moderne échoue
+  // (contexte HTTP non sécurisé) — la copie réussit donc réellement.
+  Future<void> _copyCode() async {
+    final code = widget.report.reportCode ?? '';
+    await copyTextToClipboard(code);
+    if (!mounted) return;
     setState(() => _codeCopied = true);
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) setState(() => _codeCopied = false);

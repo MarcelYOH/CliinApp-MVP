@@ -20,6 +20,7 @@ class HomeQuickReport extends StatelessWidget {
       margin: const EdgeInsets.symmetric(
         horizontal: CliinAppConstants.pagePadding,
       ),
+      clipBehavior: Clip.antiAlias,
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -65,7 +66,7 @@ class HomeQuickReport extends StatelessWidget {
                       data.title,
                       style: CliinAppTextStyles.headingMedium.copyWith(
                         color: CliinAppColors.textWhite,
-                        fontSize: 15,
+                        fontSize: 17,
                         height: 1.3,
                       ),
                       maxLines: 2,
@@ -90,43 +91,49 @@ class HomeQuickReport extends StatelessWidget {
               // ── Bouton signaler ──
               GestureDetector(
                 onTap: onTap,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 66,
-                      height: 66,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1A6B2F),
-                        borderRadius: BorderRadius.circular(
-                          CliinAppConstants.radiusMedium,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(
+                      CliinAppConstants.radiusLarge,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.14),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.camera_alt_rounded,
+                        color: Color(0xFF1A6B2F),
+                        size: 18,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        data.buttonLabel,
+                        style: CliinAppTextStyles.button.copyWith(
+                          color: const Color(0xFF1A6B2F),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      child: Center(
-                        child: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.camera_alt_rounded,
-                            color: Color(0xFF2E7D32),
-                            size: 22,
-                          ),
-                        ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.arrow_forward_rounded,
+                        color: Color(0xFF1A6B2F),
+                        size: 14,
                       ),
-                    ),
-                    const SizedBox(height: CliinAppConstants.spacingXS),
-                    Text(
-                      data.buttonLabel,
-                      style: CliinAppTextStyles.button.copyWith(
-                        fontSize: 11,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ],

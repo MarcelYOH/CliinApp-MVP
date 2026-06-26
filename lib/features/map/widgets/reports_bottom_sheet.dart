@@ -5,7 +5,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/widgets/report_card.dart';
-import '../../../features/home/models/report_model.dart';
+import '../../../features/home/models/home_report_model.dart';
 import 'status_filter_section.dart';
 
 enum MapSortOption { distance, recence, gravite, popularite }
@@ -24,7 +24,10 @@ extension MapSortOptionExt on MapSortOption {
 class ReportsBottomSheet extends StatefulWidget {
   final List<HomeReportModel> reports;
   final Set<MapStatusFilter> activeFilters;
+  // onCardTap = ouvrir détails (futur) — NE déclenche PAS la prise en charge
   final void Function(HomeReportModel)? onCardTap;
+  final void Function(HomeReportModel)? onTakeCharge;
+  final void Function(HomeReportModel)? onContact; // ← WhatsApp public
   final double availableHeight;
 
   const ReportsBottomSheet({
@@ -33,6 +36,8 @@ class ReportsBottomSheet extends StatefulWidget {
     required this.activeFilters,
     required this.availableHeight,
     this.onCardTap,
+    this.onTakeCharge,
+    this.onContact,
   });
 
   @override
@@ -201,9 +206,7 @@ class _ReportsBottomSheetState extends State<ReportsBottomSheet>
     final height = _sheetHeight.clamp(_minH, _maxH);
 
     return Positioned(
-      left: 0,
-      right: 0,
-      bottom: 0,
+      left: 0, right: 0, bottom: 0,
       height: height,
       child: GestureDetector(
         onVerticalDragStart: (details) {
@@ -242,15 +245,14 @@ class _ReportsBottomSheetState extends State<ReportsBottomSheet>
           ),
           child: Column(
             children: [
-              // ── Drag handle ──────────────────────────────────
+              // ── Drag handle ──
               Center(
                 child: Container(
                   margin: const EdgeInsets.only(
                     top: CliinAppConstants.spacingM,
                     bottom: CliinAppConstants.spacingXS,
                   ),
-                  width: 40,
-                  height: 4,
+                  width: 40, height: 4,
                   decoration: BoxDecoration(
                     color: CliinAppColors.divider,
                     borderRadius: BorderRadius.circular(2),
@@ -258,9 +260,7 @@ class _ReportsBottomSheetState extends State<ReportsBottomSheet>
                 ),
               ),
 
-              // ── Header — hauteur fixe 52px pour éviter la cassure ──
-              // Quand le filtre est sélectionné, le titre reste sur
-              // 1 ligne grâce à overflow ellipsis + SizedBox fixe.
+              // ── Header ──
               SizedBox(
                 height: 52,
                 child: Padding(
@@ -286,21 +286,17 @@ class _ReportsBottomSheetState extends State<ReportsBottomSheet>
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               const Icon(Icons.swap_vert_rounded,
-                                  size: 16,
-                                  color: CliinAppColors.textDark),
+                                  size: 16, color: CliinAppColors.textDark),
                               const SizedBox(width: 4),
                               Text('Trier',
-                                  style: CliinAppTextStyles.bodySmall
-                                      .copyWith(
+                                  style: CliinAppTextStyles.bodySmall.copyWith(
                                     color: CliinAppColors.textDark,
                                     fontWeight: FontWeight.w600,
                                     fontSize: 12,
                                   )),
                               const SizedBox(width: 2),
-                              const Icon(
-                                  Icons.keyboard_arrow_down_rounded,
-                                  size: 16,
-                                  color: CliinAppColors.textDark),
+                              const Icon(Icons.keyboard_arrow_down_rounded,
+                                  size: 16, color: CliinAppColors.textDark),
                             ],
                           ),
                         ),
@@ -310,10 +306,9 @@ class _ReportsBottomSheetState extends State<ReportsBottomSheet>
                 ),
               ),
 
-              const Divider(
-                  height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
+              const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
 
-              // ── Liste scrollable ──────────────────────────────
+              // ── Liste scrollable ──
               Expanded(
                 child: widget.reports.isEmpty
                     ? Center(
@@ -328,10 +323,8 @@ class _ReportsBottomSheetState extends State<ReportsBottomSheet>
                             Text(
                               'Aucun signalement\npour ces filtres',
                               textAlign: TextAlign.center,
-                              style: CliinAppTextStyles.bodyMedium
-                                  .copyWith(
-                                      color:
-                                          CliinAppColors.textSecondary),
+                              style: CliinAppTextStyles.bodyMedium.copyWith(
+                                  color: CliinAppColors.textSecondary),
                             ),
                           ],
                         ),
@@ -345,14 +338,21 @@ class _ReportsBottomSheetState extends State<ReportsBottomSheet>
                           80,
                         ),
                         itemCount: widget.reports.length,
-                        separatorBuilder: (_, _) => const SizedBox(
-                            height: CliinAppConstants.spacingM),
+                        separatorBuilder: (_, _) =>
+                            const SizedBox(height: CliinAppConstants.spacingM),
                         itemBuilder: (context, index) {
                           final report = widget.reports[index];
                           return ReportCard(
                             data: report,
-                            onTap: () =>
-                                widget.onCardTap?.call(report),
+                            onTap: widget.onCardTap != null
+                                ? () => widget.onCardTap!.call(report)
+                                : null,
+                            onTakeCharge: widget.onTakeCharge != null
+                                ? () => widget.onTakeCharge!.call(report)
+                                : null,
+                            onContact: widget.onContact != null
+                                ? () => widget.onContact!.call(report)
+                                : null,
                           );
                         },
                       ),
@@ -364,7 +364,6 @@ class _ReportsBottomSheetState extends State<ReportsBottomSheet>
     );
   }
 
-  // ── Titre — toujours sur 1 ligne grâce à overflow ────────────
   Widget _buildTitle() {
     if (widget.activeFilters.isEmpty) {
       return Column(
@@ -374,24 +373,20 @@ class _ReportsBottomSheetState extends State<ReportsBottomSheet>
           Text('Cas d\'insalubrité',
               style: CliinAppTextStyles.headingMedium
                   .copyWith(color: CliinAppColors.textDark, fontSize: 16),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis),
+              maxLines: 1, overflow: TextOverflow.ellipsis),
           Text('${widget.reports.length} résultats dans cette zone',
               style: CliinAppTextStyles.bodySmall
                   .copyWith(color: CliinAppColors.textSecondary, fontSize: 11),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis),
+              maxLines: 1, overflow: TextOverflow.ellipsis),
         ],
       );
     }
 
     final labels = widget.activeFilters.map((f) => f.label).join(', ');
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // ✅ Titre sur 1 ligne avec filtre coloré — overflow géré
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -403,16 +398,14 @@ class _ReportsBottomSheetState extends State<ReportsBottomSheet>
               child: Text('($labels)',
                   style: CliinAppTextStyles.headingMedium.copyWith(
                       color: _labelColor, fontSize: 16),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis),
+                  maxLines: 1, overflow: TextOverflow.ellipsis),
             ),
           ],
         ),
         Text('${widget.reports.length} résultats dans cette zone',
             style: CliinAppTextStyles.bodySmall.copyWith(
                 color: CliinAppColors.textSecondary, fontSize: 11),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis),
+            maxLines: 1, overflow: TextOverflow.ellipsis),
       ],
     );
   }

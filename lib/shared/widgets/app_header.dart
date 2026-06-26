@@ -12,6 +12,8 @@ class AppHeader extends StatefulWidget {
   final VoidCallback? onNotificationTap;
   final VoidCallback? onAvatarTap;
   final ValueChanged<String>? onSearch;
+  final String? greeting;
+  final String? contextLine;
 
   const AppHeader({
     super.key,
@@ -19,6 +21,8 @@ class AppHeader extends StatefulWidget {
     this.onNotificationTap,
     this.onAvatarTap,
     this.onSearch,
+    this.greeting,
+    this.contextLine,
   });
 
   @override
@@ -140,103 +144,181 @@ class _AppHeaderState extends State<AppHeader>
     _submitSearch(label);
   }
 
+  Widget _buildGreetingSection() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        CliinAppConstants.pagePadding,
+        10,
+        CliinAppConstants.pagePadding,
+        14,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.greeting!,
+            style: CliinAppTextStyles.headingMedium.copyWith(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: CliinAppColors.textDark,
+              height: 1.2,
+            ),
+          ),
+          if (widget.contextLine != null) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Icon(
+                  Icons.location_on_rounded,
+                  color: CliinAppColors.primary,
+                  size: 13,
+                ),
+                const SizedBox(width: 3),
+                Text(
+                  widget.contextLine!,
+                  style: CliinAppTextStyles.bodySmall.copyWith(
+                    fontSize: 12,
+                    color: CliinAppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // ── Zone blanche élevée : logo + actions + greeting ──
         Container(
-          color: Colors.white,
-          padding: const EdgeInsets.symmetric(
-            horizontal: CliinAppConstants.pagePadding,
-            vertical: 10,
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // ── Logo (lien accueil) ──
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    if (_searchOpen) _closeSearch();
-                    // Navigation vers accueil si nécessaire
-                    // Navigator.popUntil(context, (r) => r.isFirst);
-                  },
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Image.asset(
-                      'assets/images/cliinapp_logo.png',
-                      fit: BoxFit.contain,
-                      height: 44,
-                    ),
-                  ),
-                ),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
-
-              // ── Actions ──
-              if (!_searchOpen) ...[
-                _buildIconButton(Icons.search, _openSearch),
-                const SizedBox(width: CliinAppConstants.spacingS),
-                _buildNotificationButton(),
-                const SizedBox(width: 10),
-                _buildAvatar(),
-              ] else ...[
-                // ── Barre de recherche animée ──
-                Expanded(
-                  flex: 2,
-                  child: FadeTransition(
-                    opacity: _fadeAnim,
-                    child: Container(
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: CliinAppColors.background,
-                        borderRadius: BorderRadius.circular(
-                            CliinAppConstants.radiusLarge),
-                      ),
-                      child: TextField(
-                        controller: _controller,
-                        focusNode: _focusNode,
-                        onSubmitted: _submitSearch,
-                        style: CliinAppTextStyles.bodyMedium.copyWith(
-                          color: CliinAppColors.textDark,
-                          fontSize: 13,
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Ligne 1 : logo + icônes ──
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: CliinAppConstants.pagePadding,
+                  vertical: 10,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          if (_searchOpen) _closeSearch();
+                        },
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Image.asset(
+                            'assets/images/cliinapp_logo.png',
+                            fit: BoxFit.contain,
+                            height: 34,
+                          ),
                         ),
-                        decoration: InputDecoration(
-                          hintText: 'Ville, quartier, #CLN-...',
-                          hintStyle: CliinAppTextStyles.bodyMedium.copyWith(
-                            color: CliinAppColors.textSecondary,
+                      ),
+                    ),
+                    if (!_searchOpen) ...[
+                      _buildIconButton(Icons.search, _openSearch),
+                      const SizedBox(width: CliinAppConstants.spacingS),
+                      _buildNotificationButton(),
+                      const SizedBox(width: 10),
+                      _buildAvatar(),
+                    ] else ...[
+                      Expanded(
+                        flex: 2,
+                        child: FadeTransition(
+                          opacity: _fadeAnim,
+                          child: Container(
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: CliinAppColors.background,
+                              borderRadius: BorderRadius.circular(
+                                  CliinAppConstants.radiusLarge),
+                            ),
+                            child: TextField(
+                              controller: _controller,
+                              focusNode: _focusNode,
+                              onSubmitted: _submitSearch,
+                              style: CliinAppTextStyles.bodyMedium.copyWith(
+                                color: CliinAppColors.textDark,
+                                fontSize: 13,
+                              ),
+                              decoration: InputDecoration(
+                                hintText: 'Ville, quartier, #CLN-...',
+                                hintStyle:
+                                    CliinAppTextStyles.bodyMedium.copyWith(
+                                  color: CliinAppColors.textSecondary,
+                                  fontSize: 13,
+                                ),
+                                prefixIcon: const Icon(
+                                  Icons.search_rounded,
+                                  color: CliinAppColors.textSecondary,
+                                  size: 20,
+                                ),
+                                border: InputBorder.none,
+                                contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 12),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: CliinAppConstants.spacingS),
+                      GestureDetector(
+                        onTap: _closeSearch,
+                        child: Text(
+                          'Annuler',
+                          style: CliinAppTextStyles.button.copyWith(
+                            color: CliinAppColors.primary,
                             fontSize: 13,
                           ),
-                          prefixIcon: const Icon(
-                            Icons.search_rounded,
-                            color: CliinAppColors.textSecondary,
-                            size: 20,
-                          ),
-                          border: InputBorder.none,
-                          contentPadding:
-                              const EdgeInsets.symmetric(vertical: 12),
                         ),
                       ),
+                    ],
+                  ],
+                ),
+              ),
+              // ── Séparateur gradient ──
+              if (!_searchOpen && widget.greeting != null)
+                Container(
+                  height: 1,
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: CliinAppConstants.pagePadding,
+                  ),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.transparent,
+                        CliinAppColors.divider,
+                        Colors.transparent,
+                      ],
+                      stops: [0.0, 0.5, 1.0],
                     ),
                   ),
                 ),
-                const SizedBox(width: CliinAppConstants.spacingS),
-                GestureDetector(
-                  onTap: _closeSearch,
-                  child: Text(
-                    'Annuler',
-                    style: CliinAppTextStyles.button.copyWith(
-                      color: CliinAppColors.primary,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-              ],
+              // ── Ligne 2 : greeting + contexte (masqué en mode recherche) ──
+              if (!_searchOpen && widget.greeting != null)
+                _buildGreetingSection(),
             ],
           ),
         ),
-
-        // ── Suggestions ──
+        // ── Suggestions de recherche ──
         if (_searchOpen && _suggestions.isNotEmpty)
           _buildSuggestions(),
       ],

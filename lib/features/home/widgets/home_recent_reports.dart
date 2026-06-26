@@ -1,23 +1,30 @@
 // lib/features/home/widgets/home_recent_reports.dart
-// Bloc "Récents signalements" — liste verticale — CliinApp
 
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/widgets/report_card.dart';
-import '../models/report_model.dart';
+import '../models/home_report_model.dart';
 
 class HomeRecentReports extends StatelessWidget {
   final List<HomeReportModel> reports;
   final VoidCallback? onVoirTout;
   final void Function(HomeReportModel)? onCardTap;
+  // ── CORRECTION POINT 5 ──────────────────────────────────────
+  // Ajout des callbacks manquants pour cohérence avec HomeNearbyReports
+  final void Function(HomeReportModel)? onTakeCharge;
+  final void Function(HomeReportModel)? onContact;
+  final void Function(HomeReportModel)? onViewDetails;
 
   const HomeRecentReports({
     super.key,
     required this.reports,
     this.onVoirTout,
     this.onCardTap,
+    this.onTakeCharge,
+    this.onContact,
+    this.onViewDetails,
   });
 
   @override
@@ -25,36 +32,42 @@ class HomeRecentReports extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── En-tête section ──
+        // ── En-tête ──
         Padding(
           padding: const EdgeInsets.symmetric(
-            horizontal: CliinAppConstants.pagePadding,
-          ),
+              horizontal: CliinAppConstants.pagePadding),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                'Récents signalements',
-                style: CliinAppTextStyles.headingMedium.copyWith(
-                  color: const Color(0xFF1A1A1A),
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Derniers cas',
+                    style: CliinAppTextStyles.headingMedium
+                        .copyWith(color: const Color(0xFF1A1A1A)),
+                  ),
+                  const SizedBox(height: 5),
+                  Container(
+                    width: 28,
+                    height: 3,
+                    decoration: BoxDecoration(
+                      color: CliinAppColors.primary,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ],
               ),
               GestureDetector(
                 onTap: onVoirTout,
-                child: Row(
-                  children: [
-                    Text(
-                      'Voir tout',
-                      style: CliinAppTextStyles.link.copyWith(fontSize: 13),
-                    ),
-                    const SizedBox(width: 2),
-                    const Icon(
-                      Icons.chevron_right,
-                      color: CliinAppColors.primary,
-                      size: 18,
-                    ),
-                  ],
-                ),
+                child: Row(children: [
+                  Text('Voir tout',
+                      style: CliinAppTextStyles.link.copyWith(fontSize: 13)),
+                  const SizedBox(width: 2),
+                  const Icon(Icons.chevron_right,
+                      color: CliinAppColors.primary, size: 18),
+                ]),
               ),
             ],
           ),
@@ -62,20 +75,29 @@ class HomeRecentReports extends StatelessWidget {
 
         const SizedBox(height: CliinAppConstants.spacingM),
 
-        // ── Liste verticale — pleine largeur ──
+        // ── Liste verticale ──
         ListView.separated(
           padding: const EdgeInsets.symmetric(
-            horizontal: CliinAppConstants.pagePadding,
-          ),
+              horizontal: CliinAppConstants.pagePadding),
           physics: const NeverScrollableScrollPhysics(),
           shrinkWrap: true,
           itemCount: reports.length,
           separatorBuilder: (_, _) =>
               const SizedBox(height: CliinAppConstants.spacingM),
           itemBuilder: (context, index) {
+            final report = reports[index];
             return ReportCard(
-              data: reports[index],
-              onTap: () => onCardTap?.call(reports[index]),
+              data: report,
+              onTap: onCardTap != null ? () => onCardTap!.call(report) : null,
+              onTakeCharge: onTakeCharge != null
+                  ? () => onTakeCharge!.call(report)
+                  : null,
+              onContact: onContact != null
+                  ? () => onContact!.call(report)
+                  : null,
+              onViewDetails: onViewDetails != null
+                  ? () => onViewDetails!.call(report)
+                  : null,
             );
           },
         ),

@@ -6,7 +6,7 @@ import 'package:cliinapp/core/constants/app_colors.dart';
 import 'package:cliinapp/core/constants/app_constants.dart';
 import 'package:cliinapp/core/constants/app_text_styles.dart';
 import 'package:cliinapp/shared/widgets/report_card.dart';
-import 'package:cliinapp/features/home/models/report_model.dart';
+import 'package:cliinapp/features/home/models/home_report_model.dart';
 
 class ReportCardTestPage extends StatelessWidget {
   const ReportCardTestPage({super.key});

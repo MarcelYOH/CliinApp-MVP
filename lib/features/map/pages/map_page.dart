@@ -1,5 +1,4 @@
 // lib/features/map/pages/map_page.dart
-// Branché sur ReportStore
 
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
@@ -7,10 +6,11 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/store/report_store.dart';
+import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../features/reports/pages/report_camera_page.dart';
 import '../../../features/reports/pages/intervenant_detail_page.dart';
 import '../../../features/reports/widgets/take_charge_flow.dart';
-import '../../../features/home/models/report_model.dart';
+import '../../../features/home/models/home_report_model.dart';
 import '../models/map_filter_model.dart';
 import '../widgets/map_search_header.dart';
 import '../widgets/interactive_map_widget.dart';
@@ -45,7 +45,11 @@ class _MapPageState extends State<MapPage> {
       priorities: Set.from(widget.initialPriorityFilters),
       categories: Set.from(widget.initialCategoryFilters),
     );
-    ReportStore.instance.addListener(_onStoreUpdate);
+    // Enregistrement différé : évite des setState() parasites pendant
+    // l'animation d'ouverture de la page (transition de navigation).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ReportStore.instance.addListener(_onStoreUpdate);
+    });
   }
 
   @override
@@ -59,15 +63,11 @@ class _MapPageState extends State<MapPage> {
     if (mounted) setState(() {});
   }
 
-  // ── Filtrage depuis le store ──────────────────────────────────
   List<HomeReportModel> get _filteredReports {
-    List<HomeReportModel> result =
-        List.from(ReportStore.instance.mapReports);
+    List<HomeReportModel> result = List.from(ReportStore.instance.mapReports);
 
     if (_filters.statuses.isNotEmpty) {
-      result = result
-          .where((r) => _filters.statuses.contains(r.status))
-          .toList();
+      result = result.where((r) => _filters.statuses.contains(r.status)).toList();
     }
     if (_filters.priorities.isNotEmpty) {
       result = result.where((r) {
@@ -84,22 +84,16 @@ class _MapPageState extends State<MapPage> {
       }).toList();
     }
     if (_filters.categories.isNotEmpty) {
-      result = result
-          .where((r) => _filters.categories.contains(r.category))
-          .toList();
+      result = result.where((r) => _filters.categories.contains(r.category)).toList();
     }
     if (_filters.gravities.isNotEmpty) {
       result = result.where((r) {
         return _filters.gravities.any((g) {
           switch (g) {
-            case MapGravityFilter.critique:
-              return r.severity == ReportSeverity.critique;
-            case MapGravityFilter.eleve:
-              return r.severity == ReportSeverity.eleve;
-            case MapGravityFilter.moyen:
-              return r.severity == ReportSeverity.moyen;
-            case MapGravityFilter.faible:
-              return r.severity == ReportSeverity.faible;
+            case MapGravityFilter.critique: return r.severity == ReportSeverity.critique;
+            case MapGravityFilter.eleve:    return r.severity == ReportSeverity.eleve;
+            case MapGravityFilter.moyen:    return r.severity == ReportSeverity.moyen;
+            case MapGravityFilter.faible:   return r.severity == ReportSeverity.faible;
           }
         });
       }).toList();
@@ -117,9 +111,7 @@ class _MapPageState extends State<MapPage> {
 
   double _toMinutes(String timeAgo) {
     final s = timeAgo.toLowerCase();
-    final n = double.tryParse(
-            RegExp(r'\d+').firstMatch(s)?.group(0) ?? '999') ??
-        999;
+    final n = double.tryParse(RegExp(r'\d+').firstMatch(s)?.group(0) ?? '999') ?? 999;
     if (s.contains('min')) return n;
     if (s.contains(' h')) return n * 60;
     if (s.contains('j'))  return n * 1440;
@@ -127,8 +119,7 @@ class _MapPageState extends State<MapPage> {
   }
 
   void _openCamera() {
-    Navigator.push(context,
-        MaterialPageRoute(builder: (_) => const ReportCameraPage()));
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const ReportCameraPage()));
   }
 
   void _onNavTap(int index) {
@@ -169,6 +160,14 @@ class _MapPageState extends State<MapPage> {
     );
   }
 
+  // ── Contacter via WhatsApp — carte publique ───────────────────
+  void _onContact(HomeReportModel report) {
+    openWhatsApp(
+      context: context,
+      intervenant: report.intervenant,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final hasFilters = !_filters.isEmpty;
@@ -190,10 +189,8 @@ class _MapPageState extends State<MapPage> {
                   ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(
-                        CliinAppConstants.pagePadding,
-                        0,
-                        CliinAppConstants.pagePadding,
-                        CliinAppConstants.spacingS),
+                        CliinAppConstants.pagePadding, 0,
+                        CliinAppConstants.pagePadding, CliinAppConstants.spacingS),
                     child: Row(children: [
                       GestureDetector(
                         onTap: _openFilterPanel,
@@ -202,59 +199,41 @@ class _MapPageState extends State<MapPage> {
                               horizontal: CliinAppConstants.spacingM + 2,
                               vertical: CliinAppConstants.spacingS + 2),
                           decoration: BoxDecoration(
-                            color: hasFilters
-                                ? CliinAppColors.primary
-                                : Colors.white,
-                            borderRadius: BorderRadius.circular(
-                                CliinAppConstants.radiusMedium),
+                            color: hasFilters ? CliinAppColors.primary : Colors.white,
+                            borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
                             border: Border.all(
-                              color: hasFilters
-                                  ? CliinAppColors.primary
-                                  : CliinAppColors.divider,
+                              color: hasFilters ? CliinAppColors.primary : CliinAppColors.divider,
                               width: 1.2,
                             ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.tune_rounded,
-                                  size: 16,
-                                  color: hasFilters
-                                      ? Colors.white
-                                      : CliinAppColors.textDark),
-                              const SizedBox(width: 6),
-                              Text(
-                                hasFilters
-                                    ? 'Filtres (${_filters.totalActive})'
-                                    : 'Filtres',
-                                style: CliinAppTextStyles.badge.copyWith(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: hasFilters
-                                      ? Colors.white
-                                      : CliinAppColors.textDark,
-                                ),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(Icons.tune_rounded,
+                                size: 16,
+                                color: hasFilters ? Colors.white : CliinAppColors.textDark),
+                            const SizedBox(width: 6),
+                            Text(
+                              hasFilters ? 'Filtres (${_filters.totalActive})' : 'Filtres',
+                              style: CliinAppTextStyles.badge.copyWith(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: hasFilters ? Colors.white : CliinAppColors.textDark,
                               ),
-                              const SizedBox(width: 4),
-                              Icon(Icons.keyboard_arrow_down_rounded,
-                                  size: 16,
-                                  color: hasFilters
-                                      ? Colors.white
-                                      : CliinAppColors.textSecondary),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(Icons.keyboard_arrow_down_rounded,
+                                size: 16,
+                                color: hasFilters ? Colors.white : CliinAppColors.textSecondary),
+                          ]),
                         ),
                       ),
                     ]),
                   ),
                   if (hasFilters)
                     Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: CliinAppConstants.spacingS),
+                      padding: const EdgeInsets.only(bottom: CliinAppConstants.spacingS),
                       child: MapActiveFiltersBar(
                         filters: _filters,
-                        onClearAll: () =>
-                            setState(() => _filters = const MapFilterState()),
+                        onClearAll: () => setState(() => _filters = const MapFilterState()),
                       ),
                     ),
                 ],
@@ -274,7 +253,9 @@ class _MapPageState extends State<MapPage> {
                       reports: _filteredReports,
                       activeFilters: const {},
                       availableHeight: constraints.maxHeight,
-                      onCardTap: (report) => _onTakeCharge(report),
+                      onCardTap: null,
+                      onTakeCharge: _onTakeCharge,
+                      onContact: _onContact,     // ← branché
                     ),
                   ],
                 ),

@@ -1,18 +1,25 @@
 // lib/features/reports/pages/report_form_page.dart
 // Page formulaire — étape 3 — CliinApp
 
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/utils/user_location_service.dart';
 import '../models/report_model.dart';
 import '../../../../shared/models/report_category.dart';
 import '../data/report_dummy_data.dart';
 import '../widgets/report_stepper.dart';
 import '../widgets/report_image_view.dart';
 import 'report_upload_page.dart';
+
+String _generateReportCode() {
+  final n = 1000 + Random().nextInt(8999);
+  return '#CLN-$n';
+}
 
 class ReportFormPage extends StatefulWidget {
   final String imagePath;
@@ -37,13 +44,19 @@ class _ReportFormPageState extends State<ReportFormPage> {
   double? _latitude;
   double? _longitude;
   bool _isRefreshingLocation = false;
+  bool _gpsFailed = false;
 
   @override
   void initState() {
     super.initState();
     _addressController = TextEditingController(text: widget.address);
+    // Valeurs de repli en attendant la vraie position GPS ci-dessous.
     _latitude = ReportDummyData.detectedLatitude;
     _longitude = ReportDummyData.detectedLongitude;
+    // addPostFrameCallback : évite "setState() called during build" car _refreshLocation appelle setState avant son premier await.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _refreshLocation();
+    });
   }
 
   @override
@@ -54,7 +67,10 @@ class _ReportFormPageState extends State<ReportFormPage> {
   }
 
   Future<void> _refreshLocation() async {
-    setState(() => _isRefreshingLocation = true);
+    setState(() {
+      _isRefreshingLocation = true;
+      _gpsFailed = false;
+    });
     try {
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
@@ -75,10 +91,18 @@ class _ReportFormPageState extends State<ReportFormPage> {
           _latitude = position.latitude;
           _longitude = position.longitude;
           _isEditingAddress = false;
+          _gpsFailed = false;
         });
+        UserLocationService.instance.setKnownPosition(position);
       }
     } catch (e) {
       debugPrint('Erreur refresh GPS: $e');
+      setState(() {
+        _gpsFailed = true;
+        _latitude = null;
+        _longitude = null;
+        _isEditingAddress = true;
+      });
     } finally {
       setState(() => _isRefreshingLocation = false);
     }
@@ -95,14 +119,17 @@ class _ReportFormPageState extends State<ReportFormPage> {
       );
       return;
     }
-    final report = ReportDummyData.publishedReport.copyWith(
+    final report = ReportModel(
       imagePath: widget.imagePath,
+      reportCode: _generateReportCode(),
+      title: _selectedCategory.label,
       category: _selectedCategory,
       severity: _selectedSeverity,
       description: _descController.text.trim(),
       address: _addressController.text.trim(),
       latitude: _latitude,
       longitude: _longitude,
+      createdAt: DateTime.now(),
     );
     Navigator.push(context,
         MaterialPageRoute(builder: (_) => ReportUploadPage(report: report)));
@@ -312,6 +339,24 @@ class _ReportFormPageState extends State<ReportFormPage> {
                         style: GoogleFonts.inter(
                             fontSize: 10,
                             color: CliinAppColors.textSecondary),
+                      ),
+                    ] else if (_gpsFailed) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.location_off_rounded,
+                              color: CliinAppColors.alertOrange, size: 12),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              'GPS indisponible — vérifiez/corrigez l\'adresse ci-dessus',
+                              style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: CliinAppColors.alertOrange),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                     const SizedBox(height: 6),
@@ -557,7 +602,7 @@ class _ReportFormPageState extends State<ReportFormPage> {
             const Icon(Icons.send,
                 color: CliinAppColors.textWhite, size: 18),
             const SizedBox(width: CliinAppConstants.spacingM),
-            Text('Publier le signalement',
+            Text('Publier le cas',
                 style: GoogleFonts.poppins(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,

@@ -21,7 +21,7 @@ class CliinAppColors {
   static const Color textWhite      = Color(0xFFFFFFFF);
 
   // Fonds
-  static const Color background     = Color(0xFFEFEFEF);
+  static const Color background     = Color(0xFFF4F4F2);
   static const Color cardWhite      = Color(0xFFFFFFFF);
 
   // Séparateur

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
@@ -36,6 +37,11 @@ class _ReportCameraPageState extends State<ReportCameraPage>
   String _address = 'Détection en cours...';
   bool _isLoadingLocation = true;
 
+  // Fallback : utilisé quand le plugin camera natif n'arrive pas à
+  // s'initialiser (contexte non sécurisé, http via IP locale,
+  // permissions navigateur bloquées silencieusement, etc.)
+  bool _useWebFallback = false;
+
   final ImagePicker _imagePicker = ImagePicker();
 
   @override
@@ -68,8 +74,14 @@ class _ReportCameraPageState extends State<ReportCameraPage>
   // ─────────────────────────────────────────
   Future<void> _initCamera() async {
     try {
-      _cameras = await availableCameras();
-      if (_cameras.isEmpty) return;
+      _cameras = await availableCameras().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => [],
+      );
+      if (_cameras.isEmpty) {
+        _activateWebFallback();
+        return;
+      }
 
       await _controller?.dispose();
 
@@ -81,13 +93,52 @@ class _ReportCameraPageState extends State<ReportCameraPage>
       );
 
       _controller = controller;
-      await controller.initialize();
+
+      // Timeout sur l'initialisation : si le navigateur/contexte bloque
+      // l'accès caméra, on bascule sur image_picker au lieu de laisser
+      // le loader tourner indéfiniment.
+      await controller.initialize().timeout(
+        const Duration(seconds: 6),
+        onTimeout: () {
+          throw TimeoutException('Caméra non disponible — bascule fallback');
+        },
+      );
       await controller.setFlashMode(_flashMode);
 
       if (!mounted) return;
       setState(() => _isCameraReady = true);
     } catch (e) {
-      debugPrint('Erreur init caméra: $e');
+      debugPrint('Erreur init caméra: $e — activation fallback');
+      _activateWebFallback();
+    }
+  }
+
+  // ── Fallback : ouvre directement la caméra native via image_picker ──
+  void _activateWebFallback() {
+    if (!mounted) return;
+    setState(() => _useWebFallback = true);
+  }
+
+  Future<void> _captureViaImagePicker() async {
+    if (_isCapturing) return;
+    setState(() => _isCapturing = true);
+
+    try {
+      final XFile? photo = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        preferredCameraDevice: CameraDevice.rear,
+        imageQuality: 90,
+      );
+
+      if (photo == null) {
+        if (mounted) setState(() => _isCapturing = false);
+        return;
+      }
+      if (!mounted) return;
+      _navigateToPreview(photo.path);
+    } catch (e) {
+      debugPrint('Erreur capture fallback: $e');
+      if (mounted) setState(() => _isCapturing = false);
     }
   }
 
@@ -108,7 +159,6 @@ class _ReportCameraPageState extends State<ReportCameraPage>
         return;
       }
 
-      // ✅ Fix : utiliser LocationSettings au lieu de desiredAccuracy
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
@@ -227,19 +277,33 @@ class _ReportCameraPageState extends State<ReportCameraPage>
                     ),
                   ),
                   const Positioned.fill(child: _ViewfinderCorners()),
-                  Positioned(
-                    right: CliinAppConstants.pagePadding,
-                    top: 0,
-                    bottom: 0,
-                    child: Center(
-                      child: ReportCameraSideControls(
-                        flashMode: _flashMode,
-                        onFlashTap: _toggleFlash,
-                        onFlipTap: _flipCamera,
-                        onGalleryTap: _openGallery,
+                  // Contrôles latéraux masqués en mode fallback :
+                  // flash et changement de caméra sont gérés par
+                  // l'app caméra native du téléphone dans ce mode.
+                  if (!_useWebFallback)
+                    Positioned(
+                      right: CliinAppConstants.pagePadding,
+                      top: 0,
+                      bottom: 0,
+                      child: Center(
+                        child: ReportCameraSideControls(
+                          flashMode: _flashMode,
+                          onFlashTap: _toggleFlash,
+                          onFlipTap: _flipCamera,
+                          onGalleryTap: _openGallery,
+                        ),
                       ),
                     ),
-                  ),
+                  // En mode fallback, on garde quand même l'accès galerie
+                  if (_useWebFallback)
+                    Positioned(
+                      right: CliinAppConstants.pagePadding,
+                      top: 0,
+                      bottom: 0,
+                      child: Center(
+                        child: _FallbackGalleryButton(onTap: _openGallery),
+                      ),
+                    ),
                   Positioned(
                     bottom: CliinAppConstants.spacingL,
                     left: 0,
@@ -260,7 +324,8 @@ class _ReportCameraPageState extends State<ReportCameraPage>
                 vertical: CliinAppConstants.spacingXL,
               ),
               child: ReportCameraBottomBar(
-                onShutterTap: _takePhoto,
+                onShutterTap:
+                    _useWebFallback ? _captureViaImagePicker : _takePhoto,
                 isCapturing: _isCapturing,
               ),
             ),
@@ -271,6 +336,37 @@ class _ReportCameraPageState extends State<ReportCameraPage>
   }
 
   Widget _buildCameraPreview() {
+    // Mode fallback : caméra native indisponible — état clair
+    // invitant à appuyer sur le bouton de capture
+    if (_useWebFallback) {
+      return Container(
+        color: const Color(0xFF1A1A1A),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: Colors.white10,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.camera_alt_outlined,
+                    color: Colors.white54, size: 36),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Appuyez sur le bouton ci-dessous\npour prendre la photo',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     if (!_isCameraReady || _controller == null) {
       return Container(
         color: const Color(0xFF1A1A1A),
@@ -317,6 +413,40 @@ class _ReportCameraPageState extends State<ReportCameraPage>
       ),
     );
   }
+}
+
+// ─────────────────────────────────────────
+// Bouton galerie — affiché seul en mode fallback
+// ─────────────────────────────────────────
+class _FallbackGalleryButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _FallbackGalleryButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: onTap,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.55),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.photo_library_outlined,
+                  color: Colors.white, size: 22),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Galerie',
+              style: TextStyle(
+                  color: Colors.white, fontSize: 10, fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+      );
 }
 
 // ─────────────────────────────────────────

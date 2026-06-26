@@ -7,11 +7,14 @@
 import 'package:flutter/foundation.dart';
 import '../repositories/report_repository.dart';
 import '../repositories/mock_report_repository.dart';
-import '../../features/home/models/report_model.dart';
+import '../../core/utils/user_location_service.dart';
+import '../../features/home/models/home_report_model.dart';
 
 class ReportStore extends ChangeNotifier {
   // ── Singleton ─────────────────────────────────────────────────
-  ReportStore._();
+  ReportStore._() {
+    UserLocationService.instance.addListener(notifyListeners);
+  }
   static final ReportStore instance = ReportStore._();
 
   // ── Repository — swap ici pour Firebase ──────────────────────
@@ -23,6 +26,16 @@ class ReportStore extends ChangeNotifier {
     _repository = repo;
   }
 
+  // ── Rayon de recherche "À proximité" ─────────────────────────
+  // MVP : fixé à 2km. Extensible plus tard (UI pour élargir le rayon,
+  // ou explorer d'autres villes) — non développé pour le moment.
+  static const double _defaultRadiusMeters = 2000.0;
+
+  // ── Fenêtre de fraîcheur "Signalements récents" ───────────────
+  // Indépendant du délai d'intervention (72h dans IntervenantDetailPage) :
+  // celui-ci est une règle d'affichage, pas une règle d'intervention.
+  static const int _recentReportsWindowHours = 72;
+
   // ── État ──────────────────────────────────────────────────────
   List<HomeReportModel> _reports = [];
   bool _isLoading = false;
@@ -33,19 +46,49 @@ class ReportStore extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  List<HomeReportModel> get nearbyReports =>
-      _reports.where((r) => r.status != ReportStatus.traite).take(5).toList();
+  // ── "À proximité" — status disponible, rayon 2km, trié par distance croissante ──
+  List<HomeReportModel> get nearbyReports {
+    final candidates =
+        _reports.where((r) => r.status == ReportStatus.disponible).toList();
 
-  List<HomeReportModel> get recentReports {
-    final sorted = [..._reports]
-      ..sort((a, b) {
-        final aTime = a.createdAt ?? DateTime(2000);
-        final bTime = b.createdAt ?? DateTime(2000);
-        return bTime.compareTo(aTime);
-      });
-    return sorted.take(5).toList();
+    final userPosition = UserLocationService.instance.lastKnownPosition;
+    if (userPosition == null) {
+      // Position utilisateur pas encore disponible → repli simple,
+      // comme avant cette correction.
+      return candidates.take(2).toList();
+    }
+
+    final withDistance = <MapEntry<HomeReportModel, double>>[];
+
+    for (final r in candidates) {
+      final meters =
+          UserLocationService.instance.distanceMetersTo(r.latitude, r.longitude);
+      if (meters != null && meters <= _defaultRadiusMeters) {
+        withDistance.add(MapEntry(r, meters));
+      }
+      // Sans coordonnées ou hors rayon : exclu de "À proximité".
+    }
+
+    withDistance.sort((a, b) => a.value.compareTo(b.value));
+
+    return withDistance.map((e) => e.key).take(2).toList();
   }
 
+  List<HomeReportModel> get recentReports {
+    final cutoff = DateTime.now()
+        .subtract(const Duration(hours: _recentReportsWindowHours));
+    final sorted = _reports
+        .where((r) =>
+            r.status == ReportStatus.disponible &&
+            (r.createdAt != null && r.createdAt!.isAfter(cutoff)))
+        .toList()
+      ..sort((a, b) => b.createdAt!.compareTo(a.createdAt!));
+    return sorted.take(1).toList();
+  }
+
+  // ── Carte — exploration complète, PAS de filtrage par rayon ─────
+  // Conformément à la logique produit : la page Carte sert à explorer
+  // TOUS les signalements, contrairement à "À proximité" sur l'accueil.
   List<HomeReportModel> get mapReports => List.unmodifiable(_reports);
 
   HomeReportModel? reportById(String id) {
@@ -62,11 +105,18 @@ class ReportStore extends ChangeNotifier {
     try {
       _reports = await _repository.fetchAllReports();
       _error = null;
+      await UserLocationService.instance.getCurrentPosition();
     } catch (e) {
       _error = e.toString();
     } finally {
       _setLoading(false);
     }
+  }
+
+  // ── Rafraîchir manuellement la position (ex: pull-to-refresh) ──
+  Future<void> refreshUserPosition() async {
+    await UserLocationService.instance.getCurrentPosition(forceRefresh: true);
+    notifyListeners();
   }
 
   // ── Signalement — publication ─────────────────────────────────
@@ -92,6 +142,7 @@ class ReportStore extends ChangeNotifier {
     required IntervenantModel intervenant,
     required bool whatsAppConsent,
     required String? whatsAppNumber,
+    String? groupName,
   }) async {
     _setLoading(true);
     try {
@@ -100,6 +151,7 @@ class ReportStore extends ChangeNotifier {
         intervenant: intervenant,
         whatsAppConsent: whatsAppConsent,
         whatsAppNumber: whatsAppNumber,
+        groupName: groupName,
       );
       _replaceReport(updated);
       _error = null;
@@ -175,5 +227,27 @@ class ReportStore extends ChangeNotifier {
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
+  }
+
+  // ── Ajouter/modifier numéro WhatsApp ─────────────────────────
+  Future<HomeReportModel> updateWhatsAppNumber({
+    required String reportId,
+    required String number,
+    required bool visible,
+  }) async {
+    try {
+      final updated = await _repository.updateWhatsAppNumber(
+        reportId: reportId,
+        number: number,
+        visible: visible,
+      );
+      _replaceReport(updated);
+      _error = null;
+      notifyListeners();
+      return updated;
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
+    }
   }
 }

@@ -1,6 +1,6 @@
 // lib/features/map/data/map_dummy_data.dart
 
-import '../../home/models/report_model.dart';
+import '../../home/models/home_report_model.dart';
 
 class MapDummyData {
   static final List<HomeReportModel> reports = [

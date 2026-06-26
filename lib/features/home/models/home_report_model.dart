@@ -1,4 +1,4 @@
-// lib/features/home/models/report_model.dart
+// lib/features/home/models/home_report_model.dart
 
 // ── Réexports — sources de vérité uniques ─────────────────
 export 'package:cliinapp/shared/models/report_category.dart';
@@ -15,6 +15,13 @@ import 'package:cliinapp/shared/models/report_status.dart';
 import 'package:cliinapp/shared/models/report_history_entry.dart';
 import 'package:cliinapp/shared/models/intervenant_model.dart';
 
+/// Modèle d'AFFICHAGE d'un signalement sur l'accueil et la carte.
+///
+/// Distinct de [ReportModel] (features/reports/models/report_model.dart) qui est
+/// le modèle de CRÉATION utilisé dans le flow de soumission (formulaire → upload).
+/// HomeReportModel est produit par le Repository et consommé par les widgets ;
+/// il contient des champs pré-formatés pour l'UI (distance, timeAgo, imageAsset)
+/// que ReportModel ne connaît pas.
 class HomeReportModel {
   final String id;
   final String reference;

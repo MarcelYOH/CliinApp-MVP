@@ -130,18 +130,16 @@ class InteractiveMapWidget extends StatelessWidget {
       return Positioned(
         top: _pct(l.top, isTop: true),
         left: _pct(l.left, isTop: false),
-        child: LayoutBuilder(
-          builder: (context, _) => Text(
-            l.text,
-            textAlign: TextAlign.center,
-            style: CliinAppTextStyles.bodySmall.copyWith(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: l.text.contains('Baie') || l.text.contains('Lagune')
-                  ? const Color(0xFF1E88E5)
-                  : const Color(0xFF555555),
-              letterSpacing: l.text == l.text.toUpperCase() ? 0.8 : 0,
-            ),
+        child: Text(
+          l.text,
+          textAlign: TextAlign.center,
+          style: CliinAppTextStyles.bodySmall.copyWith(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: l.text.contains('Baie') || l.text.contains('Lagune')
+                ? const Color(0xFF1E88E5)
+                : const Color(0xFF555555),
+            letterSpacing: l.text == l.text.toUpperCase() ? 0.8 : 0,
           ),
         ),
       );
@@ -149,21 +147,15 @@ class InteractiveMapWidget extends StatelessWidget {
   }
 
   List<Widget> _buildMarkers() {
-    return _markers.asMap().entries.map((entry) {
-      final m = entry.value;
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          // Les positions sont calculées dans le Stack parent via Positioned
-          return Positioned(
-            top: _pct(m.top, isTop: true),
-            left: _pct(m.left, isTop: false),
-            child: m.isUserLocation
-                ? _UserLocationMarker()
-                : m.clusterCount != null
-                    ? _ClusterMarker(color: m.color, count: m.clusterCount!)
-                    : _ReportMarker(color: m.color),
-          );
-        },
+    return _markers.map((m) {
+      return Positioned(
+        top: _pct(m.top, isTop: true),
+        left: _pct(m.left, isTop: false),
+        child: m.isUserLocation
+            ? const _UserLocationMarker()
+            : m.clusterCount != null
+                ? _ClusterMarker(color: m.color, count: m.clusterCount!)
+                : _ReportMarker(color: m.color),
       );
     }).toList();
   }
@@ -273,6 +265,8 @@ class _ClusterMarker extends StatelessWidget {
 
 // ── Position utilisateur ───────────────────────────────────────────
 class _UserLocationMarker extends StatelessWidget {
+  const _UserLocationMarker();
+
   @override
   Widget build(BuildContext context) {
     return Stack(

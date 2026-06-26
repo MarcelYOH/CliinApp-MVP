@@ -1,5 +1,5 @@
 name: cliinapp
-description: "A new Flutter project."
+description: "CliinApp — Application civic-tech de signalement d'insalubrité. Ville pilote : San-Pedro, Côte d'Ivoire."
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -19,6 +19,7 @@ dependencies:
   geocoding: ^3.0.0
   permission_handler: ^11.3.1
   url_launcher: ^6.3.0
+  web: ^1.1.1
 
 
 dev_dependencies:

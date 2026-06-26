@@ -8,9 +8,9 @@ class IntervenantModel {
   final DateTime? takenAt;
   final DateTime? treatedAt;
 
-  // ── WhatsApp — MVP ────────────────────────────────────────────
-  // whatsAppNumber : null si l'intervenant n'a pas consenti
-  // whatsAppVisible : toggle ON/OFF depuis l'interface intervenant
+  // whatsAppNumber  : numéro enregistré (null si pas de numéro)
+  // whatsAppVisible : contrôle la visibilité publique (allowContact)
+  final String? groupName;    // null si intervention individuelle
   final String? whatsAppNumber;
   final bool whatsAppVisible;
 
@@ -21,11 +21,40 @@ class IntervenantModel {
     this.takenAgo,
     this.takenAt,
     this.treatedAt,
+    this.groupName,
     this.whatsAppNumber,
-    this.whatsAppVisible = false,
+    this.whatsAppVisible = false, // OFF par défaut
   });
 
-  // ── Backend-ready : sérialisation ────────────────────────────
+  // Bouton "Contacter" public visible uniquement si :
+  // whatsAppVisible = true ET whatsAppNumber != null
+  bool get isContactable =>
+      whatsAppVisible && whatsAppNumber != null && whatsAppNumber!.isNotEmpty;
+
+  IntervenantModel copyWith({
+    String? id,
+    String? name,
+    String? logoAsset,
+    String? takenAgo,
+    DateTime? takenAt,
+    DateTime? treatedAt,
+    String? groupName,
+    String? whatsAppNumber,
+    bool? whatsAppVisible,
+  }) {
+    return IntervenantModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      logoAsset: logoAsset ?? this.logoAsset,
+      takenAgo: takenAgo ?? this.takenAgo,
+      takenAt: takenAt ?? this.takenAt,
+      treatedAt: treatedAt ?? this.treatedAt,
+      groupName: groupName ?? this.groupName,
+      whatsAppNumber: whatsAppNumber ?? this.whatsAppNumber,
+      whatsAppVisible: whatsAppVisible ?? this.whatsAppVisible,
+    );
+  }
+
   Map<String, dynamic> toJson() => {
     'id': id,
     'name': name,

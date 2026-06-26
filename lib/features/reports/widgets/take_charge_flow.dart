@@ -1,5 +1,4 @@
 // lib/features/reports/widgets/take_charge_flow.dart
-// Flux prise en charge — 3 étapes — CliinApp
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -7,7 +6,28 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../shared/store/report_store.dart';
 import '../../../../shared/data/dummy_user.dart';
-import '../../../../features/home/models/report_model.dart';
+import '../../../../features/home/models/home_report_model.dart';
+
+// ── Modèle indicatif téléphonique — extensible ───────────────────
+class _CountryCode {
+  final String flag;
+  final String name;
+  final String code;
+  const _CountryCode({required this.flag, required this.name, required this.code});
+}
+
+const List<_CountryCode> _kCountryCodes = [
+  _CountryCode(flag: '🇨🇮', name: 'Côte d\'Ivoire', code: '+225'),
+  _CountryCode(flag: '🇸🇳', name: 'Sénégal',        code: '+221'),
+  _CountryCode(flag: '🇧🇫', name: 'Burkina Faso',   code: '+226'),
+  _CountryCode(flag: '🇲🇱', name: 'Mali',           code: '+223'),
+  _CountryCode(flag: '🇬🇳', name: 'Guinée',         code: '+224'),
+  _CountryCode(flag: '🇬🇭', name: 'Ghana',          code: '+233'),
+  _CountryCode(flag: '🇧🇯', name: 'Bénin',          code: '+229'),
+  _CountryCode(flag: '🇹🇬', name: 'Togo',           code: '+228'),
+  _CountryCode(flag: '🇳🇬', name: 'Nigeria',        code: '+234'),
+  _CountryCode(flag: '🇫🇷', name: 'France',         code: '+33'),
+];
 
 Future<void> showTakeChargeFlow({
   required BuildContext context,
@@ -18,9 +38,14 @@ Future<void> showTakeChargeFlow({
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => _TakeChargeSheet(
-      report: report,
-      onSuccess: onSuccess,
+    builder: (ctx) => Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(ctx).viewInsets.bottom,
+      ),
+      child: _TakeChargeSheet(
+        report: report,
+        onSuccess: onSuccess,
+      ),
     ),
   );
 }
@@ -45,12 +70,13 @@ class _TakeChargeSheetState extends State<_TakeChargeSheet> {
   String? _selectedGroup;
 
   final TextEditingController _phoneController = TextEditingController();
-  bool _whatsAppConsent = true;
-
-  bool _isLoading = false;
-  String? _errorMessage; // ← affichage visuel de l'erreur dans le sheet
+  bool _whatsAppConsent = false;
+  String? _errorMessage;
   HomeReportModel? _updatedReport;
 
+  _CountryCode _selectedCountry = _kCountryCodes.first;
+
+  // À remplacer par ReportStore.instance.userGroups (ou équivalent) une fois le module Groupes implémenté.
   static const List<String> _mockGroups = [
     'Clean Riviera',
     'Green City',
@@ -72,22 +98,44 @@ class _TakeChargeSheetState extends State<_TakeChargeSheet> {
   bool get _step1Valid =>
       _isSelf || (_selectedGroup != null && _selectedGroup!.isNotEmpty);
 
+  String get _fullPhoneNumber {
+    final local = _phoneController.text.trim();
+    if (local.isEmpty) return '';
+
+    // Règle internationale du "trunk prefix 0" :
+    // Certains pays (France +33, Belgique, UK...) utilisent un 0
+    // en début de numéro local qu'il faut supprimer en format international.
+    // D'autres (Côte d'Ivoire +225, Sénégal +221...) incluent le 0
+    // dans le numéro international.
+    //
+    // Liste des pays qui suppriment le 0 en international :
+    const removeTrunkZero = {'+33', '+32', '+44', '+31', '+39', '+34'};
+
+    final shouldRemoveZero =
+        local.startsWith('0') &&
+        removeTrunkZero.contains(_selectedCountry.code);
+
+    final cleaned = shouldRemoveZero ? local.substring(1) : local;
+    return '${_selectedCountry.code}$cleaned';
+  }
+
   Future<void> _submit() async {
+    // Passer à l'étape 3 IMMÉDIATEMENT — pas d'attente visible
     setState(() {
-      _isLoading = true;
       _errorMessage = null;
+      _step = 3;
     });
 
+    // Traitement async en arrière-plan
     try {
       final user = DummyUser.currentUser;
+      final fullNumber = _whatsAppConsent ? _fullPhoneNumber : null;
 
       final intervenant = IntervenantModel(
         id: user.id,
-        name: _isSelf ? user.name : (_selectedGroup ?? user.name),
-        whatsAppNumber:
-            _whatsAppConsent && _phoneController.text.trim().isNotEmpty
-                ? _phoneController.text.trim()
-                : null,
+        name: user.name,
+        logoAsset: null,
+        whatsAppNumber: fullNumber?.isNotEmpty == true ? fullNumber : null,
         whatsAppVisible: _whatsAppConsent,
       );
 
@@ -95,40 +143,161 @@ class _TakeChargeSheetState extends State<_TakeChargeSheet> {
         reportId: widget.report.id,
         intervenant: intervenant,
         whatsAppConsent: _whatsAppConsent,
-        whatsAppNumber: _whatsAppConsent ? _phoneController.text.trim() : null,
+        whatsAppNumber: fullNumber?.isNotEmpty == true ? fullNumber : null,
+        groupName: _isSelf ? null : _selectedGroup,
       );
 
       if (mounted) {
         _updatedReport = updated;
-        setState(() => _step = 3);
+        // Pas besoin de setState — on est déjà à l'étape 3
+        // _updatedReport sera utilisé par _onConfirmClose
       }
     } catch (e) {
-      // Affichage direct dans le sheet — visible sur mobile sans console
+      // En cas d'erreur : revenir à l'étape 2 avec le message
       if (mounted) {
         setState(() {
+          _step = 2;
           _errorMessage = 'Erreur : ${e.toString()}';
         });
       }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  // CORRECTION POINT 4 : navigation directe sans postFrameCallback
+  // pour éviter le flash visuel
   void _onConfirmClose() {
     final updated = _updatedReport;
-    Navigator.pop(context);
     if (updated != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        widget.onSuccess(updated);
-      });
+      Navigator.pop(context);
+      widget.onSuccess(updated);
+    } else {
+      Navigator.pop(context);
+    }
+  }
+
+  void _showCountryPicker() {
+    showModalBottomSheet(
+      context: context,
+      // isScrollControlled pour que le sheet puisse prendre plus de hauteur
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+            top: Radius.circular(CliinAppConstants.radiusLarge)),
+      ),
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.85,
+        expand: false,
+        builder: (_, scrollController) => Column(
+          children: [
+            // Handle + titre — fixes
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  CliinAppConstants.pagePadding,
+                  CliinAppConstants.spacingM,
+                  CliinAppConstants.pagePadding,
+                  CliinAppConstants.spacingM),
+              child: Column(children: [
+                Center(
+                  child: Container(
+                    width: 40, height: 4,
+                    decoration: BoxDecoration(
+                      color: CliinAppColors.divider,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: CliinAppConstants.spacingM),
+                Text('Sélectionner un pays',
+                    style: GoogleFonts.poppins(
+                        fontSize: 16, fontWeight: FontWeight.bold,
+                        color: CliinAppColors.textDark)),
+              ]),
+            ),
+            const Divider(height: 1, color: Color(0xFFEEEEEE)),
+            // Liste scrollable
+            Expanded(
+              child: ListView(
+                controller: scrollController,
+                children: _kCountryCodes.map((country) => ListTile(
+                  // Remplacement des emojis par des indicateurs colorés
+                  // pour éviter le délai de rendu Flutter Web
+                  leading: Container(
+                    width: 40, height: 28,
+                    decoration: BoxDecoration(
+                      color: _countryColor(country.code),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Center(
+                      child: Text(
+                        country.code.replaceAll('+', ''),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                  title: Text(country.name,
+                      style: GoogleFonts.inter(
+                          fontSize: 14, color: CliinAppColors.textDark)),
+                  trailing: Text(country.code,
+                      style: GoogleFonts.poppins(
+                          fontSize: 13, fontWeight: FontWeight.w600,
+                          color: _selectedCountry.code == country.code
+                              ? CliinAppColors.primary
+                              : CliinAppColors.textSecondary)),
+                  selected: _selectedCountry.code == country.code,
+                  selectedTileColor: CliinAppColors.primaryLight,
+                  onTap: () {
+                    setState(() => _selectedCountry = country);
+                    Navigator.pop(context);
+                  },
+                )).toList(),
+              ),
+            ),
+            SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Couleur associée à chaque indicatif — rendu immédiat sans emoji
+  Color _countryColor(String code) {
+    switch (code) {
+      case '+225': return const Color(0xFF009A44);  // Côte d'Ivoire — vert
+      case '+221': return const Color(0xFF00853F);  // Sénégal — vert
+      case '+226': return const Color(0xFFEF2B2D);  // Burkina — rouge
+      case '+223': return const Color(0xFF009A44);  // Mali — vert
+      case '+224': return const Color(0xFFCE1126);  // Guinée — rouge
+      case '+233': return const Color(0xFF006B3F);  // Ghana — vert
+      case '+229': return const Color(0xFF008751);  // Bénin — vert
+      case '+228': return const Color(0xFF006A4E);  // Togo — vert
+      case '+234': return const Color(0xFF008751);  // Nigeria — vert
+      case '+33':  return const Color(0xFF002395);  // France — bleu
+      default:     return CliinAppColors.primary;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 250),
-      child: switch (_step) {
+    // Pas d'AnimatedSwitcher — la transition animée cause un flash noir
+    // Pour Step3 : on force viewInsets à zéro pour éviter l'espace résiduel du clavier
+    if (_step >= 3) {
+      return MediaQuery(
+        data: MediaQuery.of(context).copyWith(viewInsets: EdgeInsets.zero),
+        child: _Step3Sheet(
+          key: const ValueKey(3),
+          report: _updatedReport ?? widget.report,
+          onClose: _onConfirmClose,
+        ),
+      );
+    }
+
+    return switch (_step) {
         1 => _Step1Sheet(
             key: const ValueKey(1),
             isSelf: _isSelf,
@@ -147,9 +316,11 @@ class _TakeChargeSheetState extends State<_TakeChargeSheet> {
         2 => _Step2Sheet(
             key: const ValueKey(2),
             phoneController: _phoneController,
+            selectedCountry: _selectedCountry,
             consent: _whatsAppConsent,
-            isLoading: _isLoading,
+            isLoading: false, // jamais en loading — transition immédiate
             errorMessage: _errorMessage,
+            onCountryTap: _showCountryPicker,
             onConsentChanged: (v) => setState(() => _whatsAppConsent = v),
             onBack: _back,
             onContinue: _submit,
@@ -159,8 +330,7 @@ class _TakeChargeSheetState extends State<_TakeChargeSheet> {
             report: _updatedReport ?? widget.report,
             onClose: _onConfirmClose,
           ),
-      },
-    );
+    };
   }
 }
 
@@ -202,8 +372,7 @@ class _Step1Sheet extends StatelessWidget {
           const SizedBox(height: CliinAppConstants.spacingL),
           Text('Prendre ce cas en charge',
               style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 18, fontWeight: FontWeight.bold,
                   color: CliinAppColors.textDark)),
           Text('Qui intervient sur ce signalement ?',
               style: GoogleFonts.inter(
@@ -230,8 +399,7 @@ class _Step1Sheet extends StatelessWidget {
               padding: const EdgeInsets.all(CliinAppConstants.spacingM),
               decoration: BoxDecoration(
                 color: CliinAppColors.primaryLight,
-                borderRadius:
-                    BorderRadius.circular(CliinAppConstants.radiusSmall),
+                borderRadius: BorderRadius.circular(CliinAppConstants.radiusSmall),
               ),
               child: Row(children: [
                 const Icon(Icons.shield_outlined,
@@ -249,16 +417,14 @@ class _Step1Sheet extends StatelessWidget {
             const SizedBox(height: CliinAppConstants.spacingM),
             Text('Sélectionner un groupe',
                 style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 13, fontWeight: FontWeight.w600,
                     color: CliinAppColors.textDark)),
             const SizedBox(height: CliinAppConstants.spacingS),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
                 color: CliinAppColors.cardWhite,
-                borderRadius:
-                    BorderRadius.circular(CliinAppConstants.radiusSmall),
+                borderRadius: BorderRadius.circular(CliinAppConstants.radiusSmall),
                 border: Border.all(color: CliinAppColors.divider),
               ),
               child: DropdownButtonHideUnderline(
@@ -267,15 +433,11 @@ class _Step1Sheet extends StatelessWidget {
                   isExpanded: true,
                   hint: Text('Choisir un groupe',
                       style: GoogleFonts.inter(
-                          fontSize: 13,
-                          color: CliinAppColors.textSecondary)),
-                  items: groups
-                      .map((g) => DropdownMenuItem(
-                            value: g,
-                            child: Text(g,
-                                style: GoogleFonts.inter(fontSize: 13)),
-                          ))
-                      .toList(),
+                          fontSize: 13, color: CliinAppColors.textSecondary)),
+                  items: groups.map((g) => DropdownMenuItem(
+                    value: g,
+                    child: Text(g, style: GoogleFonts.inter(fontSize: 13)),
+                  )).toList(),
                   onChanged: onGroupChanged,
                 ),
               ),
@@ -289,14 +451,12 @@ class _Step1Sheet extends StatelessWidget {
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: CliinAppColors.divider),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                          CliinAppConstants.radiusMedium)),
+                      borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium)),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
                 child: Text('Annuler',
                     style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 14, fontWeight: FontWeight.w600,
                         color: CliinAppColors.textSecondary)),
               ),
             ),
@@ -308,15 +468,13 @@ class _Step1Sheet extends StatelessWidget {
                   backgroundColor: CliinAppColors.primary,
                   disabledBackgroundColor: CliinAppColors.divider,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                          CliinAppConstants.radiusMedium)),
+                      borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium)),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   elevation: 0,
                 ),
                 child: Text('Continuer',
                     style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 14, fontWeight: FontWeight.w600,
                         color: CliinAppColors.textWhite)),
               ),
             ),
@@ -329,13 +487,15 @@ class _Step1Sheet extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// ÉTAPE 2 — avec affichage erreur intégré
+// ÉTAPE 2
 // ─────────────────────────────────────────────────────────────────
 class _Step2Sheet extends StatelessWidget {
   final TextEditingController phoneController;
+  final _CountryCode selectedCountry;
   final bool consent;
   final bool isLoading;
   final String? errorMessage;
+  final VoidCallback onCountryTap;
   final void Function(bool) onConsentChanged;
   final VoidCallback onBack;
   final VoidCallback onContinue;
@@ -343,9 +503,11 @@ class _Step2Sheet extends StatelessWidget {
   const _Step2Sheet({
     super.key,
     required this.phoneController,
+    required this.selectedCountry,
     required this.consent,
     required this.isLoading,
     required this.errorMessage,
+    required this.onCountryTap,
     required this.onConsentChanged,
     required this.onBack,
     required this.onContinue,
@@ -353,188 +515,232 @@ class _Step2Sheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _SheetWrapper(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _SheetHandle(),
-          const SizedBox(height: CliinAppConstants.spacingL),
-          Text('Vos coordonnées',
-              style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: CliinAppColors.textDark)),
-          Text(
-              'Renseignez votre numéro WhatsApp pour la prise en charge de ce cas.',
-              style: GoogleFonts.inter(
-                  fontSize: 13, color: CliinAppColors.textSecondary)),
-          const SizedBox(height: CliinAppConstants.spacingL),
-          Text('Numéro WhatsApp',
-              style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: CliinAppColors.textDark)),
-          const SizedBox(height: CliinAppConstants.spacingS),
-          Container(
-            decoration: BoxDecoration(
-              color: CliinAppColors.cardWhite,
-              borderRadius:
-                  BorderRadius.circular(CliinAppConstants.radiusSmall),
-              border: Border.all(color: CliinAppColors.divider),
-            ),
-            child: Row(children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: const Icon(Icons.phone_iphone_rounded,
-                    color: Color(0xFF25D366), size: 22),
-              ),
-              Container(width: 1, height: 24, color: CliinAppColors.divider),
-              Expanded(
-                child: TextField(
-                  controller: phoneController,
-                  keyboardType: TextInputType.phone,
-                  style: GoogleFonts.inter(
-                      fontSize: 14, color: CliinAppColors.textDark),
-                  decoration: InputDecoration(
-                    hintText: '+ 225 07 XX XX XX XX',
-                    hintStyle: GoogleFonts.inter(
-                        fontSize: 14, color: CliinAppColors.textSecondary),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 14),
-                  ),
-                ),
-              ),
-            ]),
-          ),
-          const SizedBox(height: CliinAppConstants.spacingL),
-          Container(
-            padding: const EdgeInsets.all(CliinAppConstants.spacingM),
-            decoration: BoxDecoration(
-              color: CliinAppColors.cardWhite,
-              borderRadius:
-                  BorderRadius.circular(CliinAppConstants.radiusSmall),
-              border: Border.all(color: CliinAppColors.divider),
-            ),
-            child: Row(children: [
-              const Icon(Icons.shield_outlined,
-                  color: CliinAppColors.primary, size: 20),
-              const SizedBox(width: CliinAppConstants.spacingM),
-              Expanded(
-                child: Text(
-                  'J\'accepte d\'être contacté(e) via WhatsApp concernant ce signalement et son suivi.',
-                  style: GoogleFonts.inter(
-                      fontSize: 12, color: CliinAppColors.textDark),
-                ),
-              ),
-              Switch(
-                value: consent,
-                onChanged: onConsentChanged,
-                activeThumbColor: CliinAppColors.primary,
-              ),
-            ]),
-          ),
-          const SizedBox(height: CliinAppConstants.spacingM),
-          Row(children: [
-            const Icon(Icons.lock_outline_rounded,
-                size: 14, color: CliinAppColors.textSecondary),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                'Vos informations sont sécurisées et ne seront utilisées que dans le cadre du suivi de ce signalement.',
+    return Container(
+      decoration: const BoxDecoration(
+        color: CliinAppColors.cardWhite,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(CliinAppConstants.radiusLarge),
+          topRight: Radius.circular(CliinAppConstants.radiusLarge),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(
+          horizontal: CliinAppConstants.pagePadding),
+      child: SingleChildScrollView(
+        reverse: true, // scroll vers le champ actif quand clavier ouvert
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _SheetHandle(),
+            const SizedBox(height: CliinAppConstants.spacingL),
+            Text('Vos coordonnées',
+                style: GoogleFonts.poppins(
+                    fontSize: 18, fontWeight: FontWeight.bold,
+                    color: CliinAppColors.textDark)),
+            Text('Souhaitez-vous être contacté(e) pour le suivi de ce cas ?',
                 style: GoogleFonts.inter(
-                    fontSize: 11, color: CliinAppColors.textSecondary),
-              ),
-            ),
-          ]),
+                    fontSize: 13, color: CliinAppColors.textSecondary)),
+            const SizedBox(height: CliinAppConstants.spacingL),
 
-          // ── Bloc erreur visible directement dans le sheet ────
-          if (errorMessage != null) ...[
-            const SizedBox(height: CliinAppConstants.spacingM),
+            // ── Toggle consentement EN PREMIER ────────────────
             Container(
-              width: double.infinity,
               padding: const EdgeInsets.all(CliinAppConstants.spacingM),
               decoration: BoxDecoration(
-                color: CliinAppColors.alertRedBg,
-                borderRadius:
-                    BorderRadius.circular(CliinAppConstants.radiusSmall),
-                border: Border.all(color: CliinAppColors.alertRed),
+                color: CliinAppColors.cardWhite,
+                borderRadius: BorderRadius.circular(CliinAppConstants.radiusSmall),
+                border: Border.all(color: CliinAppColors.divider),
               ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.error_outline,
-                      color: CliinAppColors.alertRed, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      errorMessage!,
-                      style: GoogleFonts.inter(
-                          fontSize: 12, color: CliinAppColors.alertRed),
+              child: Row(children: [
+                const Icon(Icons.shield_outlined,
+                    color: CliinAppColors.primary, size: 20),
+                const SizedBox(width: CliinAppConstants.spacingM),
+                Expanded(
+                  child: Text(
+                    "J'accepte d'être contacté(e) via WhatsApp concernant ce signalement et son suivi.",
+                    style: GoogleFonts.inter(
+                        fontSize: 12, color: CliinAppColors.textDark),
+                  ),
+                ),
+                Switch(
+                  value: consent,
+                  onChanged: onConsentChanged,
+                  activeThumbColor: CliinAppColors.primary,
+                ),
+              ]),
+            ),
+
+            // ── Champ numéro conditionnel ─────────────────────
+            if (consent) ...[
+              const SizedBox(height: CliinAppConstants.spacingL),
+              Text('Numéro WhatsApp',
+                  style: GoogleFonts.poppins(
+                      fontSize: 13, fontWeight: FontWeight.w600,
+                      color: CliinAppColors.textDark)),
+              const SizedBox(height: CliinAppConstants.spacingS),
+
+              // CORRECTION POINT 1 : indicatif avec largeur fixe
+              // pour éviter la cassure au chargement du drapeau
+              Container(
+                decoration: BoxDecoration(
+                  color: CliinAppColors.cardWhite,
+                  borderRadius: BorderRadius.circular(CliinAppConstants.radiusSmall),
+                  border: Border.all(color: CliinAppColors.divider),
+                ),
+                child: Row(children: [
+                  // Bouton indicatif — largeur fixe pour stabilité
+                  GestureDetector(
+                    onTap: onCountryTap,
+                    child: Container(
+                      width: 80, // largeur fixe
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: CliinAppColors.background,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(CliinAppConstants.radiusSmall),
+                          bottomLeft: Radius.circular(CliinAppConstants.radiusSmall),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Indicatif seul — pas d'emoji pour éviter
+                          // le délai de rendu Flutter Web
+                          Text(selectedCountry.code,
+                              style: GoogleFonts.poppins(
+                                  fontSize: 13, fontWeight: FontWeight.w600,
+                                  color: CliinAppColors.primary)),
+                          const Icon(Icons.keyboard_arrow_down_rounded,
+                              size: 14, color: CliinAppColors.textSecondary),
+                        ],
+                      ),
                     ),
                   ),
-                ],
-              ),
-            ),
-          ],
-
-          const SizedBox(height: CliinAppConstants.spacingXL),
-          Row(children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: onBack,
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: CliinAppColors.primary),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                          CliinAppConstants.radiusMedium)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                child: Text('Retour',
-                    style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: CliinAppColors.primary)),
-              ),
-            ),
-            const SizedBox(width: CliinAppConstants.spacingM),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: isLoading ? null : onContinue,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: CliinAppColors.primary,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                          CliinAppConstants.radiusMedium)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  elevation: 0,
-                ),
-                child: isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: CliinAppColors.textWhite),
-                      )
-                    : Text('Continuer',
-                        style: GoogleFonts.poppins(
+                  Expanded(
+                    child: TextField(
+                      controller: phoneController,
+                      keyboardType: TextInputType.phone,
+                      autofocus: true,
+                      style: GoogleFonts.inter(
+                          fontSize: 14, color: CliinAppColors.textDark),
+                      decoration: InputDecoration(
+                        hintText: '07 XX XX XX XX',
+                        hintStyle: GoogleFonts.inter(
                             fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: CliinAppColors.textWhite)),
+                            color: CliinAppColors.textSecondary),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 14),
+                      ),
+                    ),
+                  ),
+                ]),
               ),
-            ),
-          ]),
+
+              const SizedBox(height: CliinAppConstants.spacingS),
+              Row(children: [
+                const Icon(Icons.info_outline_rounded,
+                    size: 12, color: CliinAppColors.textSecondary),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    'Numéro complet : ${selectedCountry.code} ${phoneController.text.trim().isEmpty ? "XX XX XX XX XX" : phoneController.text.trim()}',
+                    style: GoogleFonts.inter(
+                        fontSize: 11, color: CliinAppColors.textSecondary),
+                  ),
+                ),
+              ]),
+            ], // fin if (consent)
+
+            const SizedBox(height: CliinAppConstants.spacingM),
+            Row(children: [
+              const Icon(Icons.lock_outline_rounded,
+                  size: 14, color: CliinAppColors.textSecondary),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Vos informations sont sécurisées et ne seront utilisées que dans le cadre du suivi de ce signalement.',
+                  style: GoogleFonts.inter(
+                      fontSize: 11, color: CliinAppColors.textSecondary),
+                ),
+              ),
+            ]),
+
+            if (errorMessage != null) ...[
+              const SizedBox(height: CliinAppConstants.spacingM),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(CliinAppConstants.spacingM),
+                decoration: BoxDecoration(
+                  color: CliinAppColors.alertRedBg,
+                  borderRadius: BorderRadius.circular(CliinAppConstants.radiusSmall),
+                  border: Border.all(color: CliinAppColors.alertRed),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.error_outline,
+                        color: CliinAppColors.alertRed, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(errorMessage!,
+                          style: GoogleFonts.inter(
+                              fontSize: 12, color: CliinAppColors.alertRed)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            const SizedBox(height: CliinAppConstants.spacingXL),
+            Row(children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: onBack,
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: CliinAppColors.primary),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                            CliinAppConstants.radiusMedium)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: Text('Retour',
+                      style: GoogleFonts.poppins(
+                          fontSize: 14, fontWeight: FontWeight.w600,
+                          color: CliinAppColors.primary)),
+                ),
+              ),
+              const SizedBox(width: CliinAppConstants.spacingM),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: isLoading ? null : onContinue,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: CliinAppColors.primary,
+                    disabledBackgroundColor: CliinAppColors.primary,
+                    disabledForegroundColor: CliinAppColors.textWhite,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                            CliinAppConstants.radiusMedium)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    elevation: 0,
+                  ),
+                  child: Text('Confirmer',
+                      style: GoogleFonts.poppins(
+                          fontSize: 14, fontWeight: FontWeight.w600,
+                          color: CliinAppColors.textWhite)),
+                ),
+              ),
+            ]),
           SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────────
-// ÉTAPE 3 — Confirmation + 72h
+// ÉTAPE 3 — Confirmation
 // ─────────────────────────────────────────────────────────────────
 class _Step3Sheet extends StatelessWidget {
   final HomeReportModel report;
@@ -555,12 +761,9 @@ class _Step3Sheet extends StatelessWidget {
           _SheetHandle(),
           const SizedBox(height: CliinAppConstants.spacingXL),
           Container(
-            width: 72,
-            height: 72,
+            width: 72, height: 72,
             decoration: const BoxDecoration(
-              color: CliinAppColors.primary,
-              shape: BoxShape.circle,
-            ),
+                color: CliinAppColors.primary, shape: BoxShape.circle),
             child: const Icon(Icons.check_rounded,
                 color: CliinAppColors.textWhite, size: 40),
           ),
@@ -568,8 +771,7 @@ class _Step3Sheet extends StatelessWidget {
           Text('Prise en charge\nconfirmée !',
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 20, fontWeight: FontWeight.bold,
                   color: CliinAppColors.textDark)),
           const SizedBox(height: CliinAppConstants.spacingS),
           Text('Vous avez pris ce cas en charge.',
@@ -580,8 +782,7 @@ class _Step3Sheet extends StatelessWidget {
             padding: const EdgeInsets.all(CliinAppConstants.spacingL),
             decoration: BoxDecoration(
               color: CliinAppColors.primaryLight,
-              borderRadius:
-                  BorderRadius.circular(CliinAppConstants.radiusMedium),
+              borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
             ),
             child: Row(children: [
               const Icon(Icons.access_time_rounded,
@@ -597,13 +798,11 @@ class _Step3Sheet extends StatelessWidget {
                       TextSpan(
                         text: '72 heures',
                         style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 16, fontWeight: FontWeight.bold,
                             color: CliinAppColors.primary),
                       ),
                       const TextSpan(
-                          text:
-                              ' pour intervenir et publier une preuve de traitement (photo).'),
+                          text: ' pour intervenir et publier une preuve de traitement (photo).'),
                     ],
                   ),
                 ),
@@ -615,8 +814,7 @@ class _Step3Sheet extends StatelessWidget {
             padding: const EdgeInsets.all(CliinAppConstants.spacingL),
             decoration: BoxDecoration(
               color: CliinAppColors.cardWhite,
-              borderRadius:
-                  BorderRadius.circular(CliinAppConstants.radiusMedium),
+              borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
               border: Border.all(color: CliinAppColors.divider),
             ),
             child: Row(children: [
@@ -640,15 +838,13 @@ class _Step3Sheet extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: CliinAppColors.primaryDark,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(
-                        CliinAppConstants.radiusMedium)),
+                    borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium)),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 elevation: 0,
               ),
               child: Text('Accéder à mon tableau de bord',
                   style: GoogleFonts.poppins(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 15, fontWeight: FontWeight.w600,
                       color: CliinAppColors.textWhite)),
             ),
           ),
@@ -665,41 +861,35 @@ class _Step3Sheet extends StatelessWidget {
 class _SheetWrapper extends StatelessWidget {
   final Widget child;
   const _SheetWrapper({required this.child});
-
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: CliinAppColors.cardWhite,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(CliinAppConstants.radiusLarge),
-          topRight: Radius.circular(CliinAppConstants.radiusLarge),
-        ),
+  Widget build(BuildContext context) => Container(
+    decoration: const BoxDecoration(
+      color: CliinAppColors.cardWhite,
+      borderRadius: BorderRadius.only(
+        topLeft: Radius.circular(CliinAppConstants.radiusLarge),
+        topRight: Radius.circular(CliinAppConstants.radiusLarge),
       ),
-      padding: const EdgeInsets.fromLTRB(
-        CliinAppConstants.pagePadding,
-        0,
-        CliinAppConstants.pagePadding,
-        0,
-      ),
-      child: SingleChildScrollView(child: child),
-    );
-  }
+    ),
+    padding: const EdgeInsets.fromLTRB(
+      CliinAppConstants.pagePadding, 0,
+      CliinAppConstants.pagePadding, 0,
+    ),
+    child: SingleChildScrollView(child: child),
+  );
 }
 
 class _SheetHandle extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
-        child: Container(
-          margin: const EdgeInsets.only(top: CliinAppConstants.spacingM),
-          width: 40,
-          height: 4,
-          decoration: BoxDecoration(
-            color: CliinAppColors.divider,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-      );
+    child: Container(
+      margin: const EdgeInsets.only(top: CliinAppConstants.spacingM),
+      width: 40, height: 4,
+      decoration: BoxDecoration(
+        color: CliinAppColors.divider,
+        borderRadius: BorderRadius.circular(2),
+      ),
+    ),
+  );
 }
 
 class _ChoiceCard extends StatelessWidget {
@@ -710,74 +900,52 @@ class _ChoiceCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const _ChoiceCard({
-    required this.selected,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
+    required this.selected, required this.icon,
+    required this.title, required this.subtitle, required this.onTap,
   });
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.all(CliinAppConstants.spacingL),
-        decoration: BoxDecoration(
-          color: selected
-              ? CliinAppColors.primaryLight
-              : CliinAppColors.cardWhite,
-          borderRadius:
-              BorderRadius.circular(CliinAppConstants.radiusMedium),
-          border: Border.all(
-            color: selected ? CliinAppColors.primary : CliinAppColors.divider,
-            width: selected ? 1.5 : 1.0,
-          ),
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      padding: const EdgeInsets.all(CliinAppConstants.spacingL),
+      decoration: BoxDecoration(
+        color: selected ? CliinAppColors.primaryLight : CliinAppColors.cardWhite,
+        borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
+        border: Border.all(
+          color: selected ? CliinAppColors.primary : CliinAppColors.divider,
+          width: selected ? 1.5 : 1.0,
         ),
-        child: Row(children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: selected
-                  ? CliinAppColors.primary
-                  : CliinAppColors.background,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon,
-                color: selected
-                    ? CliinAppColors.textWhite
-                    : CliinAppColors.textSecondary,
-                size: 20),
-          ),
-          const SizedBox(width: CliinAppConstants.spacingM),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: CliinAppColors.textDark)),
-                Text(subtitle,
-                    style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: CliinAppColors.textSecondary)),
-              ],
-            ),
-          ),
-          Icon(
-            selected
-                ? Icons.radio_button_checked_rounded
-                : Icons.radio_button_off_rounded,
-            color: selected
-                ? CliinAppColors.primary
-                : CliinAppColors.textSecondary,
-          ),
-        ]),
       ),
-    );
-  }
+      child: Row(children: [
+        Container(
+          width: 40, height: 40,
+          decoration: BoxDecoration(
+            color: selected ? CliinAppColors.primary : CliinAppColors.background,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon,
+              color: selected ? CliinAppColors.textWhite : CliinAppColors.textSecondary,
+              size: 20),
+        ),
+        const SizedBox(width: CliinAppConstants.spacingM),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title,
+                style: GoogleFonts.poppins(
+                    fontSize: 14, fontWeight: FontWeight.w600,
+                    color: CliinAppColors.textDark)),
+            Text(subtitle,
+                style: GoogleFonts.inter(
+                    fontSize: 12, color: CliinAppColors.textSecondary)),
+          ]),
+        ),
+        Icon(
+          selected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
+          color: selected ? CliinAppColors.primary : CliinAppColors.textSecondary,
+        ),
+      ]),
+    ),
+  );
 }

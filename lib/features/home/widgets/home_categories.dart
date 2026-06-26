@@ -153,24 +153,24 @@ class _CategoryCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
 
-            const SizedBox(height: CliinAppConstants.spacingS),
+            const SizedBox(height: CliinAppConstants.spacingM),
 
-            // Séparateur
+            // Mini-pill compteur
             Container(
-              width: 24,
-              height: 1.5,
-              color: Colors.grey.shade300,
-            ),
-
-            const SizedBox(height: CliinAppConstants.spacingS),
-
-            // Compteur
-            Text(
-              '${data.count}',
-              style: CliinAppTextStyles.headingMedium.copyWith(
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-                color: data.color,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: data.color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(
+                  CliinAppConstants.radiusLarge,
+                ),
+              ),
+              child: Text(
+                '${data.count} cas',
+                style: CliinAppTextStyles.badge.copyWith(
+                  color: data.color,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ],

@@ -1,5 +1,4 @@
 // lib/features/home/pages/home_page.dart
-// Branché sur ReportStore — lit les données dynamiques
 
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
@@ -8,7 +7,7 @@ import '../../../shared/widgets/app_header.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/data/dummy_user.dart';
 import '../../../shared/store/report_store.dart';
-import '../widgets/home_position_bloc.dart';
+import '../../../core/utils/whatsapp_launcher.dart';
 import '../widgets/home_quick_report.dart';
 import '../widgets/home_alert_banner.dart';
 import '../widgets/home_nearby_reports.dart';
@@ -17,7 +16,7 @@ import '../widgets/home_groups.dart';
 import '../widgets/home_categories.dart';
 import '../widgets/home_recent_reports.dart';
 import '../data/home_dummy_data.dart';
-import '../models/report_model.dart';
+import '../models/home_report_model.dart';
 import '../../reports/pages/report_camera_page.dart';
 import '../../reports/pages/intervenant_detail_page.dart';
 import '../../reports/widgets/take_charge_flow.dart';
@@ -38,7 +37,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     ReportStore.instance.addListener(_onStoreUpdate);
-    ReportStore.instance.init();
+    // init() est déjà appelé dans main() avant runApp() — ne pas rappeler ici
   }
 
   @override
@@ -67,10 +66,16 @@ class _HomePageState extends State<HomePage> {
   }) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => MapPage(
+      PageRouteBuilder<void>(
+        transitionDuration: const Duration(milliseconds: 220),
+        reverseTransitionDuration: const Duration(milliseconds: 180),
+        pageBuilder: (_, _, _) => MapPage(
           initialPriorityFilters: priorities ?? const {},
           initialCategoryFilters: categories ?? const {},
+        ),
+        transitionsBuilder: (_, animation, _, child) => FadeTransition(
+          opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+          child: child,
         ),
       ),
     );
@@ -97,25 +102,19 @@ class _HomePageState extends State<HomePage> {
     return map[label];
   }
 
-  // ── Prise en charge ───────────────────────────────────────────
-  // onSuccess est appelé APRÈS fermeture du sheet (dans take_charge_flow)
-  // On utilise addPostFrameCallback pour garantir que la navigation
-  // se fait dans un frame propre, sans conflit avec le sheet
   void _onTakeCharge(HomeReportModel report) {
     showTakeChargeFlow(
       context: context,
       report: report,
       onSuccess: (updated) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => IntervenantDetailPage(report: updated),
-              ),
-            );
-          }
-        });
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => IntervenantDetailPage(report: updated),
+            ),
+          );
+        }
       },
     );
   }
@@ -131,6 +130,16 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  // ── Contacter via WhatsApp — carte publique ───────────────────
+  // Déclenché uniquement si intervenant.isContactable = true
+  // (whatsAppVisible = true ET whatsAppNumber != null)
+  void _onContact(HomeReportModel report) {
+    openWhatsApp(
+      context: context,
+      intervenant: report.intervenant,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final store = ReportStore.instance;
@@ -141,10 +150,16 @@ class _HomePageState extends State<HomePage> {
 
     final recentReports = store.recentReports.isNotEmpty
         ? store.recentReports
-        : HomeDummyData.recentReports;
+        : HomeDummyData.recentReports
+            .where((r) => r.status == ReportStatus.disponible)
+            .take(1)
+            .toList();
+
+    final firstName = DummyUser.currentUser.name.split(' ').first;
+    final contextLine =
+        '${HomeDummyData.position.value} · ${nearbyReports.length} cas à proximité';
 
     final sections = <Widget>[
-      HomePositionBloc(position: HomeDummyData.position),
       HomeQuickReport(data: HomeDummyData.quickReport, onTap: _openCamera),
       HomeAlertBanner(
           data: HomeDummyData.alertBanner, onVoirTap: _goToMapUrgents),
@@ -153,6 +168,7 @@ class _HomePageState extends State<HomePage> {
         onVoirTout: _goToMapProches,
         onCardTap: (_) {},
         onTakeCharge: _onTakeCharge,
+        onContact: _onContact,       // ← branché
         onViewDetails: _onViewDetails,
       ),
       HomeActionBanner(data: HomeDummyData.actionBanner, onTap: () {}),
@@ -172,6 +188,9 @@ class _HomePageState extends State<HomePage> {
         reports: recentReports,
         onVoirTout: _goToMapRecents,
         onCardTap: (_) {},
+        onTakeCharge: _onTakeCharge,
+        onContact: _onContact,       // ← branché
+        onViewDetails: _onViewDetails,
       ),
       const SizedBox(height: 100),
     ];
@@ -184,6 +203,8 @@ class _HomePageState extends State<HomePage> {
           children: [
             AppHeader(
               user: DummyUser.currentUser,
+              greeting: 'Bonjour, $firstName',
+              contextLine: contextLine,
               onSearch: (_) {},
               onNotificationTap: () {},
               onAvatarTap: () {},
@@ -194,9 +215,9 @@ class _HomePageState extends State<HomePage> {
                 itemCount: sections.length,
                 itemBuilder: (_, i) => sections[i],
                 separatorBuilder: (_, i) {
-                  if (i == 0 || i == 1) return const SizedBox(height: CliinAppConstants.spacingM);
+                  if (i == 0) return const SizedBox(height: CliinAppConstants.spacingM);
                   if (i == sections.length - 2) return const SizedBox.shrink();
-                  return const SizedBox(height: CliinAppConstants.spacingXL);
+                  return const SizedBox(height: 32);
                 },
               ),
             ),

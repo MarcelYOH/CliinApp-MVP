@@ -50,9 +50,10 @@ extension ReportSeverityExtension on ReportSeverity {
 }
 
 // ─────────────────────────────────────────
-// Enum — Statut workflow upload
-// ⚠️ Renommé ReportWorkflowStatus pour éviter
-//    le conflit avec shared/models/report_status.dart
+// Enum — Statut TECHNIQUE du flow d'upload côté client
+// Représente l'avancement de la soumission d'un signalement (création uniquement).
+// ≠ ReportStatus (shared/models/report_status.dart) qui représente le cycle
+//   de vie métier du signalement sur la plateforme.
 // ─────────────────────────────────────────
 enum ReportWorkflowStatus { enAttente, enCours, traite, rejete }
 

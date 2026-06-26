@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -6,6 +7,19 @@ import '../models/report_model.dart';
 import '../data/report_dummy_data.dart';
 import '../widgets/report_stepper.dart';
 import 'report_success_page.dart';
+
+// ─────────────────────────────────────────────────────────────────
+// CORRECTION — Génération réelle du code de signalement
+// ─────────────────────────────────────────────────────────────────
+// Avant : reportCode était codé en dur ('#CLN-6589'), donc TOUS les
+// signalements créés affichaient exactement le même code.
+// Maintenant : un code aléatoire est généré ici (une seule fois), puis
+// transmis tel quel à ReportSuccessPage → cohérence garantie entre le
+// code affiché à l'écran de confirmation et celui stocké dans le store.
+String _generateReportCode() {
+  final n = 1000 + Random().nextInt(8999);
+  return '#CLN-$n';
+}
 
 class ReportUploadPage extends StatefulWidget {
   final ReportModel report;
@@ -55,8 +69,11 @@ class _ReportUploadPageState extends State<ReportUploadPage>
     }
 
     // ✅ ReportWorkflowStatus (renommé pour éviter conflit avec shared/report_status.dart)
+    // ✅ CORRECTION : code généré réellement, ne réutilise l'existant que
+    //    s'il a déjà été défini plus tôt dans le flow (ne devrait pas
+    //    arriver normalement, mais on respecte le code déjà présent).
     final publishedReport = widget.report.copyWith(
-      reportCode: '#CLN-6589',
+      reportCode: widget.report.reportCode ?? _generateReportCode(),
       createdAt: DateTime.now(),
       status: ReportWorkflowStatus.enAttente,
     );

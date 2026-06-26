@@ -25,10 +25,12 @@ class CliinApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        scaffoldBackgroundColor: CliinAppColors.background,
-        textTheme: GoogleFonts.interTextTheme(
-          Theme.of(context).textTheme,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: CliinAppColors.primary,
+          surface: CliinAppColors.background,
         ),
+        scaffoldBackgroundColor: CliinAppColors.background,
+        textTheme: GoogleFonts.interTextTheme(),
       ),
       home: const HomePage(),
     );

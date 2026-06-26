@@ -1,4 +1,7 @@
 // lib/shared/models/report_status.dart
+// Cycle de vie MÉTIER d'un signalement sur la plateforme (disponible → enCours → traite).
+// ≠ ReportWorkflowStatus (features/reports/models/report_model.dart) qui décrit
+//   l'état technique du flow d'upload côté client lors de la création.
 
 import 'package:flutter/material.dart';
 

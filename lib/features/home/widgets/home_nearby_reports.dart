@@ -5,7 +5,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/widgets/report_card.dart';
-import '../models/report_model.dart';
+import '../models/home_report_model.dart';
 
 class HomeNearbyReports extends StatelessWidget {
   final List<HomeReportModel> reports;
@@ -36,10 +36,27 @@ class HomeNearbyReports extends StatelessWidget {
               horizontal: CliinAppConstants.pagePadding),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('À proximité',
-                  style: CliinAppTextStyles.headingMedium
-                      .copyWith(color: const Color(0xFF1A1A1A))),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'À proximité',
+                    style: CliinAppTextStyles.headingMedium
+                        .copyWith(color: const Color(0xFF1A1A1A)),
+                  ),
+                  const SizedBox(height: 5),
+                  Container(
+                    width: 28,
+                    height: 3,
+                    decoration: BoxDecoration(
+                      color: CliinAppColors.primary,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ],
+              ),
               GestureDetector(
                 onTap: onVoirTout,
                 child: Row(children: [

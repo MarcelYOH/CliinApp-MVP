@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
-import '../../../../features/home/models/report_model.dart';
+import '../../../../features/home/models/home_report_model.dart';
 import '../../../../shared/repositories/report_repository.dart';
 
 class ProofResultPage extends StatelessWidget {
