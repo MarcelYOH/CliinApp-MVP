@@ -1,0 +1,87 @@
+name: Build Flutter APK
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Type de build APK'
+        required: false
+        default: 'both'
+        type: choice
+        options:
+          - debug
+          - release
+          - both
+
+jobs:
+  build-apk:
+    name: Build APK — CliinApp
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Récupération du code ──────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── 2. Java 17 (requis par build.gradle.kts) ────────────────────────
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      # ── 3. Flutter stable ───────────────────────────────────────────────
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      # ── 4. NDK 26.1.10909125 (ndkVersion dans build.gradle.kts) ─────────
+      - name: Install Android NDK
+        run: |
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+            "ndk;26.1.10909125" > /dev/null 2>&1
+
+      # ── 5. Dépendances Dart/Flutter ──────────────────────────────────────
+      - name: Flutter pub get
+        run: flutter pub get
+
+      # ── 6. Analyse statique (non bloquante pour le MVP) ──────────────────
+      - name: Flutter analyze
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+        continue-on-error: true
+
+      # ── 7. Build APK Debug ───────────────────────────────────────────────
+      - name: Build APK Debug
+        if: ${{ github.event_name == 'push' || inputs.build_type == 'debug' || inputs.build_type == 'both' }}
+        run: flutter build apk --debug
+
+      # ── 8. Build APK Release (signé avec la clé debug pour le MVP) ───────
+      - name: Build APK Release
+        if: ${{ github.event_name == 'push' || inputs.build_type == 'release' || inputs.build_type == 'both' }}
+        run: flutter build apk --release
+
+      # ── 9. Publication des artefacts ─────────────────────────────────────
+      - name: Upload APK Debug
+        if: ${{ github.event_name == 'push' || inputs.build_type == 'debug' || inputs.build_type == 'both' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: CliinApp-debug-${{ github.run_number }}
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 30
+
+      - name: Upload APK Release
+        if: ${{ github.event_name == 'push' || inputs.build_type == 'release' || inputs.build_type == 'both' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: CliinApp-release-${{ github.run_number }}
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
