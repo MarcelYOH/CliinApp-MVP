@@ -211,9 +211,11 @@ class _AppHeaderState extends State<AppHeader>
             children: [
               // ── Ligne 1 : logo + icônes ──
               Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: CliinAppConstants.pagePadding,
-                  vertical: 10,
+                padding: EdgeInsets.fromLTRB(
+                  CliinAppConstants.pagePadding,
+                  10 + MediaQuery.of(context).padding.top,
+                  CliinAppConstants.pagePadding,
+                  10,
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,

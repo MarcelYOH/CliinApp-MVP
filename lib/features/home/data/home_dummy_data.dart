@@ -80,11 +80,11 @@ class HomeDummyData {
     HomeReportModel(
       id: 'CLN-3102',
       reference: '#CLN-3102',
-      title: 'Eaux stagnantes',
+      title: 'Eaux usées',
       location: 'Abobo, PK18',
       description: 'Risque sanitaire élevé pour les habitants du quartier.',
       severity: ReportSeverity.eleve,
-      category: ReportCategory.eauxStagnantes,
+      category: ReportCategory.eauxUsees,
       distance: '650 m',
       timeAgo: 'Il y a 2j',
       imageAsset: 'assets/images/depot.jpg',
@@ -142,24 +142,24 @@ class HomeDummyData {
   ];
 
   static const List<CategoryModel> categories = [
+    CategoryModel(icon: Icons.delete_outline_rounded,
+        label: 'Bac/Poubelle saturée', count: 48, color: Color(0xFF4CAF50)),
     CategoryModel(icon: Icons.delete_sweep_outlined,
         label: 'Dépôts sauvages', count: 96, color: Color(0xFFFF9800)),
     CategoryModel(icon: Icons.water_damage_outlined,
         label: 'Caniveaux bouchés', count: 74, color: Color(0xFF1E88E5)),
     CategoryModel(icon: Icons.water_outlined,
-        label: 'Eaux stagnantes', count: 62, color: Color(0xFF00ACC1)),
-    CategoryModel(icon: Icons.delete_outline_rounded,
-        label: 'Bac à déchets saturé', count: 48, color: Color(0xFF4CAF50)),
+        label: 'Eaux usées', count: 62, color: Color(0xFF00ACC1)),
     CategoryModel(icon: Icons.inventory_2_outlined,
         label: 'Conteneur saturé', count: 35, color: Color(0xFF8D6E63)),
     CategoryModel(icon: Icons.warning_amber_outlined,
         label: 'Zone insalubre', count: 41, color: Color(0xFFE53935)),
+    CategoryModel(icon: Icons.local_fire_department_outlined,
+        label: 'Brûlage des déchets', count: 22, color: Color(0xFFFF5722)),
     CategoryModel(icon: Icons.factory_outlined,
         label: 'Déchets industriels', count: 18, color: Color(0xFF546E7A)),
     CategoryModel(icon: Icons.medical_services_outlined,
         label: 'Déchets médicaux', count: 12, color: Color(0xFF9C27B0)),
-    CategoryModel(icon: Icons.local_fire_department_outlined,
-        label: 'Brûlage des déchets', count: 22, color: Color(0xFFFF5722)),
   ];
 
   static final List<HomeReportModel> recentReports = [
@@ -182,11 +182,11 @@ class HomeDummyData {
     HomeReportModel(
       id: 'CLN-3657',
       reference: '#CLN-3657',
-      title: 'Eaux stagnantes',
+      title: 'Eaux usées',
       location: 'Cocody, Riviera Faya',
-      description: 'Eaux stagnantes, odeurs nauséabondes et moustiques.',
+      description: 'Eaux usées, odeurs nauséabondes et moustiques.',
       severity: ReportSeverity.eleve,
-      category: ReportCategory.eauxStagnantes,
+      category: ReportCategory.eauxUsees,
       distance: '400 m',
       timeAgo: 'Il y a 1h',
       imageAsset: 'assets/images/caniveau.jpg',

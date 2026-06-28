@@ -7,9 +7,8 @@ plugins {
 
 android {
     namespace = "com.example.cliinapp"
-    // Use the installed Android SDK Platform 31 and NDK 26.1.x already present locally.
     compileSdk = 36
-    ndkVersion = "26.1.10909125"
+    ndkVersion = "28.2.13676358"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

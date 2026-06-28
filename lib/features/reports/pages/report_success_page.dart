@@ -68,6 +68,7 @@ class _ReportSuccessPageState extends State<ReportSuccessPage>
         description: r.description ?? '',
         severity: r.severity ?? ReportSeverity.moyen,
         category: r.category ?? ReportCategory.depotsSauvages,
+        origin: r.origin,
         imageAsset: r.imagePath ?? 'assets/images/depot.jpg',
         // ✅ CORRECTION — '< 1 km' laissait penser à une vraie mesure même
         // quand le GPS échoue totalement. Repli neutre en attendant que

@@ -4,7 +4,9 @@
 import 'package:flutter/material.dart';
 
 export '../../../shared/models/report_category.dart' show ReportCategory;
+export '../../../shared/models/report_origin.dart' show ReportOrigin, ReportOriginExt;
 import '../../../shared/models/report_category.dart' show ReportCategory;
+import '../../../shared/models/report_origin.dart' show ReportOrigin;
 
 // ─────────────────────────────────────────
 // Enum — Niveau d'urgence
@@ -158,6 +160,7 @@ class ReportModel {
   final int sharesCount;
   final String? userId;
   final ReportWorkflowStatus status;
+  final ReportOrigin origin;
 
   const ReportModel({
     this.id,
@@ -177,6 +180,7 @@ class ReportModel {
     this.sharesCount = 0,
     this.userId,
     this.status = ReportWorkflowStatus.enAttente,
+    this.origin = ReportOrigin.espacePublic,
   });
 
   ReportModel copyWith({
@@ -197,6 +201,7 @@ class ReportModel {
     int? sharesCount,
     String? userId,
     ReportWorkflowStatus? status,
+    ReportOrigin? origin,
   }) {
     return ReportModel(
       id: id ?? this.id,
@@ -216,6 +221,7 @@ class ReportModel {
       sharesCount: sharesCount ?? this.sharesCount,
       userId: userId ?? this.userId,
       status: status ?? this.status,
+      origin: origin ?? this.origin,
     );
   }
 
@@ -236,6 +242,7 @@ class ReportModel {
     'sharesCount': sharesCount,
     'userId': userId,
     'status': status.name,
+    'origin': origin.name,
   };
 
   factory ReportModel.fromJson(Map<String, dynamic> json) => ReportModel(
@@ -263,5 +270,9 @@ class ReportModel {
     status: json['status'] != null
         ? ReportWorkflowStatus.values.firstWhere((e) => e.name == json['status'])
         : ReportWorkflowStatus.enAttente,
+    origin: json['origin'] != null
+        ? ReportOrigin.values.firstWhere((e) => e.name == json['origin'],
+            orElse: () => ReportOrigin.espacePublic)
+        : ReportOrigin.espacePublic,
   );
 }

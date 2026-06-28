@@ -37,6 +37,7 @@ class ReportFormPage extends StatefulWidget {
 
 class _ReportFormPageState extends State<ReportFormPage> {
   ReportCategory _selectedCategory = ReportCategory.depotsSauvages;
+  ReportOrigin _selectedOrigin = ReportOrigin.espacePublic;
   ReportSeverity? _selectedSeverity;
   final TextEditingController _descController = TextEditingController();
   late TextEditingController _addressController;
@@ -125,6 +126,7 @@ class _ReportFormPageState extends State<ReportFormPage> {
       title: _selectedCategory.label,
       category: _selectedCategory,
       severity: _selectedSeverity,
+      origin: _selectedOrigin,
       description: _descController.text.trim(),
       address: _addressController.text.trim(),
       latitude: _latitude,
@@ -158,6 +160,9 @@ class _ReportFormPageState extends State<ReportFormPage> {
                     const SizedBox(height: CliinAppConstants.spacingL),
                     // ── Catégorie ──
                     _buildCategorySection(),
+                    const SizedBox(height: CliinAppConstants.spacingL),
+                    // ── Provenance ──
+                    _buildOriginSection(),
                     const SizedBox(height: CliinAppConstants.spacingL),
                     // ── Gravité ──
                     _buildSeveritySection(),
@@ -469,6 +474,98 @@ class _ReportFormPageState extends State<ReportFormPage> {
             }).toList(),
           ),
         ),
+      ],
+    );
+  }
+
+  // ── Provenance — chips scrollables, pré-sélection espacePublic ─
+  Widget _buildOriginSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text('Provenance',
+                style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: CliinAppColors.textDark)),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                color: CliinAppColors.primaryLight,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text('pré-sélectionné',
+                  style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: CliinAppColors.primary)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 72,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: ReportOrigin.values.map((origin) {
+              final isSelected = _selectedOrigin == origin;
+              return GestureDetector(
+                onTap: () => setState(() => _selectedOrigin = origin),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? CliinAppColors.primary.withValues(alpha: 0.10)
+                        : CliinAppColors.cardWhite,
+                    borderRadius:
+                        BorderRadius.circular(CliinAppConstants.radiusSmall),
+                    border: Border.all(
+                      color: isSelected
+                          ? CliinAppColors.primary
+                          : CliinAppColors.divider,
+                      width: isSelected ? 1.5 : 1.0,
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(origin.icon,
+                          color: isSelected
+                              ? CliinAppColors.primary
+                              : CliinAppColors.textSecondary,
+                          size: 20),
+                      const SizedBox(height: 4),
+                      Text(
+                        origin.label,
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: isSelected
+                              ? FontWeight.w700
+                              : FontWeight.w400,
+                          color: isSelected
+                              ? CliinAppColors.primary
+                              : CliinAppColors.textSecondary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text('Déjà rempli — modifiable en 1 tap si besoin, sinon rien à faire.',
+            style: GoogleFonts.inter(
+                fontSize: 11, color: CliinAppColors.textSecondary)),
       ],
     );
   }

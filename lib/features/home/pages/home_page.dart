@@ -89,15 +89,15 @@ class _HomePageState extends State<HomePage> {
 
   ReportCategory? _labelToCategory(String label) {
     const map = {
+      'Bac/Poubelle saturée': ReportCategory.bacPoubelleSature,
       'Dépôts sauvages':      ReportCategory.depotsSauvages,
       'Caniveaux bouchés':    ReportCategory.caniveauxBouches,
-      'Eaux stagnantes':      ReportCategory.eauxStagnantes,
-      'Bac à déchets saturé': ReportCategory.bacDechetsSature,
+      'Eaux usées':           ReportCategory.eauxUsees,
       'Conteneur saturé':     ReportCategory.conteneurSature,
       'Zone insalubre':       ReportCategory.zoneInsalubre,
+      'Brûlage des déchets':  ReportCategory.brulageDesDechets,
       'Déchets industriels':  ReportCategory.dechetsIndustriels,
       'Déchets médicaux':     ReportCategory.dechetsMedicaux,
-      'Brûlage des déchets':  ReportCategory.brulageDesDechets,
     };
     return map[label];
   }
@@ -198,6 +198,7 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: CliinAppColors.background,
       body: SafeArea(
+        top: false,
         bottom: false,
         child: Column(
           children: [

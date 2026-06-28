@@ -44,11 +44,11 @@ jobs:
       - name: Flutter version
         run: flutter --version
 
-      # ── 4. NDK 26.1.10909125 (ndkVersion dans build.gradle.kts) ─────────
+      # ── 4. NDK 28.2.13676358 (ndkVersion dans build.gradle.kts) ─────────
       - name: Install Android NDK
         run: |
           echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
-            "ndk;26.1.10909125" > /dev/null 2>&1
+            "ndk;28.2.13676358" > /dev/null 2>&1
 
       # ── 5. Dépendances Dart/Flutter ──────────────────────────────────────
       - name: Flutter pub get

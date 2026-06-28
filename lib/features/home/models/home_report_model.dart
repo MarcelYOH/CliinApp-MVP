@@ -2,6 +2,7 @@
 
 // ── Réexports — sources de vérité uniques ─────────────────
 export 'package:cliinapp/shared/models/report_category.dart';
+export 'package:cliinapp/shared/models/report_origin.dart';
 export 'package:cliinapp/features/reports/models/report_model.dart'
     show ReportSeverity, ReportSeverityExtension;
 export 'package:cliinapp/shared/models/report_status.dart';
@@ -9,6 +10,7 @@ export 'package:cliinapp/shared/models/report_history_entry.dart';
 export 'package:cliinapp/shared/models/intervenant_model.dart';
 
 import 'package:cliinapp/shared/models/report_category.dart';
+import 'package:cliinapp/shared/models/report_origin.dart';
 import 'package:cliinapp/features/reports/models/report_model.dart'
     show ReportSeverity;
 import 'package:cliinapp/shared/models/report_status.dart';
@@ -45,6 +47,7 @@ class HomeReportModel {
   final List<ReportHistoryEntry> history;
   final String? signalePar;
   final String? gpsCoords;
+  final ReportOrigin origin;
 
   const HomeReportModel({
     required this.id,
@@ -69,6 +72,7 @@ class HomeReportModel {
     this.history = const [],
     this.signalePar,
     this.gpsCoords,
+    this.origin = ReportOrigin.espacePublic,
   });
 
   HomeReportModel copyWith({
@@ -94,6 +98,7 @@ class HomeReportModel {
     List<ReportHistoryEntry>? history,
     String? signalePar,
     String? gpsCoords,
+    ReportOrigin? origin,
   }) {
     return HomeReportModel(
       id: id ?? this.id,
@@ -118,6 +123,7 @@ class HomeReportModel {
       history: history ?? this.history,
       signalePar: signalePar ?? this.signalePar,
       gpsCoords: gpsCoords ?? this.gpsCoords,
+      origin: origin ?? this.origin,
     );
   }
 }
