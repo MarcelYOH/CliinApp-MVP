@@ -56,6 +56,15 @@ Enum `ReportOrigin` créé avec même pattern que `ReportCategory` (label, icon)
 - Fichier `map_dummy_data.dart` : **présent et valide** (les erreurs IDE signalées venaient du cache build — `flutter clean` + `flutter pub get` les a résolues)
 - `bacPoubelleSature` est bien **en premier** dans l'enum
 - `_selectedOrigin = ReportOrigin.espacePublic` est bien la **valeur par défaut** dans le formulaire
-- Build complet (depuis zéro après `flutter clean`) installé sur **itel P651W** (Android 10, API 29)
-- Heure de démarrage du build : **11:14:35**
-- CliinApp démarré sur le téléphone (PID 6092, Impeller Vulkan + FlutterGeolocator confirmés dans les logs)
+- APK compilé par **GitHub Actions** (run `28325191830`, artifact `CliinApp-release-5`, commit `3800371`)
+- Téléchargé depuis Azure Blob Storage (via API GitHub + token OAuth)
+- Installé sur **itel P651W** (Android 10, API 29) via `adb install` à **17:57:59** le 28/06/2026
+- Sortie adb : `Performing Streamed Install → Success` (aucune erreur de signature)
+- **Vérifié par l'utilisateur** : nouvelles catégories et section Provenance s'affichent correctement
+
+## Process de build validé pour la suite
+1. `git push origin main` → déclenche GitHub Actions automatiquement
+2. Attendre la fin du run (~20 min) sur `https://github.com/MarcelYOH/CliinApp-MVP/actions`
+3. Télécharger l'artifact `CliinApp-release-*` via API GitHub
+4. Dézipper et `adb install -r app-release.apk` sur le téléphone connecté
+⚠️ Ne jamais compiler en local (PC 4 Go RAM insuffisant pour Gradle)
