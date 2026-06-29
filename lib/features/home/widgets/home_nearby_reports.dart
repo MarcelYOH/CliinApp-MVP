@@ -13,7 +13,6 @@ class HomeNearbyReports extends StatelessWidget {
   final void Function(HomeReportModel)? onCardTap;
   final void Function(HomeReportModel)? onTakeCharge;
   final void Function(HomeReportModel)? onContact;
-  final void Function(HomeReportModel)? onViewDetails;
 
   const HomeNearbyReports({
     super.key,
@@ -22,7 +21,6 @@ class HomeNearbyReports extends StatelessWidget {
     this.onCardTap,
     this.onTakeCharge,
     this.onContact,
-    this.onViewDetails,
   });
 
   @override
@@ -74,15 +72,12 @@ class HomeNearbyReports extends StatelessWidget {
         const SizedBox(height: CliinAppConstants.spacingM),
 
         // ── Scroll horizontal avec hauteur uniforme ──
-        // UniformCardRow mesure la hauteur de la plus grande carte
-        // et impose cette hauteur à toutes via SizedBox
         _UniformHeightCardRow(
           reports: reports,
           cardWidth: 300,
           onCardTap: onCardTap,
           onTakeCharge: onTakeCharge,
           onContact: onContact,
-          onViewDetails: onViewDetails,
         ),
       ],
     );
@@ -97,7 +92,6 @@ class _UniformHeightCardRow extends StatefulWidget {
   final void Function(HomeReportModel)? onCardTap;
   final void Function(HomeReportModel)? onTakeCharge;
   final void Function(HomeReportModel)? onContact;
-  final void Function(HomeReportModel)? onViewDetails;
 
   const _UniformHeightCardRow({
     required this.reports,
@@ -105,7 +99,6 @@ class _UniformHeightCardRow extends StatefulWidget {
     this.onCardTap,
     this.onTakeCharge,
     this.onContact,
-    this.onViewDetails,
   });
 
   @override
@@ -120,7 +113,6 @@ class _UniformHeightCardRowState extends State<_UniformHeightCardRow> {
   void initState() {
     super.initState();
     _keys.addAll(List.generate(widget.reports.length, (_) => GlobalKey()));
-    // Mesure après le premier rendu
     WidgetsBinding.instance.addPostFrameCallback((_) => _measureHeights());
   }
 
@@ -150,7 +142,6 @@ class _UniformHeightCardRowState extends State<_UniformHeightCardRow> {
           for (int i = 0; i < widget.reports.length; i++) ...[
             if (i > 0) const SizedBox(width: CliinAppConstants.spacingM),
             _maxHeight != null
-                // ── Hauteur fixe connue : toutes les cartes à la même taille ──
                 ? SizedBox(
                     width: widget.cardWidth,
                     height: _maxHeight,
@@ -162,11 +153,8 @@ class _UniformHeightCardRowState extends State<_UniformHeightCardRow> {
                           widget.onTakeCharge?.call(widget.reports[i]),
                       onContact: () =>
                           widget.onContact?.call(widget.reports[i]),
-                      onViewDetails: () =>
-                          widget.onViewDetails?.call(widget.reports[i]),
                     ),
                   )
-                // ── Premier rendu : mesure invisible ──
                 : SizedBox(
                     key: _keys[i],
                     width: widget.cardWidth,
@@ -178,8 +166,6 @@ class _UniformHeightCardRowState extends State<_UniformHeightCardRow> {
                           widget.onTakeCharge?.call(widget.reports[i]),
                       onContact: () =>
                           widget.onContact?.call(widget.reports[i]),
-                      onViewDetails: () =>
-                          widget.onViewDetails?.call(widget.reports[i]),
                     ),
                   ),
           ],

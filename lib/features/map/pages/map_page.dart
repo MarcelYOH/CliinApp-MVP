@@ -8,6 +8,7 @@ import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/store/report_store.dart';
 import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../features/reports/pages/report_camera_page.dart';
+import '../../../features/reports/pages/report_detail_page.dart';
 import '../../../features/reports/pages/intervenant_detail_page.dart';
 import '../../../features/reports/widgets/take_charge_flow.dart';
 import '../../../features/home/models/home_report_model.dart';
@@ -143,6 +144,14 @@ class _MapPageState extends State<MapPage> {
     );
   }
 
+  void _onCardTap(HomeReportModel report) {
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+          builder: (_) => ReportDetailPage(data: report)),
+    );
+  }
+
   void _onTakeCharge(HomeReportModel report) {
     showTakeChargeFlow(
       context: context,
@@ -253,9 +262,9 @@ class _MapPageState extends State<MapPage> {
                       reports: _filteredReports,
                       activeFilters: const {},
                       availableHeight: constraints.maxHeight,
-                      onCardTap: null,
+                      onCardTap: _onCardTap,
                       onTakeCharge: _onTakeCharge,
-                      onContact: _onContact,     // ← branché
+                      onContact: _onContact,
                     ),
                   ],
                 ),

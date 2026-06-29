@@ -18,6 +18,7 @@ import '../widgets/home_recent_reports.dart';
 import '../data/home_dummy_data.dart';
 import '../models/home_report_model.dart';
 import '../../reports/pages/report_camera_page.dart';
+import '../../reports/pages/report_detail_page.dart';
 import '../../reports/pages/intervenant_detail_page.dart';
 import '../../reports/widgets/take_charge_flow.dart';
 import '../../map/pages/map_page.dart';
@@ -102,6 +103,14 @@ class _HomePageState extends State<HomePage> {
     return map[label];
   }
 
+  void _onCardTap(HomeReportModel report) {
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+          builder: (_) => ReportDetailPage(data: report)),
+    );
+  }
+
   void _onTakeCharge(HomeReportModel report) {
     showTakeChargeFlow(
       context: context,
@@ -117,17 +126,6 @@ class _HomePageState extends State<HomePage> {
         }
       },
     );
-  }
-
-  void _onViewDetails(HomeReportModel report) {
-    if (report.intervenant != null) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => IntervenantDetailPage(report: report),
-        ),
-      );
-    }
   }
 
   // ── Contacter via WhatsApp — carte publique ───────────────────
@@ -166,10 +164,9 @@ class _HomePageState extends State<HomePage> {
       HomeNearbyReports(
         reports: nearbyReports,
         onVoirTout: _goToMapProches,
-        onCardTap: (_) {},
+        onCardTap: _onCardTap,
         onTakeCharge: _onTakeCharge,
-        onContact: _onContact,       // ← branché
-        onViewDetails: _onViewDetails,
+        onContact: _onContact,
       ),
       HomeActionBanner(data: HomeDummyData.actionBanner, onTap: () {}),
       HomeGroups(
@@ -187,10 +184,9 @@ class _HomePageState extends State<HomePage> {
       HomeRecentReports(
         reports: recentReports,
         onVoirTout: _goToMapRecents,
-        onCardTap: (_) {},
+        onCardTap: _onCardTap,
         onTakeCharge: _onTakeCharge,
-        onContact: _onContact,       // ← branché
-        onViewDetails: _onViewDetails,
+        onContact: _onContact,
       ),
       const SizedBox(height: 100),
     ];

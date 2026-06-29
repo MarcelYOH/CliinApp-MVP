@@ -420,7 +420,7 @@ class _ReportFormPageState extends State<ReportFormPage> {
         ),
         const SizedBox(height: 8),
         SizedBox(
-          height: 72,
+          height: 80,
           child: ListView(
             scrollDirection: Axis.horizontal,
             children: ReportCategory.values.map((cat) {
@@ -429,9 +429,9 @@ class _ReportFormPageState extends State<ReportFormPage> {
                 onTap: () => setState(() => _selectedCategory = cat),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 180),
+                  width: 88,
+                  height: 80,
                   margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: isSelected
                         ? cat.color.withValues(alpha: 0.10)
@@ -446,7 +446,7 @@ class _ReportFormPageState extends State<ReportFormPage> {
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Icon(cat.icon,
                           color: isSelected
@@ -454,18 +454,24 @@ class _ReportFormPageState extends State<ReportFormPage> {
                               : CliinAppColors.textSecondary,
                           size: 20),
                       const SizedBox(height: 4),
-                      Text(
-                        cat.label,
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: isSelected
-                              ? FontWeight.w700
-                              : FontWeight.w400,
-                          color: isSelected
-                              ? cat.color
-                              : CliinAppColors.textSecondary,
+                      Padding(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 4),
+                        child: Text(
+                          cat.label,
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            fontWeight: isSelected
+                                ? FontWeight.w700
+                                : FontWeight.w400,
+                            color: isSelected
+                                ? cat.color
+                                : CliinAppColors.textSecondary,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),
@@ -507,7 +513,7 @@ class _ReportFormPageState extends State<ReportFormPage> {
         ),
         const SizedBox(height: 8),
         SizedBox(
-          height: 72,
+          height: 80,
           child: ListView(
             scrollDirection: Axis.horizontal,
             children: ReportOrigin.values.map((origin) {
@@ -516,9 +522,9 @@ class _ReportFormPageState extends State<ReportFormPage> {
                 onTap: () => setState(() => _selectedOrigin = origin),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 180),
+                  width: 88,
+                  height: 80,
                   margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: isSelected
                         ? CliinAppColors.primary.withValues(alpha: 0.10)
@@ -534,7 +540,7 @@ class _ReportFormPageState extends State<ReportFormPage> {
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Icon(origin.icon,
                           color: isSelected
@@ -542,18 +548,24 @@ class _ReportFormPageState extends State<ReportFormPage> {
                               : CliinAppColors.textSecondary,
                           size: 20),
                       const SizedBox(height: 4),
-                      Text(
-                        origin.label,
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: isSelected
-                              ? FontWeight.w700
-                              : FontWeight.w400,
-                          color: isSelected
-                              ? CliinAppColors.primary
-                              : CliinAppColors.textSecondary,
+                      Padding(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 4),
+                        child: Text(
+                          origin.label,
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            fontWeight: isSelected
+                                ? FontWeight.w700
+                                : FontWeight.w400,
+                            color: isSelected
+                                ? CliinAppColors.primary
+                                : CliinAppColors.textSecondary,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),

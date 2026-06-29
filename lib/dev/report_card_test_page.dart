@@ -136,8 +136,6 @@ class ReportCardTestPage extends StatelessWidget {
           const SizedBox(height: CliinAppConstants.spacingS),
           ReportCard(
             data: _traite,
-            onViewDetails: () =>
-                _showSnack(context, '👁 Voir les détails tapé'),
           ),
           const SizedBox(height: 40),
         ],

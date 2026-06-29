@@ -11,11 +11,8 @@ class HomeRecentReports extends StatelessWidget {
   final List<HomeReportModel> reports;
   final VoidCallback? onVoirTout;
   final void Function(HomeReportModel)? onCardTap;
-  // ── CORRECTION POINT 5 ──────────────────────────────────────
-  // Ajout des callbacks manquants pour cohérence avec HomeNearbyReports
   final void Function(HomeReportModel)? onTakeCharge;
   final void Function(HomeReportModel)? onContact;
-  final void Function(HomeReportModel)? onViewDetails;
 
   const HomeRecentReports({
     super.key,
@@ -24,7 +21,6 @@ class HomeRecentReports extends StatelessWidget {
     this.onCardTap,
     this.onTakeCharge,
     this.onContact,
-    this.onViewDetails,
   });
 
   @override
@@ -92,12 +88,8 @@ class HomeRecentReports extends StatelessWidget {
               onTakeCharge: onTakeCharge != null
                   ? () => onTakeCharge!.call(report)
                   : null,
-              onContact: onContact != null
-                  ? () => onContact!.call(report)
-                  : null,
-              onViewDetails: onViewDetails != null
-                  ? () => onViewDetails!.call(report)
-                  : null,
+              onContact:
+                  onContact != null ? () => onContact!.call(report) : null,
             );
           },
         ),
