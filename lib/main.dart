@@ -20,6 +20,8 @@ Future<void> main() async {
     systemNavigationBarIconBrightness: Brightness.dark,
   ));
 
+  GoogleFonts.config.allowRuntimeFetching = false;
+
   // Initialise le store mock au démarrage
   await ReportStore.instance.init();
 
