@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'core/constants/app_colors.dart';
 import 'shared/store/report_store.dart';
+import 'shared/store/auth_store.dart';
 import 'features/home/pages/home_page.dart';
 
 Future<void> main() async {
@@ -22,8 +23,9 @@ Future<void> main() async {
 
   GoogleFonts.config.allowRuntimeFetching = false;
 
-  // Initialise le store mock au démarrage
+  // Initialise les stores au démarrage
   await ReportStore.instance.init();
+  await AuthStore.instance.init();
 
   runApp(const CliinApp());
 }

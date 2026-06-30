@@ -11,6 +11,8 @@ import '../../../shared/widgets/report_card.dart'
     show buildReportImage, reportTimeAgoLabel, copyReportCode;
 import '../../../shared/widgets/report_action_zone.dart';
 import 'intervenant_detail_page.dart';
+import '../../auth/auth_guard.dart';
+import '../widgets/take_charge_flow.dart';
 
 // ─────────────────────────────────────────────────────────────────
 // Mock commentaires pour la démo
@@ -78,6 +80,26 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
     );
   }
 
+  void _onTakeCharge() async {
+    if (await requireAuth(context)) {
+      if (!mounted) return;
+      showTakeChargeFlow(
+        context: context,
+        report: widget.data,
+        onSuccess: (updated) {
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => IntervenantDetailPage(report: updated),
+              ),
+            );
+          }
+        },
+      );
+    }
+  }
+
   void _onContact() {
     openWhatsApp(
       context: context,
@@ -132,7 +154,7 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
                               '${widget.data.id}-${_demoShowContact}'),
                           data: _effectiveData,
                           compact: false,
-                          onTakeCharge: null,
+                          onTakeCharge: _onTakeCharge,
                           onContact: _onContact,
                           onIntervenantTap: _onIntervenantTap,
                         ),
@@ -347,32 +369,44 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
       top: false,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: CliinAppColors.cardWhite,
-          border: const Border(
-              top: BorderSide(color: CliinAppColors.divider)),
+          border: Border(top: BorderSide(color: CliinAppColors.divider)),
         ),
         child: Row(children: [
           Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: CliinAppColors.background,
-                borderRadius: BorderRadius.circular(24),
+            child: GestureDetector(
+              onTap: () async {
+                if (await requireAuth(context)) {
+                  // Commentaire non encore implémenté — le guard est posé
+                }
+              },
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: CliinAppColors.background,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Text('Ajouter un commentaire…',
+                    style: CliinAppTextStyles.bodySmall.copyWith(
+                        color: CliinAppColors.textSecondary, fontSize: 13)),
               ),
-              child: Text('Ajouter un commentaire…',
-                  style: CliinAppTextStyles.bodySmall.copyWith(
-                      color: CliinAppColors.textSecondary, fontSize: 13)),
             ),
           ),
           const SizedBox(width: 10),
-          Container(
-            width: 40,
-            height: 40,
-            decoration: const BoxDecoration(
-                color: CliinAppColors.primary, shape: BoxShape.circle),
-            child: const Icon(Icons.send_rounded,
-                color: CliinAppColors.textWhite, size: 18),
+          GestureDetector(
+            onTap: () async {
+              await requireAuth(context);
+            },
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: const BoxDecoration(
+                  color: CliinAppColors.primary, shape: BoxShape.circle),
+              child: const Icon(Icons.send_rounded,
+                  color: CliinAppColors.textWhite, size: 18),
+            ),
           ),
         ]),
       ),

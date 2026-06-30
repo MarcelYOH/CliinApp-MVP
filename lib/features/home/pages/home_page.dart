@@ -23,6 +23,7 @@ import '../../reports/pages/intervenant_detail_page.dart';
 import '../../reports/widgets/take_charge_flow.dart';
 import '../../map/pages/map_page.dart';
 import '../../map/models/map_filter_model.dart';
+import '../../auth/auth_guard.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -51,9 +52,12 @@ class _HomePageState extends State<HomePage> {
     if (mounted) setState(() {});
   }
 
-  void _openCamera() {
-    Navigator.push(context,
-        MaterialPageRoute(builder: (_) => const ReportCameraPage()));
+  void _openCamera() async {
+    if (await requireAuth(context)) {
+      if (!mounted) return;
+      Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const ReportCameraPage()));
+    }
   }
 
   void _onNavTap(int index) {
@@ -111,21 +115,24 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _onTakeCharge(HomeReportModel report) {
-    showTakeChargeFlow(
-      context: context,
-      report: report,
-      onSuccess: (updated) {
-        if (mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => IntervenantDetailPage(report: updated),
-            ),
-          );
-        }
-      },
-    );
+  void _onTakeCharge(HomeReportModel report) async {
+    if (await requireAuth(context)) {
+      if (!mounted) return;
+      showTakeChargeFlow(
+        context: context,
+        report: report,
+        onSuccess: (updated) {
+          if (mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => IntervenantDetailPage(report: updated),
+              ),
+            );
+          }
+        },
+      );
+    }
   }
 
   // ── Contacter via WhatsApp — carte publique ───────────────────

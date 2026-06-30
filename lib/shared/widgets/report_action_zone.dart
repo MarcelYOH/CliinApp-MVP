@@ -10,6 +10,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../features/home/models/home_report_model.dart';
+import '../../features/auth/auth_guard.dart';
 
 const double _kBtnHeight = 48.0;
 const double _kSpacing = 8.0;
@@ -148,7 +149,11 @@ class _ReportActionZoneState extends State<ReportActionZone> {
     final active = _isFollowing;
     if (widget.compact) {
       return GestureDetector(
-        onTap: () => setState(() => _isFollowing = !_isFollowing),
+        onTap: () async {
+          if (await requireAuth(context)) {
+            setState(() => _isFollowing = !_isFollowing);
+          }
+        },
         child: Container(
           width: _kBtnHeight,
           height: _kBtnHeight,
@@ -177,7 +182,11 @@ class _ReportActionZoneState extends State<ReportActionZone> {
     }
     // Détail : bouton outlined avec texte
     return OutlinedButton.icon(
-      onPressed: () => setState(() => _isFollowing = !_isFollowing),
+      onPressed: () async {
+        if (await requireAuth(context)) {
+          setState(() => _isFollowing = !_isFollowing);
+        }
+      },
       icon: Icon(
         active
             ? Icons.notifications_active_rounded
@@ -314,7 +323,11 @@ class _ReportActionZoneState extends State<ReportActionZone> {
           // Bell — coin supérieur droit, indépendant du bouton Contacter
           const SizedBox(width: 4),
           GestureDetector(
-            onTap: () => setState(() => _isFollowing = !_isFollowing),
+            onTap: () async {
+              if (await requireAuth(context)) {
+                setState(() => _isFollowing = !_isFollowing);
+              }
+            },
             child: Container(
               width: 28,
               height: 28,
@@ -389,8 +402,11 @@ class _ReportActionZoneState extends State<ReportActionZone> {
           SizedBox(
             height: _kBtnHeight,
             child: ElevatedButton.icon(
-              onPressed: () =>
-                  setState(() => _showConfirmPrompt = true),
+              onPressed: () async {
+                if (await requireAuth(context)) {
+                  setState(() => _showConfirmPrompt = true);
+                }
+              },
               icon: const Icon(Icons.check_circle_outline_rounded,
                   color: CliinAppColors.textWhite, size: 20),
               label: Text('Confirmer la résolution',
@@ -443,8 +459,11 @@ class _ReportActionZoneState extends State<ReportActionZone> {
           const SizedBox(height: 6),
           Center(
             child: GestureDetector(
-              onTap: () =>
-                  setState(() => _showPersistPrompt = true),
+              onTap: () async {
+                if (await requireAuth(context)) {
+                  setState(() => _showPersistPrompt = true);
+                }
+              },
               child: Text(
                 'Le problème persiste encore ?',
                 style: GoogleFonts.poppins(
