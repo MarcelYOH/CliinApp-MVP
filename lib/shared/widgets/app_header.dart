@@ -14,6 +14,7 @@ class AppHeader extends StatefulWidget {
   final ValueChanged<String>? onSearch;
   final String? greeting;
   final String? contextLine;
+  final Widget? avatarOverride;
 
   const AppHeader({
     super.key,
@@ -23,6 +24,7 @@ class AppHeader extends StatefulWidget {
     this.onSearch,
     this.greeting,
     this.contextLine,
+    this.avatarOverride,
   });
 
   @override
@@ -463,14 +465,16 @@ class _AppHeaderState extends State<AppHeader>
           ],
         ),
         child: ClipOval(
-          child: Image.asset(
-            widget.user.avatarUrl,
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => Container(
-              color: Colors.grey.shade300,
-              child: const Icon(Icons.person, color: Colors.white, size: 22),
-            ),
-          ),
+          child: widget.avatarOverride ??
+              Image.asset(
+                widget.user.avatarUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => Container(
+                  color: Colors.grey.shade300,
+                  child:
+                      const Icon(Icons.person, color: Colors.white, size: 22),
+                ),
+              ),
         ),
       ),
     );

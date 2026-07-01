@@ -25,6 +25,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   late final TextEditingController _zoneController;
   bool _isLoading = false;
   bool _isLocating = false;
+  bool _locationError = false;
   bool _usernameValid = true;
 
   @override
@@ -34,7 +35,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
         TextEditingController(text: _generateUsername());
     _zoneController = TextEditingController(text: '');
     _usernameValid = _usernameController.text.isNotEmpty;
-    _tryGetZone();
+    // GPS ne se lance PAS automatiquement — uniquement sur bouton
   }
 
   @override
@@ -55,13 +56,21 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   }
 
   Future<void> _tryGetZone() async {
-    setState(() => _isLocating = true);
+    if (_isLocating) return;
+    setState(() { _isLocating = true; _locationError = false; });
     try {
-      final pos = await UserLocationService.instance.getCurrentPosition();
-      if (pos == null || !mounted) return;
+      final pos = await UserLocationService.instance
+          .getCurrentPosition()
+          .timeout(const Duration(seconds: 5), onTimeout: () => null);
+      if (!mounted) return;
+      if (pos == null) { setState(() => _locationError = true); return; }
+
       final placemarks = await placemarkFromCoordinates(
-          pos.latitude, pos.longitude);
-      if (placemarks.isEmpty || !mounted) return;
+              pos.latitude, pos.longitude)
+          .timeout(const Duration(seconds: 5), onTimeout: () => []);
+      if (!mounted) return;
+      if (placemarks.isEmpty) { setState(() => _locationError = true); return; }
+
       final p = placemarks.first;
       final parts = <String>[];
       if (p.subLocality?.isNotEmpty == true) parts.add(p.subLocality!);
@@ -70,10 +79,12 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
         parts.add(p.administrativeArea!);
       }
       if (parts.isNotEmpty && mounted) {
-        setState(() => _zoneController.text = parts.join(', '));
+        setState(() { _zoneController.text = parts.join(', '); _locationError = false; });
+      } else if (mounted) {
+        setState(() => _locationError = true);
       }
     } catch (_) {
-      // géolocalisation indisponible — utilisateur peut saisir manuellement
+      if (mounted) setState(() => _locationError = true);
     } finally {
       if (mounted) setState(() => _isLocating = false);
     }
@@ -94,7 +105,8 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
         zone: _zoneController.text.trim(),
       );
       if (mounted) {
-        widget.onAuthenticated();
+        widget.onAuthenticated(); // signale didAuth = true au parent
+        Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } catch (_) {
       if (mounted) {
@@ -104,9 +116,8 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
             behavior: SnackBarBehavior.floating,
           ),
         );
+        setState(() => _isLoading = false);
       }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -330,44 +341,24 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                                       color: CliinAppColors.textSecondary),
                                 ),
                               ),
-                              _isLocating
-                                  ? Padding(
-                                      padding:
-                                          const EdgeInsets.only(bottom: 10),
-                                      child: Row(children: [
-                                        const SizedBox(
-                                          width: 14,
-                                          height: 14,
-                                          child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: CliinAppColors.primary),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text('Localisation en cours...',
-                                            style: GoogleFonts.inter(
-                                                fontSize: 13,
-                                                color: CliinAppColors
-                                                    .textSecondary)),
-                                      ]),
-                                    )
-                                  : TextField(
-                                      controller: _zoneController,
-                                      onChanged: (_) => setState(() {}),
-                                      style: GoogleFonts.inter(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600,
-                                          color: CliinAppColors.textDark),
-                                      decoration: InputDecoration(
-                                        border: InputBorder.none,
-                                        contentPadding:
-                                            const EdgeInsets.only(bottom: 10),
-                                        isDense: true,
-                                        hintText: 'Ex : Cocody, Abidjan',
-                                        hintStyle: GoogleFonts.inter(
-                                            fontSize: 13,
-                                            color: CliinAppColors.textSecondary),
-                                      ),
-                                    ),
+                              TextField(
+                                controller: _zoneController,
+                                onChanged: (_) => setState(() {}),
+                                style: GoogleFonts.inter(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: CliinAppColors.textDark),
+                                decoration: InputDecoration(
+                                  border: InputBorder.none,
+                                  contentPadding:
+                                      const EdgeInsets.only(bottom: 10),
+                                  isDense: true,
+                                  hintText: 'Ex : Cocody, Abidjan',
+                                  hintStyle: GoogleFonts.inter(
+                                      fontSize: 13,
+                                      color: CliinAppColors.textSecondary),
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -380,19 +371,29 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                     ),
                     const SizedBox(height: 10),
 
-                    // Utiliser ma position actuelle
+                    // Utiliser ma position actuelle — uniquement sur tap
                     Align(
                       alignment: Alignment.centerLeft,
                       child: GestureDetector(
-                        onTap: _tryGetZone,
+                        onTap: _isLocating ? null : _tryGetZone,
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.my_location_rounded,
-                                color: CliinAppColors.primary, size: 14),
-                            const SizedBox(width: 4),
+                            _isLocating
+                                ? const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: CliinAppColors.primary),
+                                  )
+                                : const Icon(Icons.my_location_rounded,
+                                    color: CliinAppColors.primary, size: 14),
+                            const SizedBox(width: 6),
                             Text(
-                              'Utiliser ma position actuelle',
+                              _isLocating
+                                  ? 'Localisation en cours...'
+                                  : 'Utiliser ma position actuelle',
                               style: GoogleFonts.poppins(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
@@ -404,6 +405,16 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                         ),
                       ),
                     ),
+                    if (_locationError)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          'Position non trouvée — saisissez votre zone manuellement.',
+                          style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: CliinAppColors.textSecondary),
+                        ),
+                      ),
                     const SizedBox(height: 28),
 
                     // Bouton Commencer à explorer

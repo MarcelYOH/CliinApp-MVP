@@ -1,13 +1,16 @@
 // lib/features/home/pages/home_page.dart
 
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../shared/widgets/app_header.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
-import '../../../shared/data/dummy_user.dart';
+import '../../../shared/models/user_model.dart';
+import '../../../shared/store/auth_store.dart';
 import '../../../shared/store/report_store.dart';
 import '../../../core/utils/whatsapp_launcher.dart';
+import '../../auth/pages/auth_gate_sheet.dart';
 import '../widgets/home_quick_report.dart';
 import '../widgets/home_alert_banner.dart';
 import '../widgets/home_nearby_reports.dart';
@@ -145,6 +148,26 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget _buildInitialsWidget(String username) {
+    final parts = username.trim().split(' ');
+    final initials = parts.length >= 2
+        ? '${parts[0][0]}${parts[1][0]}'.toUpperCase()
+        : (username.isEmpty ? '?' : username[0].toUpperCase());
+    return Container(
+      color: CliinAppColors.primaryLight,
+      child: Center(
+        child: Text(
+          initials,
+          style: const TextStyle(
+            color: CliinAppColors.primary,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final store = ReportStore.instance;
@@ -159,10 +182,6 @@ class _HomePageState extends State<HomePage> {
             .where((r) => r.status == ReportStatus.disponible)
             .take(1)
             .toList();
-
-    final firstName = DummyUser.currentUser.name.split(' ').first;
-    final contextLine =
-        '${HomeDummyData.position.value} · ${nearbyReports.length} cas à proximité';
 
     final sections = <Widget>[
       HomeQuickReport(data: HomeDummyData.quickReport, onTap: _openCamera),
@@ -205,13 +224,60 @@ class _HomePageState extends State<HomePage> {
         bottom: false,
         child: Column(
           children: [
-            AppHeader(
-              user: DummyUser.currentUser,
-              greeting: 'Bonjour, $firstName',
-              contextLine: contextLine,
-              onSearch: (_) {},
-              onNotificationTap: () {},
-              onAvatarTap: () {},
+            ListenableBuilder(
+              listenable: AuthStore.instance,
+              builder: (ctx, _) {
+                final authUser = AuthStore.instance.currentUser;
+                final isAuthed = AuthStore.instance.isAuthenticated;
+
+                final greeting = isAuthed
+                    ? 'Bonjour, ${authUser!.username.split(' ').first}'
+                    : 'Bienvenue !';
+                final contextLine =
+                    '${HomeDummyData.position.value} · ${nearbyReports.length} cas à proximité';
+
+                Widget avatarContent;
+                if (!isAuthed) {
+                  avatarContent = Container(
+                    color: Colors.grey.shade200,
+                    child: Icon(Icons.person_rounded,
+                        color: Colors.grey.shade500, size: 22),
+                  );
+                } else if (authUser!.avatarPath != null &&
+                    authUser.avatarPath!.isNotEmpty) {
+                  avatarContent = Image.file(
+                    File(authUser.avatarPath!),
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) =>
+                        _buildInitialsWidget(authUser.username),
+                  );
+                } else {
+                  avatarContent = _buildInitialsWidget(authUser.username);
+                }
+
+                return AppHeader(
+                  user: const UserModel(
+                      id: 'guest',
+                      name: '',
+                      avatarUrl: '',
+                      notificationCount: 0),
+                  greeting: greeting,
+                  contextLine: contextLine,
+                  avatarOverride: avatarContent,
+                  onSearch: (_) {},
+                  onNotificationTap: () {},
+                  onAvatarTap: isAuthed
+                      ? () => ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content:
+                                  Text('Module Profil bientôt disponible'),
+                              behavior: SnackBarBehavior.floating,
+                              duration: Duration(seconds: 2),
+                            ),
+                          )
+                      : () => showAuthGateSheet(context),
+                );
+              },
             ),
             Expanded(
               child: ListView.separated(

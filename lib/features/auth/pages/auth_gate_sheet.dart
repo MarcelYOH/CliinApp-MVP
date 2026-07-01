@@ -18,7 +18,7 @@ Future<bool> showAuthGateSheet(BuildContext context) async {
     builder: (ctx) => AuthGateSheet(
       onAuthenticated: () {
         didAuth = true;
-        Navigator.pop(ctx);
+        // ProfileSetupPage ferme tout le flow via popUntil(route.isFirst)
       },
     ),
   );
