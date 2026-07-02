@@ -38,6 +38,10 @@ abstract class ReportRepository {
     required String reportId,
     required ReportStatus status,
   });
+
+  Future<HomeReportModel> updateReport(HomeReportModel report);
+
+  Future<void> deleteReport(String reportId);
 }
 
 class ProofVerificationResult {

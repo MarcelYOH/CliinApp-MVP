@@ -66,17 +66,23 @@ class ReportIntervenantAvatar extends StatelessWidget {
 class ReportActionZone extends StatefulWidget {
   final HomeReportModel data;
   final bool compact;
+  final bool isAuthor;
   final VoidCallback? onTakeCharge;
   final VoidCallback? onContact;
   final VoidCallback? onIntervenantTap;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const ReportActionZone({
     super.key,
     required this.data,
     this.compact = true,
+    this.isAuthor = false,
     this.onTakeCharge,
     this.onContact,
     this.onIntervenantTap,
+    this.onEdit,
+    this.onDelete,
   });
 
   @override
@@ -90,6 +96,7 @@ class _ReportActionZoneState extends State<ReportActionZone> {
   bool _showConfirmPrompt = false;
   bool _showPersistPrompt = false;
   bool _isContested = false;
+  bool _showDeleteConfirm = false;
 
   @override
   Widget build(BuildContext context) {
@@ -141,7 +148,116 @@ class _ReportActionZoneState extends State<ReportActionZone> {
           const SizedBox(height: _kSpacing),
           _infoBanner(),
         ],
+        if (!widget.compact && widget.isAuthor) ...[
+          const SizedBox(height: _kSpacing),
+          if (_showDeleteConfirm)
+            _deleteConfirmDialog()
+          else
+            Row(children: [
+              Expanded(
+                child: SizedBox(
+                  height: 44,
+                  child: OutlinedButton.icon(
+                    onPressed: widget.onEdit,
+                    icon: const Icon(Icons.edit_outlined,
+                        color: CliinAppColors.primary, size: 16),
+                    label: Text('Modifier',
+                        style: CliinAppTextStyles.button.copyWith(
+                            color: CliinAppColors.primary, fontSize: 13)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(
+                          color: CliinAppColors.primary, width: 1.5),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                              CliinAppConstants.radiusMedium)),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: _kSpacing),
+              Expanded(
+                child: SizedBox(
+                  height: 44,
+                  child: OutlinedButton.icon(
+                    onPressed: () =>
+                        setState(() => _showDeleteConfirm = true),
+                    icon: const Icon(Icons.delete_outline_rounded,
+                        color: CliinAppColors.alertRed, size: 16),
+                    label: Text('Supprimer',
+                        style: CliinAppTextStyles.button.copyWith(
+                            color: CliinAppColors.alertRed, fontSize: 13)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(
+                          color: CliinAppColors.alertRed, width: 1.5),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                              CliinAppConstants.radiusMedium)),
+                    ),
+                  ),
+                ),
+              ),
+            ]),
+        ],
       ],
+    );
+  }
+
+  Widget _deleteConfirmDialog() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: CliinAppColors.alertRedBg,
+        borderRadius:
+            BorderRadius.circular(CliinAppConstants.radiusMedium),
+        border: Border.all(color: CliinAppColors.alertRed),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Supprimer définitivement ce cas ?',
+              style: CliinAppTextStyles.bodySmall.copyWith(
+                  fontSize: 11.5, color: CliinAppColors.textDark),
+              textAlign: TextAlign.center),
+          const SizedBox(height: 8),
+          Row(children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () =>
+                    setState(() => _showDeleteConfirm = false),
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: CliinAppColors.cardWhite,
+                  side: const BorderSide(color: CliinAppColors.divider),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                          CliinAppConstants.radiusMedium)),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                ),
+                child: Text('Annuler',
+                    style: CliinAppTextStyles.badge
+                        .copyWith(color: CliinAppColors.textSecondary)),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: widget.onDelete,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: CliinAppColors.alertRed,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                          CliinAppConstants.radiusMedium)),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  elevation: 0,
+                ),
+                child: Text('Oui, supprimer',
+                    style: CliinAppTextStyles.badge.copyWith(
+                        color: CliinAppColors.textWhite,
+                        fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ]),
+        ],
+      ),
     );
   }
 

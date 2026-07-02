@@ -274,4 +274,17 @@ class MockReportRepository implements ReportRepository {
     _updateReport(updated);
     return updated;
   }
+
+  @override
+  Future<HomeReportModel> updateReport(HomeReportModel report) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    _updateReport(report);
+    return report;
+  }
+
+  @override
+  Future<void> deleteReport(String reportId) async {
+    await Future.delayed(const Duration(milliseconds: 150));
+    _reports.removeWhere((r) => r.id == reportId);
+  }
 }

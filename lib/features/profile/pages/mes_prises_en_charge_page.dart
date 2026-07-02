@@ -138,7 +138,21 @@ class _MesPrisesEnChargePageState extends State<MesPrisesEnChargePage> {
           id: 'current-user',
           name: 'Vous',
           takenAt: DateTime(2025, 4, 28, 9, 0),
+          outcome: InterventionOutcome.abandoned,
         ),
+        history: [
+          ReportHistoryEntry(
+              type: HistoryEventType.signalementCree,
+              dateTime: DateTime(2025, 4, 27, 8, 0)),
+          ReportHistoryEntry(
+              type: HistoryEventType.prisEnCharge,
+              dateTime: DateTime(2025, 4, 28, 9, 0),
+              actorName: 'Vous'),
+          ReportHistoryEntry(
+              type: HistoryEventType.abandonne,
+              dateTime: DateTime(2025, 5, 1, 9, 0),
+              isCurrentStep: true),
+        ],
         views: 42,
         comments: 6,
         shares: 11,
@@ -163,7 +177,21 @@ class _MesPrisesEnChargePageState extends State<MesPrisesEnChargePage> {
           id: 'current-user',
           name: 'Vous',
           takenAt: DateTime(2025, 4, 17, 11, 0),
+          outcome: InterventionOutcome.rejected,
         ),
+        history: [
+          ReportHistoryEntry(
+              type: HistoryEventType.signalementCree,
+              dateTime: DateTime(2025, 4, 16, 8, 0)),
+          ReportHistoryEntry(
+              type: HistoryEventType.prisEnCharge,
+              dateTime: DateTime(2025, 4, 17, 11, 0),
+              actorName: 'Vous'),
+          ReportHistoryEntry(
+              type: HistoryEventType.rejete,
+              dateTime: DateTime(2025, 4, 19, 15, 30),
+              isCurrentStep: true),
+        ],
         views: 29,
         comments: 4,
         shares: 9,
@@ -244,7 +272,8 @@ class _MesPrisesEnChargePageState extends State<MesPrisesEnChargePage> {
                       ),
                     )
                   : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      padding: EdgeInsets.fromLTRB(
+                          16, 0, 16, MediaQuery.of(context).padding.bottom + 80),
                       itemCount: _filtered.length,
                       separatorBuilder: (_, _) => const SizedBox(height: 12),
                       itemBuilder: (context, i) => _buildCard(context, _filtered[i]),

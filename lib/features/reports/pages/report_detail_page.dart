@@ -10,53 +10,21 @@ import '../../../features/home/models/home_report_model.dart';
 import '../../../shared/widgets/report_card.dart'
     show buildReportImage, reportTimeAgoLabel, copyReportCode;
 import '../../../shared/widgets/report_action_zone.dart';
+import '../../../shared/store/report_store.dart';
+import '../../../shared/widgets/report_stats_comments.dart';
 import 'intervenant_detail_page.dart';
+import 'report_form_page.dart';
 import 'package:cliinapp/features/auth/auth_guard.dart';
 import '../widgets/take_charge_flow.dart';
-
-// ─────────────────────────────────────────────────────────────────
-// Mock commentaires pour la démo
-// ─────────────────────────────────────────────────────────────────
-const List<_MockComment> _kMockComments = [
-  _MockComment(
-      initials: 'AK',
-      name: 'Awa K.',
-      time: 'il y a 2h',
-      text: 'C\'est vraiment urgent, ça pue jusqu\'à chez moi. '
-          'Merci à celui qui prendra ça en charge !'),
-  _MockComment(
-      initials: 'BT',
-      name: 'Bakary T.',
-      time: 'il y a 5h',
-      text: 'Même problème dans ma rue, j\'espère qu\'on aura '
-          'une vraie solution durable.'),
-  _MockComment(
-      initials: 'MY',
-      name: 'Marcel Y.',
-      time: 'il y a 1j',
-      text: 'J\'ai signalé ça plusieurs fois. '
-          'Content que quelqu\'un prenne enfin ça en main.'),
-];
-
-class _MockComment {
-  final String initials;
-  final String name;
-  final String time;
-  final String text;
-  const _MockComment(
-      {required this.initials,
-      required this.name,
-      required this.time,
-      required this.text});
-}
 
 // ─────────────────────────────────────────────────────────────────
 // Page principale
 // ─────────────────────────────────────────────────────────────────
 class ReportDetailPage extends StatefulWidget {
   final HomeReportModel data;
+  final bool isAuthor;
 
-  const ReportDetailPage({super.key, required this.data});
+  const ReportDetailPage({super.key, required this.data, this.isAuthor = false});
 
   @override
   State<ReportDetailPage> createState() => _ReportDetailPageState();
@@ -120,6 +88,19 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
     copyReportCode(context, widget.data.reference);
   }
 
+  void _onEdit() {
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+          builder: (_) => ReportFormPage(existingReport: widget.data)),
+    );
+  }
+
+  Future<void> _onDelete() async {
+    await ReportStore.instance.deleteReport(widget.data.id);
+    if (mounted) Navigator.pop(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -149,14 +130,21 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
                         const SizedBox(height: 16),
                         _buildDescriptionCard(),
                         const SizedBox(height: 16),
+                        _buildInformationsSection(),
+                        const SizedBox(height: 16),
+                        _buildLocationSection(),
+                        const SizedBox(height: 16),
                         ReportActionZone(
                           key: ValueKey(
                               '${widget.data.id}-$_demoShowContact'),
                           data: _effectiveData,
                           compact: false,
+                          isAuthor: widget.isAuthor,
                           onTakeCharge: _onTakeCharge,
                           onContact: _onContact,
                           onIntervenantTap: _onIntervenantTap,
+                          onEdit: _onEdit,
+                          onDelete: _onDelete,
                         ),
                         // Lien démo bascule contact (en cours uniquement)
                         if (widget.data.status == ReportStatus.enCours &&
@@ -182,19 +170,12 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
                           ),
                         ],
                         const SizedBox(height: 24),
-                        const Divider(
-                            height: 1,
-                            thickness: 1,
-                            color: CliinAppColors.divider),
+                        ReportStatsRow(
+                            views: widget.data.views,
+                            comments: widget.data.comments,
+                            shares: widget.data.shares),
                         const SizedBox(height: 16),
-                        _buildStatsRow(),
-                        const SizedBox(height: 16),
-                        const Divider(
-                            height: 1,
-                            thickness: 1,
-                            color: CliinAppColors.divider),
-                        const SizedBox(height: 16),
-                        _buildCommentsSection(),
+                        ReportCommentsSection(count: widget.data.comments),
                         const SizedBox(height: 100),
                       ],
                     ),
@@ -205,7 +186,7 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
           ),
         ]),
       ),
-      bottomNavigationBar: _buildCommentBar(context),
+      bottomNavigationBar: const ReportCommentBar(),
     );
   }
 
@@ -219,26 +200,34 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
         GestureDetector(
           onTap: () => Navigator.pop(context),
           child: Container(
-            width: 36,
-            height: 36,
+            width: 38,
+            height: 38,
             decoration: const BoxDecoration(
-                color: CliinAppColors.primary, shape: BoxShape.circle),
+                color: CliinAppColors.primaryLight, shape: BoxShape.circle),
             child: const Icon(Icons.arrow_back_rounded,
-                color: CliinAppColors.textWhite, size: 20),
+                color: CliinAppColors.primary, size: 20),
           ),
         ),
-        const SizedBox(width: 12),
         Expanded(
-          child: Text('Détails du signalement',
-              style: CliinAppTextStyles.headingSmall
-                  .copyWith(fontSize: 16, fontWeight: FontWeight.w700),
+          child: Text('Détails du cas',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: CliinAppColors.textDark),
               maxLines: 1,
               overflow: TextOverflow.ellipsis),
         ),
         GestureDetector(
           onTap: _onShare,
-          child: const Icon(Icons.share_rounded,
-              color: CliinAppColors.textDark, size: 22),
+          child: Container(
+            width: 38,
+            height: 38,
+            decoration: const BoxDecoration(
+                color: CliinAppColors.primaryLight, shape: BoxShape.circle),
+            child: const Icon(Icons.ios_share_rounded,
+                color: CliinAppColors.primary, size: 18),
+          ),
         ),
       ]),
     );
@@ -248,21 +237,29 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
   Widget _buildTitleRow() {
     final status = widget.data.status;
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
           child: Text(widget.data.title,
-              style: CliinAppTextStyles.headingSmall.copyWith(
+              style: GoogleFonts.poppins(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
-                  color: const Color(0xFF1A1A1A))),
+                  color: CliinAppColors.textDark,
+                  height: 1.25)),
         ),
         const SizedBox(width: 8),
-        Text(status.label,
-            style: CliinAppTextStyles.badge.copyWith(
-                color: status.color,
-                fontSize: 12,
-                fontWeight: FontWeight.w700)),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+              color: status.bgColor,
+              borderRadius:
+                  BorderRadius.circular(CliinAppConstants.radiusSmall)),
+          child: Text(status.label,
+              style: CliinAppTextStyles.badge.copyWith(
+                  color: status.color,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700)),
+        ),
       ],
     );
   }
@@ -271,14 +268,14 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
   Widget _buildLocationRow() {
     return Row(children: [
       const Icon(Icons.location_on_rounded,
-          color: CliinAppColors.primary, size: 14),
+          color: CliinAppColors.primary, size: 13),
       const SizedBox(width: 4),
       Expanded(
         child: Text(widget.data.location,
             style: CliinAppTextStyles.bodySmall.copyWith(
                 color: CliinAppColors.primary,
                 fontWeight: FontWeight.w500,
-                fontSize: 13),
+                fontSize: 12.5),
             maxLines: 1,
             overflow: TextOverflow.ellipsis),
       ),
@@ -292,7 +289,7 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: CliinAppColors.cardWhite,
         borderRadius:
@@ -306,7 +303,7 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
               style: CliinAppTextStyles.bodySmall.copyWith(
                   color: CliinAppColors.textDark,
                   fontSize: 13,
-                  height: 1.5)),
+                  height: 1.6)),
           if (pubDate != null) ...[
             const SizedBox(height: 10),
             const Divider(height: 1, color: CliinAppColors.divider),
@@ -326,89 +323,134 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
     );
   }
 
-  // ── Stats ────────────────────────────────────────────────────
-  Widget _buildStatsRow() {
-    final d = widget.data;
-    return Row(children: [
-      _Stat(icon: Icons.remove_red_eye_outlined, value: d.views, label: 'Vues'),
-      const SizedBox(width: 24),
-      _Stat(
-          icon: Icons.chat_bubble_outline_rounded,
-          value: d.comments,
-          label: d.comments > 1 ? 'Commentaires' : 'Commentaire'),
-      const SizedBox(width: 24),
-      _Stat(
-          icon: Icons.reply_rounded,
-          value: d.shares,
-          label: 'Partages',
-          mirror: true),
-    ]);
-  }
-
-  // ── Commentaires ─────────────────────────────────────────────
-  Widget _buildCommentsSection() {
-    final count = widget.data.comments;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Commentaires ($count)',
-            style: CliinAppTextStyles.headingSmall
-                .copyWith(fontSize: 15, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 12),
-        for (final c in _kMockComments) ...[
-          _CommentItem(comment: c),
+  // ── Informations — grille 2 colonnes, 4 tuiles ────────────────
+  Widget _buildInformationsSection() {
+    final status = widget.data.status;
+    final signalePar = widget.isAuthor
+        ? 'Vous'
+        : (widget.data.signalePar ?? 'Citoyen');
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: CliinAppColors.cardWhite,
+        borderRadius:
+            BorderRadius.circular(CliinAppConstants.radiusMedium),
+        border: Border.all(color: CliinAppColors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Informations',
+              style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: CliinAppColors.textDark)),
           const SizedBox(height: 12),
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(
+                child: _InfoGridTile(
+                    icon: Icons.delete_outline_rounded,
+                    iconColor: CliinAppColors.primary,
+                    iconBg: CliinAppColors.primaryLight,
+                    label: 'Catégorie',
+                    value: widget.data.category.label)),
+            const SizedBox(width: 10),
+            Expanded(
+                child: _InfoGridTile(
+                    icon: Icons.person_outline_rounded,
+                    iconColor: CliinAppColors.primary,
+                    iconBg: CliinAppColors.primaryLight,
+                    label: 'Signalé par',
+                    value: signalePar)),
+          ]),
+          const SizedBox(height: 12),
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(
+                child: _InfoGridTile(
+                    icon: Icons.description_outlined,
+                    iconColor: CliinAppColors.primary,
+                    iconBg: CliinAppColors.primaryLight,
+                    label: 'Référence',
+                    value: widget.data.reference)),
+            const SizedBox(width: 10),
+            Expanded(
+                child: _InfoGridTile(
+                    icon: Icons.check_rounded,
+                    iconColor: status.color,
+                    iconBg: status.bgColor,
+                    label: 'Statut',
+                    value: status.label)),
+          ]),
         ],
-      ],
+      ),
     );
   }
 
-  // ── Barre de commentaire fixe ─────────────────────────────────
-  Widget _buildCommentBar(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: const BoxDecoration(
-          color: CliinAppColors.cardWhite,
-          border: Border(top: BorderSide(color: CliinAppColors.divider)),
-        ),
-        child: Row(children: [
-          Expanded(
-            child: GestureDetector(
-              onTap: () async {
-                if (await requireAuth(context)) {
-                  // Commentaire non encore implémenté — le guard est posé
-                }
-              },
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: CliinAppColors.background,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Text('Ajouter un commentaire…',
-                    style: CliinAppTextStyles.bodySmall.copyWith(
-                        color: CliinAppColors.textSecondary, fontSize: 13)),
+  // ── Localisation — miniature carte + adresse ──────────────────
+  Widget _buildLocationSection() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: CliinAppColors.cardWhite,
+        borderRadius:
+            BorderRadius.circular(CliinAppConstants.radiusMedium),
+        border: Border.all(color: CliinAppColors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Localisation',
+              style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: CliinAppColors.textDark)),
+          const SizedBox(height: 10),
+          Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+            Container(
+              width: 90,
+              height: 70,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE4E8EC),
+                borderRadius:
+                    BorderRadius.circular(CliinAppConstants.radiusSmall),
+              ),
+              child: const Icon(Icons.location_on_rounded,
+                  color: CliinAppColors.primary, size: 26),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(widget.data.location,
+                      style: GoogleFonts.inter(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: CliinAppColors.textDark),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 6),
+                  Row(children: [
+                    const Icon(Icons.navigation_rounded,
+                        color: CliinAppColors.primary, size: 13),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                          '${widget.data.distance} de votre position',
+                          style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: CliinAppColors.textSecondary),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                  ]),
+                ],
               ),
             ),
-          ),
-          const SizedBox(width: 10),
-          GestureDetector(
-            onTap: () async {
-              await requireAuth(context);
-            },
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: const BoxDecoration(
-                  color: CliinAppColors.primary, shape: BoxShape.circle),
-              child: const Icon(Icons.send_rounded,
-                  color: CliinAppColors.textWhite, size: 18),
-            ),
-          ),
-        ]),
+          ]),
+        ],
       ),
     );
   }
@@ -441,14 +483,14 @@ class _DetailPhotoSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final isTraite = data.status == ReportStatus.traite;
     return SizedBox(
-      height: 220,
+      height: isTraite ? 200 : 220,
       child: Stack(fit: StackFit.expand, children: [
         isTraite
             ? _BeforeAfterDetail(data: data, onOpenPhoto: _openPhoto)
             : buildReportImage(data.imageAsset,
                 fit: BoxFit.cover,
                 errorBuilder: (_, _, _) =>
-                    Container(color: CliinAppColors.background)),
+                    Container(color: const Color(0xFFCFD3D8))),
         // Badges
         if (!isTraite)
           Positioned(
@@ -704,95 +746,52 @@ class _DistanceBadgeDetail extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Stat widget
+// Tuile info — section Informations
 // ─────────────────────────────────────────────────────────────────
-class _Stat extends StatelessWidget {
+class _InfoGridTile extends StatelessWidget {
   final IconData icon;
-  final int value;
+  final Color iconColor;
+  final Color iconBg;
   final String label;
-  final bool mirror;
-  const _Stat(
-      {required this.icon,
-      required this.value,
-      required this.label,
-      this.mirror = false});
-
-  @override
-  Widget build(BuildContext context) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Transform(
-            alignment: Alignment.center,
-            transform: mirror
-                ? (Matrix4.identity()
-                  ..scaleByDouble(-1.0, 1.0, 1.0, 1.0))
-                : Matrix4.identity(),
-            child:
-                Icon(icon, size: 16, color: CliinAppColors.textSecondary),
-          ),
-          const SizedBox(width: 4),
-          Text('$value',
-              style: CliinAppTextStyles.bodySmall.copyWith(
-                  color: CliinAppColors.textDark,
-                  fontWeight: FontWeight.w600)),
-          const SizedBox(width: 4),
-          Text(label,
-              style: CliinAppTextStyles.bodySmall
-                  .copyWith(color: CliinAppColors.textSecondary)),
-        ],
-      );
-}
-
-// ─────────────────────────────────────────────────────────────────
-// Commentaire item
-// ─────────────────────────────────────────────────────────────────
-class _CommentItem extends StatelessWidget {
-  final _MockComment comment;
-  const _CommentItem({required this.comment});
+  final String value;
+  const _InfoGridTile({
+    required this.icon,
+    required this.iconColor,
+    required this.iconBg,
+    required this.label,
+    required this.value,
+  });
 
   @override
   Widget build(BuildContext context) => Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 36, height: 36,
-            decoration: const BoxDecoration(
-                color: CliinAppColors.primaryLight,
-                shape: BoxShape.circle),
-            child: Center(
-              child: Text(comment.initials,
-                  style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: CliinAppColors.primary)),
-            ),
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
+            child: Icon(icon, color: iconColor, size: 15),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(children: [
-                  Text(comment.name,
-                      style: CliinAppTextStyles.bodySmall.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: CliinAppColors.textDark,
-                          fontSize: 13)),
-                  const SizedBox(width: 6),
-                  Text(comment.time,
-                      style: CliinAppTextStyles.bodySmall.copyWith(
-                          color: CliinAppColors.textSecondary,
-                          fontSize: 11)),
-                ]),
-                const SizedBox(height: 3),
-                Text(comment.text,
-                    style: CliinAppTextStyles.bodySmall.copyWith(
-                        color: CliinAppColors.textDark,
+                Text(label,
+                    style: GoogleFonts.inter(
+                        fontSize: 10, color: CliinAppColors.textSecondary)),
+                const SizedBox(height: 2),
+                Text(value,
+                    style: GoogleFonts.inter(
                         fontSize: 12,
-                        height: 1.4)),
+                        fontWeight: FontWeight.w600,
+                        color: CliinAppColors.textDark),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
               ],
             ),
           ),
         ],
       );
 }
+

@@ -214,6 +214,39 @@ class ReportStore extends ChangeNotifier {
     }
   }
 
+  // ── Modification d'un signalement (auteur) ────────────────────
+  Future<HomeReportModel> updateReport(HomeReportModel report) async {
+    _setLoading(true);
+    try {
+      final updated = await _repository.updateReport(report);
+      _replaceReport(updated);
+      _error = null;
+      notifyListeners();
+      return updated;
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // ── Suppression d'un signalement (auteur) ──────────────────────
+  Future<void> deleteReport(String reportId) async {
+    _setLoading(true);
+    try {
+      await _repository.deleteReport(reportId);
+      _reports.removeWhere((r) => r.id == reportId);
+      _error = null;
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   // ── Helpers internes ──────────────────────────────────────────
   void _replaceReport(HomeReportModel updated) {
     final index = _reports.indexWhere((r) => r.id == updated.id);

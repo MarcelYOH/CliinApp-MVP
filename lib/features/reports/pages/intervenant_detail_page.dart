@@ -7,6 +7,8 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../shared/store/report_store.dart';
+import '../../../../shared/widgets/report_action_zone.dart';
+import '../../../../shared/widgets/report_stats_comments.dart';
 import '../../../../features/home/models/home_report_model.dart';
 import 'proof_camera_page.dart';
 
@@ -283,7 +285,7 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
                   CliinAppConstants.pagePadding,
                   CliinAppConstants.spacingM,
                   CliinAppConstants.pagePadding,
-                  80,
+                  0,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -293,10 +295,31 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
                     _buildReportSummary(),
                     const SizedBox(height: CliinAppConstants.spacingM),
                     _buildIntervenantWhatsAppBlock(),
-                    const SizedBox(height: CliinAppConstants.spacingM),
-                    _buildProofBlock(),
+                    if (_report.status == ReportStatus.traite) ...[
+                      const SizedBox(height: CliinAppConstants.spacingM),
+                      ReportActionZone(data: _report, compact: false),
+                    ] else if (_report.intervenant?.outcome ==
+                        InterventionOutcome.abandoned) ...[
+                      const SizedBox(height: CliinAppConstants.spacingM),
+                      _buildAbandonedCard(),
+                    ] else if (_report.intervenant?.outcome ==
+                        InterventionOutcome.rejected) ...[
+                      const SizedBox(height: CliinAppConstants.spacingM),
+                      _buildRejectedCard(),
+                    ] else ...[
+                      const SizedBox(height: CliinAppConstants.spacingM),
+                      _buildProofBlock(),
+                    ],
                     const SizedBox(height: CliinAppConstants.spacingM),
                     _buildInfoAndHistory(),
+                    const SizedBox(height: CliinAppConstants.spacingXL),
+                    ReportStatsRow(
+                        views: _report.views,
+                        comments: _report.comments,
+                        shares: _report.shares),
+                    const SizedBox(height: CliinAppConstants.spacingL),
+                    ReportCommentsSection(count: _report.comments),
+                    const SizedBox(height: CliinAppConstants.spacingXL),
                   ],
                 ),
               ),
@@ -304,6 +327,74 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
           ],
         ),
       ),
+      bottomNavigationBar: const ReportCommentBar(),
+    );
+  }
+
+  // ── Carte "Abandonné" — délai 72h expiré sans preuve ───────────
+  Widget _buildAbandonedCard() {
+    return Container(
+      padding: const EdgeInsets.all(CliinAppConstants.spacingM),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F0F0),
+        borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
+      ),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Icon(Icons.hourglass_bottom_rounded,
+            color: Color(0xFF6B7280), size: 22),
+        const SizedBox(width: CliinAppConstants.spacingM),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Délai de 72h expiré',
+                style: GoogleFonts.poppins(
+                    fontSize: 13, fontWeight: FontWeight.w700,
+                    color: CliinAppColors.textDark)),
+            const SizedBox(height: 3),
+            Text(
+                'Aucune preuve n\'a été soumise dans le délai. Ce cas est '
+                'redevenu Disponible — un autre intervenant peut désormais le '
+                'prendre en charge.',
+                style: GoogleFonts.inter(
+                    fontSize: 11, color: CliinAppColors.textSecondary,
+                    height: 1.4)),
+          ]),
+        ),
+      ]),
+    );
+  }
+
+  // ── Carte "Rejeté" — preuve refusée (GPS hors marge) ────────────
+  Widget _buildRejectedCard() {
+    return Container(
+      padding: const EdgeInsets.all(CliinAppConstants.spacingM),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3E5F5),
+        borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
+        border: Border.all(color: const Color(0xFF8E24AA)),
+      ),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Icon(Icons.error_outline_rounded,
+            color: Color(0xFF8E24AA), size: 22),
+        const SizedBox(width: CliinAppConstants.spacingM),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Preuve refusée',
+                style: GoogleFonts.poppins(
+                    fontSize: 13, fontWeight: FontWeight.w700,
+                    color: CliinAppColors.textDark)),
+            const SizedBox(height: 3),
+            Text(
+                'La position GPS de votre photo \'après\' ne correspondait '
+                'pas à celle du signalement (écart supérieur à la marge '
+                'tolérée). Ce cas est redevenu Disponible. Assurez-vous '
+                'd\'être bien sur place au moment de la photo la prochaine '
+                'fois.',
+                style: GoogleFonts.inter(
+                    fontSize: 11, color: CliinAppColors.textSecondary,
+                    height: 1.4)),
+          ]),
+        ),
+      ]),
     );
   }
 
@@ -853,7 +944,7 @@ class _HistoryTile extends StatelessWidget {
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Column(children: [
           Container(
-            width: 30, height: 30,
+            width: 28, height: 28,
             decoration: BoxDecoration(
                 color: entry.type.color, shape: BoxShape.circle),
             child: Icon(entry.type.icon, color: Colors.white, size: 14),

@@ -10,7 +10,8 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/utils/user_location_service.dart';
 import '../models/report_model.dart';
-import '../../../../shared/models/report_category.dart';
+import '../../../../shared/store/report_store.dart';
+import '../../../../features/home/models/home_report_model.dart';
 import '../data/report_dummy_data.dart';
 import '../widgets/report_stepper.dart';
 import '../widgets/report_image_view.dart';
@@ -22,24 +23,33 @@ String _generateReportCode() {
 }
 
 class ReportFormPage extends StatefulWidget {
-  final String imagePath;
-  final String address;
+  final String? imagePath;
+  final String? address;
+  final HomeReportModel? existingReport;
 
   const ReportFormPage({
     super.key,
-    required this.imagePath,
-    required this.address,
-  });
+    this.imagePath,
+    this.address,
+    this.existingReport,
+  }) : assert(
+          existingReport != null || (imagePath != null && address != null),
+          'ReportFormPage requires either existingReport or imagePath+address',
+        );
 
   @override
   State<ReportFormPage> createState() => _ReportFormPageState();
 }
 
 class _ReportFormPageState extends State<ReportFormPage> {
-  ReportCategory _selectedCategory = ReportCategory.depotsSauvages;
-  ReportOrigin _selectedOrigin = ReportOrigin.espacePublic;
+  bool get _isEditing => widget.existingReport != null;
+  String get _effectiveImagePath =>
+      widget.existingReport?.imageAsset ?? widget.imagePath!;
+
+  late ReportCategory _selectedCategory;
+  late ReportOrigin _selectedOrigin;
   ReportSeverity? _selectedSeverity;
-  final TextEditingController _descController = TextEditingController();
+  late TextEditingController _descController;
   late TextEditingController _addressController;
   bool _isEditingAddress = false;
   double? _latitude;
@@ -50,14 +60,22 @@ class _ReportFormPageState extends State<ReportFormPage> {
   @override
   void initState() {
     super.initState();
-    _addressController = TextEditingController(text: widget.address);
-    // Valeurs de repli en attendant la vraie position GPS ci-dessous.
-    _latitude = ReportDummyData.detectedLatitude;
-    _longitude = ReportDummyData.detectedLongitude;
-    // addPostFrameCallback : évite "setState() called during build" car _refreshLocation appelle setState avant son premier await.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _refreshLocation();
-    });
+    final existing = widget.existingReport;
+    _selectedCategory = existing?.category ?? ReportCategory.depotsSauvages;
+    _selectedOrigin = existing?.origin ?? ReportOrigin.espacePublic;
+    _selectedSeverity = existing?.severity;
+    _descController =
+        TextEditingController(text: existing?.description ?? '');
+    _addressController =
+        TextEditingController(text: existing?.location ?? widget.address!);
+    _latitude = existing?.latitude ?? ReportDummyData.detectedLatitude;
+    _longitude = existing?.longitude ?? ReportDummyData.detectedLongitude;
+    if (!_isEditing) {
+      // addPostFrameCallback : évite "setState() called during build" car _refreshLocation appelle setState avant son premier await.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _refreshLocation();
+      });
+    }
   }
 
   @override
@@ -88,7 +106,7 @@ class _ReportFormPageState extends State<ReportFormPage> {
         if (place.locality?.isNotEmpty == true) parts.add(place.locality!);
         setState(() {
           _addressController.text =
-              parts.isNotEmpty ? parts.join(', ') : widget.address;
+              parts.isNotEmpty ? parts.join(', ') : widget.address!;
           _latitude = position.latitude;
           _longitude = position.longitude;
           _isEditingAddress = false;
@@ -120,8 +138,14 @@ class _ReportFormPageState extends State<ReportFormPage> {
       );
       return;
     }
+
+    if (_isEditing) {
+      _saveEdit();
+      return;
+    }
+
     final report = ReportModel(
-      imagePath: widget.imagePath,
+      imagePath: widget.imagePath!,
       reportCode: _generateReportCode(),
       title: _selectedCategory.label,
       category: _selectedCategory,
@@ -135,6 +159,30 @@ class _ReportFormPageState extends State<ReportFormPage> {
     );
     Navigator.push(context,
         MaterialPageRoute(builder: (_) => ReportUploadPage(report: report)));
+  }
+
+  Future<void> _saveEdit() async {
+    final existing = widget.existingReport!;
+    final updated = existing.copyWith(
+      title: _selectedCategory.label,
+      category: _selectedCategory,
+      severity: _selectedSeverity,
+      origin: _selectedOrigin,
+      description: _descController.text.trim(),
+      location: _addressController.text.trim(),
+      latitude: _latitude,
+      longitude: _longitude,
+    );
+    await ReportStore.instance.updateReport(updated);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Modifications enregistrées', style: GoogleFonts.inter()),
+          backgroundColor: CliinAppColors.primary,
+        ),
+      );
+      Navigator.pop(context);
+    }
   }
 
   @override
@@ -207,7 +255,7 @@ class _ReportFormPageState extends State<ReportFormPage> {
           ),
           Expanded(
             child: Text(
-              'Nouveau signalement',
+              _isEditing ? 'Modifier le signalement' : 'Nouveau signalement',
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
                   fontSize: 16,
@@ -250,7 +298,7 @@ class _ReportFormPageState extends State<ReportFormPage> {
               borderRadius:
                   BorderRadius.circular(CliinAppConstants.radiusSmall),
               child: ReportImageView(
-                imagePath: widget.imagePath,
+                imagePath: _effectiveImagePath,
                 width: 90,
                 height: 90,
                 fit: BoxFit.cover,
@@ -708,10 +756,10 @@ class _ReportFormPageState extends State<ReportFormPage> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.send,
+            Icon(_isEditing ? Icons.check_rounded : Icons.send,
                 color: CliinAppColors.textWhite, size: 18),
             const SizedBox(width: CliinAppConstants.spacingM),
-            Text('Publier le cas',
+            Text(_isEditing ? 'Enregistrer les modifications' : 'Publier le cas',
                 style: GoogleFonts.poppins(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,

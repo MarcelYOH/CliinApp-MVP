@@ -1,5 +1,11 @@
 // lib/shared/models/intervenant_model.dart
 
+// Issue d'une intervention lorsque le cas est redevenu Disponible sans
+// avoir été traité. Sans lien avec ReportStatus (qui repasse à
+// `disponible`) — sert uniquement à l'affichage du tableau de bord
+// de l'intervenant concerné (IntervenantDetailPage).
+enum InterventionOutcome { none, abandoned, rejected }
+
 class IntervenantModel {
   final String id;
   final String name;
@@ -13,6 +19,7 @@ class IntervenantModel {
   final String? groupName;    // null si intervention individuelle
   final String? whatsAppNumber;
   final bool whatsAppVisible;
+  final InterventionOutcome outcome;
 
   const IntervenantModel({
     required this.id,
@@ -24,6 +31,7 @@ class IntervenantModel {
     this.groupName,
     this.whatsAppNumber,
     this.whatsAppVisible = false, // OFF par défaut
+    this.outcome = InterventionOutcome.none,
   });
 
   // Bouton "Contacter" public visible uniquement si :
@@ -41,6 +49,7 @@ class IntervenantModel {
     String? groupName,
     String? whatsAppNumber,
     bool? whatsAppVisible,
+    InterventionOutcome? outcome,
   }) {
     return IntervenantModel(
       id: id ?? this.id,
@@ -52,6 +61,7 @@ class IntervenantModel {
       groupName: groupName ?? this.groupName,
       whatsAppNumber: whatsAppNumber ?? this.whatsAppNumber,
       whatsAppVisible: whatsAppVisible ?? this.whatsAppVisible,
+      outcome: outcome ?? this.outcome,
     );
   }
 

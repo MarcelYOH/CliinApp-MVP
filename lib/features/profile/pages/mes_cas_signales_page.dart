@@ -110,7 +110,8 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
                       ),
                     )
                   : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      padding: EdgeInsets.fromLTRB(
+                          16, 0, 16, MediaQuery.of(context).padding.bottom + 80),
                       itemCount: _filtered.length,
                       separatorBuilder: (_, _) => const SizedBox(height: 12),
                       itemBuilder: (context, i) => _buildCard(context, _filtered[i]),
@@ -210,7 +211,8 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => ReportDetailPage(data: report)),
+        MaterialPageRoute(
+            builder: (_) => ReportDetailPage(data: report, isAuthor: true)),
       ),
       child: Container(
         decoration: BoxDecoration(
