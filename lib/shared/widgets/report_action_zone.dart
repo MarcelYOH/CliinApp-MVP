@@ -10,7 +10,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../features/home/models/home_report_model.dart';
-import '../../features/auth/auth_guard.dart';
+import 'package:cliinapp/features/auth/auth_guard.dart';
 
 const double _kBtnHeight = 48.0;
 const double _kSpacing = 8.0;

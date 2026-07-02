@@ -18,7 +18,7 @@ import '../widgets/interactive_map_widget.dart';
 import '../widgets/reports_bottom_sheet.dart';
 import '../widgets/map_filter_panel.dart';
 import '../widgets/map_active_filters_bar.dart';
-import '../../auth/auth_guard.dart';
+import 'package:cliinapp/features/auth/auth_guard.dart';
 
 class MapPage extends StatefulWidget {
   final Set<MapPriorityFilter> initialPriorityFilters;

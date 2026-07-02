@@ -27,6 +27,7 @@ import '../../reports/widgets/take_charge_flow.dart';
 import '../../map/pages/map_page.dart';
 import '../../map/models/map_filter_model.dart';
 import '../../auth/auth_guard.dart';
+import '../../profile/pages/profile_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -65,7 +66,16 @@ class _HomePageState extends State<HomePage> {
 
   void _onNavTap(int index) {
     if (index == 1) { _goToMap(); return; }
+    if (index == 4) { _goToProfile(); return; }
     setState(() => _currentNavIndex = index);
+  }
+
+  void _goToProfile() {
+    if (AuthStore.instance.isAuthenticated) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()));
+    } else {
+      showAuthGateSheet(context);
+    }
   }
 
   void _goToMap({
@@ -267,14 +277,8 @@ class _HomePageState extends State<HomePage> {
                   onSearch: (_) {},
                   onNotificationTap: () {},
                   onAvatarTap: isAuthed
-                      ? () => ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content:
-                                  Text('Module Profil bientôt disponible'),
-                              behavior: SnackBarBehavior.floating,
-                              duration: Duration(seconds: 2),
-                            ),
-                          )
+                      ? () => Navigator.push(context,
+                            MaterialPageRoute(builder: (_) => const ProfilePage()))
                       : () => showAuthGateSheet(context),
                 );
               },

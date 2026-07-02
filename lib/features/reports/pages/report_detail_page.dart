@@ -11,7 +11,7 @@ import '../../../shared/widgets/report_card.dart'
     show buildReportImage, reportTimeAgoLabel, copyReportCode;
 import '../../../shared/widgets/report_action_zone.dart';
 import 'intervenant_detail_page.dart';
-import '../../auth/auth_guard.dart';
+import 'package:cliinapp/features/auth/auth_guard.dart';
 import '../widgets/take_charge_flow.dart';
 
 // ─────────────────────────────────────────────────────────────────
@@ -151,7 +151,7 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
                         const SizedBox(height: 16),
                         ReportActionZone(
                           key: ValueKey(
-                              '${widget.data.id}-${_demoShowContact}'),
+                              '${widget.data.id}-$_demoShowContact'),
                           data: _effectiveData,
                           compact: false,
                           onTakeCharge: _onTakeCharge,
