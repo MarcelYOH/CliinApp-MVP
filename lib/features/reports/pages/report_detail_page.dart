@@ -31,23 +31,6 @@ class ReportDetailPage extends StatefulWidget {
 }
 
 class _ReportDetailPageState extends State<ReportDetailPage> {
-  // Toggle démo pour afficher/masquer le bouton Contacter (en cours)
-  bool _demoShowContact = false;
-
-  HomeReportModel get _effectiveData {
-    if (widget.data.status != ReportStatus.enCours ||
-        widget.data.intervenant == null) {
-      return widget.data;
-    }
-    return widget.data.copyWith(
-      intervenant: widget.data.intervenant!.copyWith(
-        whatsAppVisible: _demoShowContact,
-        whatsAppNumber:
-            _demoShowContact ? '+2250700000000' : null,
-      ),
-    );
-  }
-
   void _onTakeCharge() async {
     if (await requireAuth(context)) {
       if (!mounted) return;
@@ -71,7 +54,7 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
   void _onContact() {
     openWhatsApp(
       context: context,
-      intervenant: _effectiveData.intervenant,
+      intervenant: widget.data.intervenant,
     );
   }
 
@@ -135,9 +118,8 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
                         _buildLocationSection(),
                         const SizedBox(height: 16),
                         ReportActionZone(
-                          key: ValueKey(
-                              '${widget.data.id}-$_demoShowContact'),
-                          data: _effectiveData,
+                          key: ValueKey(widget.data.id),
+                          data: widget.data,
                           compact: false,
                           isAuthor: widget.isAuthor,
                           onTakeCharge: _onTakeCharge,
@@ -146,29 +128,6 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
                           onEdit: _onEdit,
                           onDelete: _onDelete,
                         ),
-                        // Lien démo bascule contact (en cours uniquement)
-                        if (widget.data.status == ReportStatus.enCours &&
-                            widget.data.intervenant != null) ...[
-                          const SizedBox(height: 8),
-                          Center(
-                            child: GestureDetector(
-                              onTap: () => setState(
-                                  () => _demoShowContact = !_demoShowContact),
-                              child: Text(
-                                _demoShowContact
-                                    ? '(démo) masquer le contact'
-                                    : '(démo) basculer : contact renseigné',
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  color: CliinAppColors.textSecondary,
-                                  decoration: TextDecoration.underline,
-                                  decorationColor:
-                                      CliinAppColors.textSecondary,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
                         const SizedBox(height: 24),
                         ReportStatsRow(
                             views: widget.data.views,

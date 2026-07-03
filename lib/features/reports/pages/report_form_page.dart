@@ -6,15 +6,16 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/utils/user_location_service.dart';
 import '../models/report_model.dart';
 import '../../../../shared/store/report_store.dart';
+import '../../../../shared/widgets/report_card.dart' show buildReportImage;
 import '../../../../features/home/models/home_report_model.dart';
 import '../data/report_dummy_data.dart';
 import '../widgets/report_stepper.dart';
-import '../widgets/report_image_view.dart';
 import 'report_upload_page.dart';
 
 String _generateReportCode() {
@@ -43,8 +44,9 @@ class ReportFormPage extends StatefulWidget {
 
 class _ReportFormPageState extends State<ReportFormPage> {
   bool get _isEditing => widget.existingReport != null;
+  String? _newImagePath;
   String get _effectiveImagePath =>
-      widget.existingReport?.imageAsset ?? widget.imagePath!;
+      _newImagePath ?? widget.existingReport?.imageAsset ?? widget.imagePath!;
 
   late ReportCategory _selectedCategory;
   late ReportOrigin _selectedOrigin;
@@ -127,6 +129,20 @@ class _ReportFormPageState extends State<ReportFormPage> {
     }
   }
 
+  // Remplacement photo en mode édition — caméra uniquement (règle
+  // anti-fraude : pas d'accès galerie pour éviter la substitution
+  // d'une photo qui ne correspond pas au terrain).
+  Future<void> _changePhoto() async {
+    final photo = await ImagePicker().pickImage(
+      source: ImageSource.camera,
+      preferredCameraDevice: CameraDevice.rear,
+      imageQuality: 90,
+    );
+    if (photo != null && mounted) {
+      setState(() => _newImagePath = photo.path);
+    }
+  }
+
   void _publish() {
     if (_selectedSeverity == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -172,6 +188,7 @@ class _ReportFormPageState extends State<ReportFormPage> {
       location: _addressController.text.trim(),
       latitude: _latitude,
       longitude: _longitude,
+      imageAsset: _newImagePath ?? existing.imageAsset,
     );
     await ReportStore.instance.updateReport(updated);
     if (mounted) {
@@ -297,16 +314,15 @@ class _ReportFormPageState extends State<ReportFormPage> {
             ClipRRect(
               borderRadius:
                   BorderRadius.circular(CliinAppConstants.radiusSmall),
-              child: ReportImageView(
-                imagePath: _effectiveImagePath,
+              child: SizedBox(
                 width: 90,
                 height: 90,
-                fit: BoxFit.cover,
+                child: buildReportImage(_effectiveImagePath, fit: BoxFit.cover),
               ),
             ),
             const SizedBox(height: 4),
             GestureDetector(
-              onTap: () => Navigator.pop(context),
+              onTap: _isEditing ? _changePhoto : () => Navigator.pop(context),
               child: Text('Changer',
                   style: GoogleFonts.poppins(
                       fontSize: 11,

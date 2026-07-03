@@ -5,6 +5,8 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../home/models/home_report_model.dart';
 import '../../reports/pages/intervenant_detail_page.dart';
+import '../../reports/pages/report_camera_page.dart';
+import '../../../shared/widgets/app_bottom_nav.dart';
 
 enum _TakeoverStatus { enCours, traite, abandonne, rejete }
 
@@ -280,6 +282,18 @@ class _MesPrisesEnChargePageState extends State<MesPrisesEnChargePage> {
                     ),
             ),
           ],
+        ),
+      ),
+      bottomNavigationBar: AppBottomNav(
+        currentIndex: 4,
+        onTap: (index) {
+          if (index != 4) {
+            Navigator.popUntil(context, (route) => route.isFirst);
+          }
+        },
+        onSignalerTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ReportCameraPage()),
         ),
       ),
     );

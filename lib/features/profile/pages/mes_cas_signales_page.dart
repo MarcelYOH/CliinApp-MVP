@@ -7,6 +7,7 @@ import '../../home/data/home_dummy_data.dart';
 import '../../home/models/home_report_model.dart';
 import '../../reports/pages/report_detail_page.dart';
 import '../../reports/pages/report_camera_page.dart';
+import '../../../shared/widgets/app_bottom_nav.dart';
 
 class MesCasSignalesPage extends StatefulWidget {
   const MesCasSignalesPage({super.key});
@@ -120,6 +121,18 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
           ],
         ),
       ),
+      bottomNavigationBar: AppBottomNav(
+        currentIndex: 4,
+        onTap: (index) {
+          if (index != 4) {
+            Navigator.popUntil(context, (route) => route.isFirst);
+          }
+        },
+        onSignalerTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ReportCameraPage()),
+        ),
+      ),
     );
   }
 
@@ -143,30 +156,6 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
           const SizedBox(width: 12),
           Expanded(
             child: Text('Mes cas signalés', style: CliinAppTextStyles.headingMedium),
-          ),
-          GestureDetector(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ReportCameraPage()),
-            ),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: CliinAppColors.primary,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.camera_alt_rounded, color: Colors.white, size: 15),
-                  SizedBox(width: 5),
-                  Text(
-                    'Signaler',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
-                  ),
-                ],
-              ),
-            ),
           ),
         ],
       ),

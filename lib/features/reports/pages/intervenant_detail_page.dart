@@ -53,6 +53,7 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
   }
 
   void _startCountdown() {
+    if (_report.status != ReportStatus.enCours) return;
     final takenAt = _report.intervenant?.takenAt;
     if (takenAt == null) return;
     final deadline = takenAt.add(const Duration(hours: 72));
@@ -293,8 +294,10 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
                     _buildStatusBar(),
                     const SizedBox(height: CliinAppConstants.spacingM),
                     _buildReportSummary(),
-                    const SizedBox(height: CliinAppConstants.spacingM),
-                    _buildIntervenantWhatsAppBlock(),
+                    if (_report.status == ReportStatus.enCours) ...[
+                      const SizedBox(height: CliinAppConstants.spacingM),
+                      _buildIntervenantWhatsAppBlock(),
+                    ],
                     if (_report.status == ReportStatus.traite) ...[
                       const SizedBox(height: CliinAppConstants.spacingM),
                       ReportActionZone(data: _report, compact: false),
@@ -417,7 +420,7 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
           ),
         ),
         Expanded(
-          child: Text('Mon intervention',
+          child: Text('Ma prise en charge',
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
                   fontSize: 17, fontWeight: FontWeight.bold,
@@ -434,8 +437,86 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
     );
   }
 
-  // ── Statut + compteur — 2 colonnes, pas d'overflow ────────────
+  // ── Statut réel (jamais hardcodé) ──────────────────────────────
+  ({String label, Color color, Color bg, IconData icon}) get _statusDisplay {
+    if (_report.status == ReportStatus.traite) {
+      return (
+        label: 'Traité',
+        color: CliinAppColors.alertRed,
+        bg: CliinAppColors.alertRedBg,
+        icon: Icons.check_circle_rounded,
+      );
+    }
+    final outcome = _report.intervenant?.outcome;
+    if (outcome == InterventionOutcome.abandoned) {
+      return (
+        label: 'Abandonné',
+        color: const Color(0xFF6B7280),
+        bg: const Color(0xFFF0F0F0),
+        icon: Icons.cancel_rounded,
+      );
+    }
+    if (outcome == InterventionOutcome.rejected) {
+      return (
+        label: 'Rejeté',
+        color: const Color(0xFF8E24AA),
+        bg: const Color(0xFFF3E5F5),
+        icon: Icons.error_rounded,
+      );
+    }
+    return (
+      label: 'En cours',
+      color: CliinAppColors.alertOrange,
+      bg: const Color(0xFFFFF3E0),
+      icon: Icons.access_time_rounded,
+    );
+  }
+
+  // ── Colonne de droite — dépend du statut réel ──────────────────
+  ({String label, String value, Color color, Color bg, IconData icon})
+      get _secondaryDisplay {
+    if (_report.status == ReportStatus.traite) {
+      final treatedAt = _report.intervenant?.treatedAt;
+      return (
+        label: 'Traité le',
+        value: treatedAt != null ? _formatDate(treatedAt) : '—',
+        color: CliinAppColors.alertRed,
+        bg: CliinAppColors.alertRedBg,
+        icon: Icons.event_available_rounded,
+      );
+    }
+    final outcome = _report.intervenant?.outcome;
+    if (outcome == InterventionOutcome.abandoned) {
+      return (
+        label: 'Délai',
+        value: 'Expiré',
+        color: const Color(0xFF6B7280),
+        bg: const Color(0xFFF0F0F0),
+        icon: Icons.hourglass_disabled_rounded,
+      );
+    }
+    if (outcome == InterventionOutcome.rejected) {
+      return (
+        label: 'Preuve',
+        value: 'Refusée',
+        color: const Color(0xFF8E24AA),
+        bg: const Color(0xFFF3E5F5),
+        icon: Icons.gpp_bad_rounded,
+      );
+    }
+    return (
+      label: 'Temps restant',
+      value: _countdownText,
+      color: CliinAppColors.primary,
+      bg: CliinAppColors.primaryLight,
+      icon: Icons.timer_outlined,
+    );
+  }
+
+  // ── Statut + info secondaire — 2 colonnes, pas d'overflow ─────
   Widget _buildStatusBar() {
+    final status = _statusDisplay;
+    final secondary = _secondaryDisplay;
     return Container(
       padding: const EdgeInsets.symmetric(
           horizontal: CliinAppConstants.spacingL,
@@ -451,20 +532,20 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
             Container(
               width: 36, height: 36,
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF3E0),
+                color: status.bg,
                 borderRadius: BorderRadius.circular(CliinAppConstants.radiusSmall),
               ),
-              child: const Icon(Icons.access_time_rounded,
-                  color: CliinAppColors.alertOrange, size: 18),
+              child: Icon(status.icon, color: status.color, size: 18),
             ),
             const SizedBox(width: CliinAppConstants.spacingS),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text('Statut', style: GoogleFonts.inter(
                     fontSize: 10, color: CliinAppColors.textSecondary)),
-                Text('En cours', style: GoogleFonts.poppins(
+                Text(status.label, style: GoogleFonts.poppins(
                     fontSize: 13, fontWeight: FontWeight.w700,
-                    color: CliinAppColors.alertOrange)),
+                    color: status.color),
+                    overflow: TextOverflow.ellipsis),
               ]),
             ),
           ]),
@@ -476,21 +557,20 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
             Container(
               width: 36, height: 36,
               decoration: BoxDecoration(
-                color: CliinAppColors.primaryLight,
+                color: secondary.bg,
                 borderRadius: BorderRadius.circular(CliinAppConstants.radiusSmall),
               ),
-              child: const Icon(Icons.timer_outlined,
-                  color: CliinAppColors.primary, size: 18),
+              child: Icon(secondary.icon, color: secondary.color, size: 18),
             ),
             const SizedBox(width: CliinAppConstants.spacingS),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Temps restant', style: GoogleFonts.inter(
+                Text(secondary.label, style: GoogleFonts.inter(
                     fontSize: 10, color: CliinAppColors.textSecondary)),
-                Text(_countdownText,
+                Text(secondary.value,
                     style: GoogleFonts.poppins(
                         fontSize: 13, fontWeight: FontWeight.w700,
-                        color: CliinAppColors.primary),
+                        color: secondary.color),
                     overflow: TextOverflow.ellipsis),
               ]),
             ),

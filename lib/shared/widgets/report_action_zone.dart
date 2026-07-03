@@ -139,8 +139,10 @@ class _ReportActionZoneState extends State<ReportActionZone> {
                   ),
                 ),
               ),
-              const SizedBox(width: _kSpacing),
-              _followButton(),
+              if (!widget.isAuthor) ...[
+                const SizedBox(width: _kSpacing),
+                _followButton(),
+              ],
             ],
           ),
         ),
