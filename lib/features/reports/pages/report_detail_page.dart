@@ -10,6 +10,7 @@ import '../../../features/home/models/home_report_model.dart';
 import '../../../shared/widgets/report_card.dart'
     show buildReportImage, reportTimeAgoLabel, copyReportCode;
 import '../../../shared/widgets/report_action_zone.dart';
+import '../../../shared/widgets/public_view_link_button.dart';
 import '../../../shared/store/report_store.dart';
 import '../../../shared/widgets/report_stats_comments.dart';
 import 'intervenant_detail_page.dart';
@@ -84,6 +85,14 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
     if (mounted) Navigator.pop(context);
   }
 
+  void _onViewPublic() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+          builder: (_) => ReportDetailPage(data: widget.data, isAuthor: false)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -128,6 +137,10 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
                           onEdit: _onEdit,
                           onDelete: _onDelete,
                         ),
+                        if (widget.isAuthor) ...[
+                          const SizedBox(height: 12),
+                          PublicViewLinkButton(onTap: _onViewPublic),
+                        ],
                         const SizedBox(height: 24),
                         ReportStatsRow(
                             views: widget.data.views,

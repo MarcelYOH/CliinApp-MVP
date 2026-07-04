@@ -241,7 +241,7 @@ class PublicProfilePage extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Ceci est ce que les autres utilisateurs voient lorsqu\'ils consultent votre profil (par exemple depuis un signalement publié à votre nom).',
+                    'Ceci est ce que les autres utilisateurs voient lorsqu\'ils consultent votre profil (par exemple depuis un cas signalé publié à votre nom).',
                     style: CliinAppTextStyles.bodySmall,
                     textAlign: TextAlign.center,
                   ),

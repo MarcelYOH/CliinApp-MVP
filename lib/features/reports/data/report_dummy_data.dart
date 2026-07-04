@@ -10,7 +10,7 @@ class ReportDummyData {
   static final ReportModel publishedReport = ReportModel(
     id: 'report_001',
     reportCode: '#CLN-6589',
-    title: 'Dépôt sauvage Cocody',
+    title: 'Dépôts sauvages',
     description:
         'Accumulation importante de déchets sur la voie publique, devant le mur de clôture. Présence de sacs plastiques et déchets ménagers non collectés depuis plusieurs jours.',
     imageUrl: null,
@@ -90,10 +90,8 @@ class ReportDummyData {
       'Plus votre signalement est précis, plus il peut être traité rapidement par les autorités compétentes.';
   static const String successTitle    = 'Merci !';
   static const String successSubtitle =
-      'Votre signalement a été publié avec succès.\nIl sera visible par toute la communauté.';
+      'Votre cas signalé a été publié avec succès.\nIl sera visible par toute la communauté.';
   static const String successMotivationTitle = 'Vos actions comptent !';
   static const String successMotivationText =
       'En signalant, vous contribuez à garder notre environnement propre et sain.';
-  static const String successNextActionTitle =
-      'Que souhaitez-vous faire maintenant ?';
 }

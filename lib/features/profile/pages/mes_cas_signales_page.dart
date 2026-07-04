@@ -46,7 +46,7 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
       report: const HomeReportModel(
         id: 'CLN-4201',
         reference: '#CLN-4201',
-        title: 'Bac/Poubelle saturée quartier Cocody Angré',
+        title: 'Bac/Poubelle saturée',
         location: 'Cocody, Angré 7e tranche',
         description: 'Bac débordant depuis 5 jours, déchets éparpillés sur la voie publique.',
         severity: ReportSeverity.eleve,

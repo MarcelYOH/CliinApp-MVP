@@ -7,6 +7,8 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../features/home/models/home_report_model.dart';
 import '../../../../shared/repositories/report_repository.dart';
+import 'intervenant_detail_page.dart';
+import 'report_detail_page.dart';
 
 class ProofResultPage extends StatelessWidget {
   final HomeReportModel report;
@@ -69,6 +71,26 @@ class _ValidatedViewState extends State<_ValidatedView>
     Navigator.of(context).popUntil((r) => r.isFirst);
   }
 
+  HomeReportModel get _updatedReport =>
+      widget.result.updatedReport ?? widget.report;
+
+  void _viewIntervention(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+          builder: (_) => IntervenantDetailPage(report: _updatedReport)),
+    );
+  }
+
+  void _viewPublic(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+          builder: (_) =>
+              ReportDetailPage(data: _updatedReport, isAuthor: false)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -108,7 +130,7 @@ class _ValidatedViewState extends State<_ValidatedView>
                 const SizedBox(height: CliinAppConstants.spacingS),
                 Text(
                   'Votre intervention a été enregistrée avec succès.\n'
-                  'Le signalement est maintenant marqué comme traité.',
+                  'Le cas signalé est maintenant marqué comme traité.',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
                       fontSize: 13, color: CliinAppColors.textSecondary),
@@ -136,7 +158,7 @@ class _ValidatedViewState extends State<_ValidatedView>
                     _ResultRow(
                       icon: Icons.my_location_rounded,
                       color: CliinAppColors.primary,
-                      label: 'Distance du signalement',
+                      label: 'Distance du cas signalé',
                       value:
                           '${widget.result.distanceMeters.toStringAsFixed(0)} m',
                     ),
@@ -187,24 +209,30 @@ class _ValidatedViewState extends State<_ValidatedView>
 
                 // Actions
                 _ActionButton(
-                  label: 'Retour à l\'accueil',
-                  icon: Icons.home_outlined,
+                  label: 'Voir ma prise en charge',
+                  icon: Icons.assignment_turned_in_outlined,
                   isPrimary: true,
-                  onTap: () => _goHome(context),
+                  onTap: () => _viewIntervention(context),
                 ),
                 const SizedBox(height: CliinAppConstants.spacingM),
                 _ActionButton(
-                  label: 'Voir le signalement mis à jour',
+                  label: 'Voir l\'affichage public',
                   icon: Icons.visibility_outlined,
                   isPrimary: false,
-                  onTap: () => _goHome(context),
+                  onTap: () => _viewPublic(context),
                 ),
-                const SizedBox(height: CliinAppConstants.spacingM),
-                _ActionButton(
-                  label: 'Voir mes interventions',
-                  icon: Icons.assignment_outlined,
-                  isPrimary: false,
-                  onTap: () => _goHome(context),
+                const SizedBox(height: CliinAppConstants.spacingL),
+                Center(
+                  child: GestureDetector(
+                    onTap: () => _goHome(context),
+                    child: Text('Retour à l\'accueil',
+                        style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: CliinAppColors.textSecondary,
+                            decoration: TextDecoration.underline,
+                            decorationColor: CliinAppColors.textSecondary)),
+                  ),
                 ),
 
                 const SizedBox(height: CliinAppConstants.spacingXL),
@@ -236,6 +264,20 @@ class _RejectedView extends StatelessWidget {
   final ProofVerificationResult result;
 
   const _RejectedView({required this.report, required this.result});
+
+  HomeReportModel get _updatedReport => result.updatedReport ?? report;
+
+  void _viewIntervention(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+          builder: (_) => IntervenantDetailPage(report: _updatedReport)),
+    );
+  }
+
+  void _goHome(BuildContext context) {
+    Navigator.of(context).popUntil((r) => r.isFirst);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -270,7 +312,7 @@ class _RejectedView extends StatelessWidget {
                       color: CliinAppColors.textDark)),
               const SizedBox(height: CliinAppConstants.spacingS),
               Text(
-                'Les coordonnées GPS ne correspondent pas\nà l\'emplacement du signalement.',
+                'Les coordonnées GPS ne correspondent pas\nà l\'emplacement du cas signalé.',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.inter(
                     fontSize: 13, color: CliinAppColors.textSecondary),
@@ -327,7 +369,7 @@ class _RejectedView extends StatelessWidget {
                     const SizedBox(width: CliinAppConstants.spacingM),
                     Expanded(
                       child: Text(
-                        'La photo doit être prise sur le lieu exact du signalement '
+                        'La photo doit être prise sur le lieu exact du cas signalé '
                         '(dans un rayon de 50 m). '
                         'Assurez-vous d\'être bien sur place avant de prendre la photo.',
                         style: GoogleFonts.inter(
@@ -344,18 +386,23 @@ class _RejectedView extends StatelessWidget {
 
               // Actions
               _ActionButton(
-                label: 'Reprendre une photo',
-                icon: Icons.camera_alt_outlined,
+                label: 'Voir ma prise en charge',
+                icon: Icons.assignment_turned_in_outlined,
                 isPrimary: true,
-                onTap: () => Navigator.pop(context),
+                onTap: () => _viewIntervention(context),
               ),
-              const SizedBox(height: CliinAppConstants.spacingM),
-              _ActionButton(
-                label: 'Retour au signalement',
-                icon: Icons.arrow_back_rounded,
-                isPrimary: false,
-                onTap: () =>
-                    Navigator.of(context).popUntil((r) => r.isFirst),
+              const SizedBox(height: CliinAppConstants.spacingL),
+              Center(
+                child: GestureDetector(
+                  onTap: () => _goHome(context),
+                  child: Text('Retour à l\'accueil',
+                      style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: CliinAppColors.textSecondary,
+                          decoration: TextDecoration.underline,
+                          decorationColor: CliinAppColors.textSecondary)),
+                ),
               ),
 
               const SizedBox(height: CliinAppConstants.spacingXL),

@@ -11,6 +11,7 @@ import '../../../../shared/models/report_category.dart';
 import '../data/report_dummy_data.dart';
 import '../widgets/report_stepper.dart';
 import 'report_camera_page.dart';
+import 'report_detail_page.dart';
 import '../../../../shared/store/report_store.dart';
 import '../../../../features/home/models/home_report_model.dart' as home;
 
@@ -29,6 +30,7 @@ class _ReportSuccessPageState extends State<ReportSuccessPage>
   late Animation<double> _scaleAnim;
   late Animation<double> _fadeAnim;
   bool _codeCopied = false;
+  home.HomeReportModel? _homeReport;
 
   @override
   void initState() {
@@ -63,7 +65,7 @@ class _ReportSuccessPageState extends State<ReportSuccessPage>
         // .addReport() détecte reference.isEmpty et génère un vrai code
         // unique au lieu d'écraser tous les signalements avec la même valeur.
         reference: r.reportCode ?? '',
-        title: r.title ?? r.category?.label ?? 'Signalement',
+        title: r.title ?? r.category?.label ?? 'Cas signalé',
         location: r.address ?? '',
         description: r.description ?? '',
         severity: r.severity ?? ReportSeverity.moyen,
@@ -88,6 +90,7 @@ class _ReportSuccessPageState extends State<ReportSuccessPage>
       );
 
       await ReportStore.instance.addReport(homeReport);
+      if (mounted) setState(() => _homeReport = homeReport);
     } catch (e) {
       debugPrint('Erreur ajout store : $e');
     }
@@ -115,6 +118,16 @@ class _ReportSuccessPageState extends State<ReportSuccessPage>
     Navigator.of(context).popUntil((route) => route.isFirst);
     Navigator.push(context,
         MaterialPageRoute(builder: (_) => const ReportCameraPage()));
+  }
+
+  void _viewReport(BuildContext context) {
+    final report = _homeReport;
+    if (report == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+          builder: (_) => ReportDetailPage(data: report, isAuthor: true)),
+    );
   }
 
   String _formatDate(DateTime? date) {
@@ -158,11 +171,11 @@ class _ReportSuccessPageState extends State<ReportSuccessPage>
                       const SizedBox(height: CliinAppConstants.spacingL),
                       _buildMotivationBanner(),
                       const SizedBox(height: CliinAppConstants.spacingXL),
-                      _buildNextActionsTitle(),
+                      _buildPrimaryViewButton(context),
                       const SizedBox(height: CliinAppConstants.spacingM),
-                      _buildNextActionsRow(context),
-                      const SizedBox(height: CliinAppConstants.spacingXL),
-                      _buildContinueButton(context),
+                      _buildSecondaryContinueButton(context),
+                      const SizedBox(height: CliinAppConstants.spacingL),
+                      _buildHomeLink(context),
                       const SizedBox(height: CliinAppConstants.spacingXL),
                     ],
                   ),
@@ -197,7 +210,7 @@ class _ReportSuccessPageState extends State<ReportSuccessPage>
             ),
           ),
           Expanded(
-            child: Text('Signalement publié !',
+            child: Text('Cas signalé publié !',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.poppins(
                     fontSize: 17,
@@ -278,7 +291,7 @@ class _ReportSuccessPageState extends State<ReportSuccessPage>
         border: Border.all(color: CliinAppColors.divider),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Code du signalement',
+        Text('Code du cas signalé',
             style: GoogleFonts.inter(
                 fontSize: 12, color: CliinAppColors.textSecondary)),
         const SizedBox(height: CliinAppConstants.spacingS),
@@ -375,84 +388,57 @@ class _ReportSuccessPageState extends State<ReportSuccessPage>
     );
   }
 
-  Widget _buildNextActionsTitle() {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Text(ReportDummyData.successNextActionTitle,
-          style: GoogleFonts.poppins(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: CliinAppColors.textDark)),
+  Widget _buildPrimaryViewButton(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _viewReport(context),
+      child: Container(
+        width: double.infinity,
+        height: 56,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: CliinAppColors.primary,
+          borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
+        ),
+        child: Text('Voir le cas signalé',
+            style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: CliinAppColors.textWhite)),
+      ),
     );
   }
 
-  Widget _buildNextActionsRow(BuildContext context) {
-    final actions = [
-      _ActionItem(icon: Icons.share_outlined, label: 'Partager\nle signalement'),
-      _ActionItem(icon: Icons.visibility_outlined, label: 'Voir mon\nsignalement'),
-      _ActionItem(
-          icon: Icons.home_outlined,
-          label: 'Retour à\nl\'accueil',
-          onTap: () => _goHome(context)),
-    ];
-    return Row(
-      children: actions.asMap().entries.map((entry) {
-        final i = entry.key;
-        final a = entry.value;
-        return Expanded(
-          child: GestureDetector(
-            onTap: a.onTap,
-            child: Container(
-              margin: EdgeInsets.only(
-                  right: i < actions.length - 1 ? CliinAppConstants.spacingS : 0),
-              padding: const EdgeInsets.symmetric(
-                  vertical: CliinAppConstants.spacingL),
-              decoration: BoxDecoration(
-                color: CliinAppColors.cardWhite,
-                borderRadius:
-                    BorderRadius.circular(CliinAppConstants.radiusMedium),
-                border: Border.all(color: CliinAppColors.divider),
-              ),
-              child: Column(children: [
-                Icon(a.icon, color: CliinAppColors.primary, size: 26),
-                const SizedBox(height: CliinAppConstants.spacingS),
-                Text(a.label,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                        fontSize: 11, color: CliinAppColors.textSecondary)),
-              ]),
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildContinueButton(BuildContext context) {
+  Widget _buildSecondaryContinueButton(BuildContext context) {
     return GestureDetector(
       onTap: () => _continueReporting(context),
       child: Container(
         width: double.infinity,
         height: 56,
+        alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: CliinAppColors.primary,
           borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
+          border: Border.all(color: CliinAppColors.primary, width: 1.5),
         ),
-        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text('Continuer à signaler',
-              style: GoogleFonts.poppins(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: CliinAppColors.textWhite)),
-          const SizedBox(width: CliinAppConstants.spacingM),
-          Container(
-            width: 28, height: 28,
-            decoration: const BoxDecoration(
-                color: CliinAppColors.textWhite, shape: BoxShape.circle),
-            child: const Icon(Icons.add,
-                color: CliinAppColors.primary, size: 18),
-          ),
-        ]),
+        child: Text('Continuer à signaler',
+            style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: CliinAppColors.primary)),
+      ),
+    );
+  }
+
+  Widget _buildHomeLink(BuildContext context) {
+    return Center(
+      child: GestureDetector(
+        onTap: () => _goHome(context),
+        child: Text('Retour à l\'accueil',
+            style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: CliinAppColors.textSecondary,
+                decoration: TextDecoration.underline,
+                decorationColor: CliinAppColors.textSecondary)),
       ),
     );
   }
@@ -523,11 +509,4 @@ class _SeverityInfoRow extends StatelessWidget {
         ]),
       ),
   ]);
-}
-
-class _ActionItem {
-  final IconData icon;
-  final String label;
-  final VoidCallback? onTap;
-  const _ActionItem({required this.icon, required this.label, this.onTap});
 }

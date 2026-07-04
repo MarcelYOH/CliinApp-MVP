@@ -14,7 +14,7 @@ enum HistoryEventType {
 extension HistoryEventTypeExtension on HistoryEventType {
   String get label {
     switch (this) {
-      case HistoryEventType.signalementCree:     return 'Signalement créé';
+      case HistoryEventType.signalementCree:     return 'Cas signalé créé';
       case HistoryEventType.prisEnCharge:        return 'Pris en charge';
       case HistoryEventType.enCoursDeTraitement: return 'En cours de traitement';
       case HistoryEventType.traite:              return 'Preuve validée — Traité';
@@ -25,7 +25,7 @@ extension HistoryEventTypeExtension on HistoryEventType {
 
   String get description {
     switch (this) {
-      case HistoryEventType.signalementCree:     return 'Signalement publié sur la plateforme';
+      case HistoryEventType.signalementCree:     return 'Cas signalé publié sur la plateforme';
       case HistoryEventType.prisEnCharge:        return 'Un intervenant a accepté le cas';
       case HistoryEventType.enCoursDeTraitement: return 'En attente de preuve de résolution';
       case HistoryEventType.traite:              return 'Preuve APRÈS validée et publiée';

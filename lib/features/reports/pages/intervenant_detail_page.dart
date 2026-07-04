@@ -9,8 +9,10 @@ import '../../../../core/constants/app_text_styles.dart';
 import '../../../../shared/store/report_store.dart';
 import '../../../../shared/widgets/report_action_zone.dart';
 import '../../../../shared/widgets/report_stats_comments.dart';
+import '../../../../shared/widgets/public_view_link_button.dart';
 import '../../../../features/home/models/home_report_model.dart';
 import 'proof_camera_page.dart';
+import 'report_detail_page.dart';
 
 class IntervenantDetailPage extends StatefulWidget {
   final HomeReportModel report;
@@ -254,6 +256,20 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
     );
   }
 
+  bool get _showPublicViewLink {
+    final outcome = _report.intervenant?.outcome;
+    return outcome != InterventionOutcome.abandoned &&
+        outcome != InterventionOutcome.rejected;
+  }
+
+  void _onViewPublic() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+          builder: (_) => ReportDetailPage(data: _report, isAuthor: false)),
+    );
+  }
+
   void _openProofCamera() {
     Navigator.push(
       context,
@@ -312,6 +328,10 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
                     ] else ...[
                       const SizedBox(height: CliinAppConstants.spacingM),
                       _buildProofBlock(),
+                    ],
+                    if (_showPublicViewLink) ...[
+                      const SizedBox(height: CliinAppConstants.spacingM),
+                      PublicViewLinkButton(onTap: _onViewPublic),
                     ],
                     const SizedBox(height: CliinAppConstants.spacingM),
                     _buildInfoAndHistory(),
@@ -388,7 +408,7 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
             const SizedBox(height: 3),
             Text(
                 'La position GPS de votre photo \'après\' ne correspondait '
-                'pas à celle du signalement (écart supérieur à la marge '
+                'pas à celle du cas signalé (écart supérieur à la marge '
                 'tolérée). Ce cas est redevenu Disponible. Assurez-vous '
                 'd\'être bien sur place au moment de la photo la prochaine '
                 'fois.',

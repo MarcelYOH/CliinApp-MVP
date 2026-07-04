@@ -175,6 +175,11 @@ class _TakeChargeSheetState extends State<_TakeChargeSheet> {
     }
   }
 
+  void _onGoHome() {
+    Navigator.pop(context);
+    Navigator.of(context).popUntil((route) => route.isFirst);
+  }
+
   void _showCountryPicker() {
     showModalBottomSheet(
       context: context,
@@ -293,6 +298,7 @@ class _TakeChargeSheetState extends State<_TakeChargeSheet> {
           key: const ValueKey(3),
           report: _updatedReport ?? widget.report,
           onClose: _onConfirmClose,
+          onGoHome: _onGoHome,
         ),
       );
     }
@@ -329,6 +335,7 @@ class _TakeChargeSheetState extends State<_TakeChargeSheet> {
             key: const ValueKey(3),
             report: _updatedReport ?? widget.report,
             onClose: _onConfirmClose,
+            onGoHome: _onGoHome,
           ),
     };
   }
@@ -374,7 +381,7 @@ class _Step1Sheet extends StatelessWidget {
               style: GoogleFonts.poppins(
                   fontSize: 18, fontWeight: FontWeight.bold,
                   color: CliinAppColors.textDark)),
-          Text('Qui intervient sur ce signalement ?',
+          Text('Qui intervient sur ce cas signalé ?',
               style: GoogleFonts.inter(
                   fontSize: 13, color: CliinAppColors.textSecondary)),
           const SizedBox(height: CliinAppConstants.spacingL),
@@ -556,7 +563,7 @@ class _Step2Sheet extends StatelessWidget {
                 const SizedBox(width: CliinAppConstants.spacingM),
                 Expanded(
                   child: Text(
-                    "J'accepte d'être contacté(e) via WhatsApp concernant ce signalement et son suivi.",
+                    "J'accepte d'être contacté(e) via WhatsApp concernant ce cas signalé et son suivi.",
                     style: GoogleFonts.inter(
                         fontSize: 12, color: CliinAppColors.textDark),
                   ),
@@ -659,7 +666,7 @@ class _Step2Sheet extends StatelessWidget {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  'Vos informations sont sécurisées et ne seront utilisées que dans le cadre du suivi de ce signalement.',
+                  'Vos informations sont sécurisées et ne seront utilisées que dans le cadre du suivi de ce cas signalé.',
                   style: GoogleFonts.inter(
                       fontSize: 11, color: CliinAppColors.textSecondary),
                 ),
@@ -745,11 +752,13 @@ class _Step2Sheet extends StatelessWidget {
 class _Step3Sheet extends StatelessWidget {
   final HomeReportModel report;
   final VoidCallback onClose;
+  final VoidCallback onGoHome;
 
   const _Step3Sheet({
     super.key,
     required this.report,
     required this.onClose,
+    required this.onGoHome,
   });
 
   @override
@@ -842,10 +851,23 @@ class _Step3Sheet extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 elevation: 0,
               ),
-              child: Text('Accéder à mon tableau de bord',
+              child: Text('Voir ma prise en charge',
                   style: GoogleFonts.poppins(
                       fontSize: 15, fontWeight: FontWeight.w600,
                       color: CliinAppColors.textWhite)),
+            ),
+          ),
+          const SizedBox(height: CliinAppConstants.spacingM),
+          Center(
+            child: GestureDetector(
+              onTap: onGoHome,
+              child: Text('Retour à l\'accueil',
+                  style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: CliinAppColors.textSecondary,
+                      decoration: TextDecoration.underline,
+                      decorationColor: CliinAppColors.textSecondary)),
             ),
           ),
           SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
