@@ -7,6 +7,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../features/home/models/home_report_model.dart';
+import '../../../features/profile/pages/public_profile_page.dart';
 import '../../../shared/widgets/report_card.dart'
     show buildReportImage, reportTimeAgoLabel, copyReportCode;
 import '../../../shared/widgets/report_action_zone.dart';
@@ -90,6 +91,23 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
       context,
       MaterialPageRoute(
           builder: (_) => ReportDetailPage(data: widget.data, isAuthor: false)),
+    );
+  }
+
+  bool get _canTapAuthor =>
+      !widget.data.isAnonyme && widget.data.signaleParId != null;
+
+  void _onAuthorTap() {
+    if (!_canTapAuthor) return;
+    if (widget.data.groupId != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Module Groupes bientôt disponible')),
+      );
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const PublicProfilePage()),
     );
   }
 
@@ -298,9 +316,7 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
   // ── Informations — grille 2 colonnes, 4 tuiles ────────────────
   Widget _buildInformationsSection() {
     final status = widget.data.status;
-    final signalePar = widget.isAuthor
-        ? 'Vous'
-        : (widget.data.signalePar ?? 'Citoyen');
+    final signalePar = widget.data.signalePar ?? 'Citoyen';
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -334,7 +350,8 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
                     iconColor: CliinAppColors.primary,
                     iconBg: CliinAppColors.primaryLight,
                     label: 'Signalé par',
-                    value: signalePar)),
+                    value: signalePar,
+                    onTap: _canTapAuthor ? _onAuthorTap : null)),
           ]),
           const SizedBox(height: 12),
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -726,44 +743,55 @@ class _InfoGridTile extends StatelessWidget {
   final Color iconBg;
   final String label;
   final String value;
+  final VoidCallback? onTap;
   const _InfoGridTile({
     required this.icon,
     required this.iconColor,
     required this.iconBg,
     required this.label,
     required this.value,
+    this.onTap,
   });
 
   @override
-  Widget build(BuildContext context) => Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
-            child: Icon(icon, color: iconColor, size: 15),
+  Widget build(BuildContext context) {
+    final tappable = onTap != null;
+    final row = Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
+          child: Icon(icon, color: iconColor, size: 15),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label,
+                  style: GoogleFonts.inter(
+                      fontSize: 10, color: CliinAppColors.textSecondary)),
+              const SizedBox(height: 2),
+              Text(value,
+                  style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: tappable
+                          ? CliinAppColors.primary
+                          : CliinAppColors.textDark,
+                      decoration:
+                          tappable ? TextDecoration.underline : null,
+                      decorationColor: CliinAppColors.primary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis),
+            ],
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label,
-                    style: GoogleFonts.inter(
-                        fontSize: 10, color: CliinAppColors.textSecondary)),
-                const SizedBox(height: 2),
-                Text(value,
-                    style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: CliinAppColors.textDark),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
-              ],
-            ),
-          ),
-        ],
-      );
+        ),
+      ],
+    );
+    return tappable ? GestureDetector(onTap: onTap, child: row) : row;
+  }
 }
 

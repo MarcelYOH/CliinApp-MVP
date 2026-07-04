@@ -6,6 +6,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../models/report_model.dart';
 import '../data/report_dummy_data.dart';
 import '../widgets/report_stepper.dart';
+import '../widgets/attribution_choice_sheet.dart';
 import 'report_success_page.dart';
 
 // ─────────────────────────────────────────────────────────────────
@@ -80,10 +81,21 @@ class _ReportUploadPageState extends State<ReportUploadPage>
 
     await Future.delayed(const Duration(milliseconds: 500));
     if (!mounted) return;
+
+    final attribution = await showAttributionChoiceSheet(context);
+    if (!mounted) return;
+
+    final attributedReport = publishedReport.copyWith(
+      signaleParNom: attribution.signaleParNom,
+      signaleParId: attribution.signaleParId,
+      groupId: attribution.groupId,
+      isAnonyme: attribution.isAnonyme,
+    );
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) => ReportSuccessPage(report: publishedReport),
+        builder: (_) => ReportSuccessPage(report: attributedReport),
       ),
     );
   }

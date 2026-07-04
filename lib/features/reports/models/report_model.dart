@@ -161,6 +161,10 @@ class ReportModel {
   final String? userId;
   final ReportWorkflowStatus status;
   final ReportOrigin origin;
+  final String? signaleParNom;
+  final String? signaleParId;
+  final String? groupId;
+  final bool isAnonyme;
 
   const ReportModel({
     this.id,
@@ -181,6 +185,10 @@ class ReportModel {
     this.userId,
     this.status = ReportWorkflowStatus.enAttente,
     this.origin = ReportOrigin.espacePublic,
+    this.signaleParNom,
+    this.signaleParId,
+    this.groupId,
+    this.isAnonyme = false,
   });
 
   ReportModel copyWith({
@@ -202,6 +210,10 @@ class ReportModel {
     String? userId,
     ReportWorkflowStatus? status,
     ReportOrigin? origin,
+    String? signaleParNom,
+    String? signaleParId,
+    String? groupId,
+    bool? isAnonyme,
   }) {
     return ReportModel(
       id: id ?? this.id,
@@ -222,6 +234,10 @@ class ReportModel {
       userId: userId ?? this.userId,
       status: status ?? this.status,
       origin: origin ?? this.origin,
+      signaleParNom: signaleParNom ?? this.signaleParNom,
+      signaleParId: signaleParId ?? this.signaleParId,
+      groupId: groupId ?? this.groupId,
+      isAnonyme: isAnonyme ?? this.isAnonyme,
     );
   }
 
@@ -243,6 +259,10 @@ class ReportModel {
     'userId': userId,
     'status': status.name,
     'origin': origin.name,
+    'signaleParNom': signaleParNom,
+    'signaleParId': signaleParId,
+    'groupId': groupId,
+    'isAnonyme': isAnonyme,
   };
 
   factory ReportModel.fromJson(Map<String, dynamic> json) => ReportModel(
@@ -274,5 +294,9 @@ class ReportModel {
         ? ReportOrigin.values.firstWhere((e) => e.name == json['origin'],
             orElse: () => ReportOrigin.espacePublic)
         : ReportOrigin.espacePublic,
+    signaleParNom: json['signaleParNom'],
+    signaleParId: json['signaleParId'],
+    groupId: json['groupId'],
+    isAnonyme: json['isAnonyme'] ?? false,
   );
 }

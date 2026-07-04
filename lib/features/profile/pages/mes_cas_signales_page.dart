@@ -3,8 +3,9 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
-import '../../home/data/home_dummy_data.dart';
 import '../../home/models/home_report_model.dart';
+import '../../../shared/store/report_store.dart';
+import '../../../shared/store/auth_store.dart';
 import '../../reports/pages/report_detail_page.dart';
 import '../../reports/pages/report_camera_page.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
@@ -16,12 +17,6 @@ class MesCasSignalesPage extends StatefulWidget {
   State<MesCasSignalesPage> createState() => _MesCasSignalesPageState();
 }
 
-class _ProfileCas {
-  final HomeReportModel report;
-  final String displayDate;
-  const _ProfileCas({required this.report, required this.displayDate});
-}
-
 class _FilterOption {
   final ReportStatus? status;
   final String label;
@@ -29,110 +24,105 @@ class _FilterOption {
 }
 
 class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
-  static final List<_ProfileCas> _allCas = [
-    _ProfileCas(
-      report: HomeDummyData.nearbyReports[0],
-      displayDate: '12 juin 2025 · 08h30',
-    ),
-    _ProfileCas(
-      report: HomeDummyData.nearbyReports[1],
-      displayDate: '10 juin 2025 · 14h15',
-    ),
-    _ProfileCas(
-      report: HomeDummyData.nearbyReports[2],
-      displayDate: '07 juin 2025 · 11h00',
-    ),
-    _ProfileCas(
-      report: const HomeReportModel(
-        id: 'CLN-4201',
-        reference: '#CLN-4201',
-        title: 'Bac/Poubelle saturée',
-        location: 'Cocody, Angré 7e tranche',
-        description: 'Bac débordant depuis 5 jours, déchets éparpillés sur la voie publique.',
-        severity: ReportSeverity.eleve,
-        category: ReportCategory.bacPoubelleSature,
-        distance: '0 m',
-        timeAgo: 'Il y a 5j',
-        imageAsset: 'assets/images/depot.jpg',
-        status: ReportStatus.disponible,
-        views: 31,
-        comments: 4,
-        shares: 8,
-      ),
-      displayDate: '26 mai 2025 · 09h45',
-    ),
-  ];
-
   ReportStatus? _selectedFilter;
 
-  List<_ProfileCas> get _filtered {
-    if (_selectedFilter == null) return _allCas;
-    return _allCas.where((c) => c.report.status == _selectedFilter).toList();
+  List<HomeReportModel> get _myCas {
+    final userId = AuthStore.instance.currentUser?.id;
+    if (userId == null) return const [];
+    return ReportStore.instance.reports
+        .where((r) => r.signaleParId == userId)
+        .toList();
   }
 
-  int _count(ReportStatus? status) {
-    if (status == null) return _allCas.length;
-    return _allCas.where((c) => c.report.status == status).length;
+  List<HomeReportModel> _filtered(List<HomeReportModel> myCas) {
+    if (_selectedFilter == null) return myCas;
+    return myCas.where((r) => r.status == _selectedFilter).toList();
   }
 
-  List<_FilterOption> get _filters => [
-        _FilterOption(null, 'Tous (${_count(null)})'),
-        _FilterOption(ReportStatus.disponible, 'Disponibles (${_count(ReportStatus.disponible)})'),
-        _FilterOption(ReportStatus.enCours, 'En cours (${_count(ReportStatus.enCours)})'),
-        _FilterOption(ReportStatus.traite, 'Traités (${_count(ReportStatus.traite)})'),
+  int _count(List<HomeReportModel> myCas, ReportStatus? status) {
+    if (status == null) return myCas.length;
+    return myCas.where((r) => r.status == status).length;
+  }
+
+  List<_FilterOption> _filters(List<HomeReportModel> myCas) => [
+        _FilterOption(null, 'Tous (${_count(myCas, null)})'),
+        _FilterOption(ReportStatus.disponible,
+            'Disponibles (${_count(myCas, ReportStatus.disponible)})'),
+        _FilterOption(ReportStatus.enCours,
+            'En cours (${_count(myCas, ReportStatus.enCours)})'),
+        _FilterOption(ReportStatus.traite,
+            'Traités (${_count(myCas, ReportStatus.traite)})'),
       ];
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return '—';
+    const mois = [
+      'janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin',
+      'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.',
+    ];
+    return '${date.day} ${mois[date.month - 1]} ${date.year} · '
+        '${date.hour.toString().padLeft(2, '0')}h${date.minute.toString().padLeft(2, '0')}';
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: CliinAppColors.background,
-      body: SafeArea(
-        top: true,
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(context),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Text(
-                'Retrouvez tous les cas d\'insalubrité que vous avez signalés.',
-                style: CliinAppTextStyles.bodyMedium,
-              ),
+    return ListenableBuilder(
+      listenable: ReportStore.instance,
+      builder: (context, _) {
+        final myCas = _myCas;
+        final filtered = _filtered(myCas);
+        return Scaffold(
+          backgroundColor: CliinAppColors.background,
+          body: SafeArea(
+            top: true,
+            bottom: false,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(context),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Text(
+                    'Retrouvez tous les cas d\'insalubrité que vous avez signalés.',
+                    style: CliinAppTextStyles.bodyMedium,
+                  ),
+                ),
+                _buildFilterRow(myCas),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: filtered.isEmpty
+                      ? Center(
+                          child: Text(
+                            'Aucun cas dans cette catégorie.',
+                            style: CliinAppTextStyles.bodyMedium,
+                          ),
+                        )
+                      : ListView.separated(
+                          padding: EdgeInsets.fromLTRB(16, 0, 16,
+                              MediaQuery.of(context).padding.bottom + 80),
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, _) => const SizedBox(height: 12),
+                          itemBuilder: (context, i) =>
+                              _buildCard(context, filtered[i]),
+                        ),
+                ),
+              ],
             ),
-            _buildFilterRow(),
-            const SizedBox(height: 12),
-            Expanded(
-              child: _filtered.isEmpty
-                  ? Center(
-                      child: Text(
-                        'Aucun cas dans cette catégorie.',
-                        style: CliinAppTextStyles.bodyMedium,
-                      ),
-                    )
-                  : ListView.separated(
-                      padding: EdgeInsets.fromLTRB(
-                          16, 0, 16, MediaQuery.of(context).padding.bottom + 80),
-                      itemCount: _filtered.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 12),
-                      itemBuilder: (context, i) => _buildCard(context, _filtered[i]),
-                    ),
+          ),
+          bottomNavigationBar: AppBottomNav(
+            currentIndex: 4,
+            onTap: (index) {
+              if (index != 4) {
+                Navigator.popUntil(context, (route) => route.isFirst);
+              }
+            },
+            onSignalerTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ReportCameraPage()),
             ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: AppBottomNav(
-        currentIndex: 4,
-        onTap: (index) {
-          if (index != 4) {
-            Navigator.popUntil(context, (route) => route.isFirst);
-          }
-        },
-        onSignalerTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ReportCameraPage()),
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -162,12 +152,12 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
     );
   }
 
-  Widget _buildFilterRow() {
+  Widget _buildFilterRow(List<HomeReportModel> myCas) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
-        children: _filters.map((f) {
+        children: _filters(myCas).map((f) {
           final isSelected = _selectedFilter == f.status;
           return GestureDetector(
             onTap: () => setState(() => _selectedFilter = f.status),
@@ -195,8 +185,7 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
     );
   }
 
-  Widget _buildCard(BuildContext context, _ProfileCas item) {
-    final report = item.report;
+  Widget _buildCard(BuildContext context, HomeReportModel report) {
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
@@ -293,7 +282,7 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
                           const SizedBox(width: 3),
                           Flexible(
                             child: Text(
-                              item.displayDate,
+                              _formatDate(report.createdAt),
                               style: CliinAppTextStyles.bodySmall.copyWith(fontSize: 10),
                               overflow: TextOverflow.ellipsis,
                             ),

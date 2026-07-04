@@ -46,6 +46,9 @@ class HomeReportModel {
   final int shares;
   final List<ReportHistoryEntry> history;
   final String? signalePar;
+  final String? signaleParId;
+  final String? groupId;
+  final bool isAnonyme;
   final String? gpsCoords;
   final ReportOrigin origin;
 
@@ -71,6 +74,9 @@ class HomeReportModel {
     required this.shares,
     this.history = const [],
     this.signalePar,
+    this.signaleParId,
+    this.groupId,
+    this.isAnonyme = false,
     this.gpsCoords,
     this.origin = ReportOrigin.espacePublic,
   });
@@ -97,6 +103,9 @@ class HomeReportModel {
     int? shares,
     List<ReportHistoryEntry>? history,
     String? signalePar,
+    String? signaleParId,
+    String? groupId,
+    bool? isAnonyme,
     String? gpsCoords,
     ReportOrigin? origin,
   }) {
@@ -122,6 +131,9 @@ class HomeReportModel {
       shares: shares ?? this.shares,
       history: history ?? this.history,
       signalePar: signalePar ?? this.signalePar,
+      signaleParId: signaleParId ?? this.signaleParId,
+      groupId: groupId ?? this.groupId,
+      isAnonyme: isAnonyme ?? this.isAnonyme,
       gpsCoords: gpsCoords ?? this.gpsCoords,
       origin: origin ?? this.origin,
     );

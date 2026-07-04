@@ -5,7 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../shared/store/report_store.dart';
-import '../../../../shared/data/dummy_user.dart';
+import '../../../../shared/store/auth_store.dart';
+import '../../../../shared/data/mock_groups.dart';
 import '../../../../features/home/models/home_report_model.dart';
 
 // ── Modèle indicatif téléphonique — extensible ───────────────────
@@ -77,11 +78,7 @@ class _TakeChargeSheetState extends State<_TakeChargeSheet> {
   _CountryCode _selectedCountry = _kCountryCodes.first;
 
   // À remplacer par ReportStore.instance.userGroups (ou équivalent) une fois le module Groupes implémenté.
-  static const List<String> _mockGroups = [
-    'Clean Riviera',
-    'Green City',
-    'Eco Jeunes',
-  ];
+  static const List<String> _mockGroups = kMockUserGroups;
 
   @override
   void dispose() {
@@ -128,12 +125,12 @@ class _TakeChargeSheetState extends State<_TakeChargeSheet> {
 
     // Traitement async en arrière-plan
     try {
-      final user = DummyUser.currentUser;
+      final user = AuthStore.instance.currentUser!;
       final fullNumber = _whatsAppConsent ? _fullPhoneNumber : null;
 
       final intervenant = IntervenantModel(
         id: user.id,
-        name: user.name,
+        name: user.username,
         logoAsset: null,
         whatsAppNumber: fullNumber?.isNotEmpty == true ? fullNumber : null,
         whatsAppVisible: _whatsAppConsent,

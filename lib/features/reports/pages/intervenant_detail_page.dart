@@ -262,6 +262,12 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
         outcome != InterventionOutcome.rejected;
   }
 
+  bool get _isTerminalOutcome {
+    final outcome = _report.intervenant?.outcome;
+    return outcome == InterventionOutcome.abandoned ||
+        outcome == InterventionOutcome.rejected;
+  }
+
   void _onViewPublic() {
     Navigator.push(
       context,
@@ -927,20 +933,27 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
               )),
             ]),
             const SizedBox(height: CliinAppConstants.spacingM),
-            Row(children: [
-              Expanded(child: _InfoTile(
+            if (_isTerminalOutcome)
+              _InfoTile(
                 icon: Icons.tag_rounded,
                 label: 'Référence',
                 value: _report.reference,
-              )),
-              const SizedBox(width: CliinAppConstants.spacingM),
-              Expanded(child: _InfoTile(
-                icon: Icons.verified_outlined,
-                label: 'GPS AVANT/APRÈS',
-                value: 'En attente',
-                valueColor: CliinAppColors.alertOrange,
-              )),
-            ]),
+              )
+            else
+              Row(children: [
+                Expanded(child: _InfoTile(
+                  icon: Icons.tag_rounded,
+                  label: 'Référence',
+                  value: _report.reference,
+                )),
+                const SizedBox(width: CliinAppConstants.spacingM),
+                Expanded(child: _InfoTile(
+                  icon: Icons.verified_outlined,
+                  label: 'GPS AVANT/APRÈS',
+                  value: 'En attente',
+                  valueColor: CliinAppColors.alertOrange,
+                )),
+              ]),
           ]),
         ),
 
@@ -1070,7 +1083,9 @@ class _HistoryTile extends StatelessWidget {
                           fontSize: 10, color: CliinAppColors.textSecondary)),
               ]),
             ),
-            if (entry.isCurrentStep)
+            if (entry.isCurrentStep &&
+                entry.type != HistoryEventType.abandonne &&
+                entry.type != HistoryEventType.rejete)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                 decoration: BoxDecoration(

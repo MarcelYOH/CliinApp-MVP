@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../home/models/home_report_model.dart';
+import '../../../shared/store/report_store.dart';
+import '../../../shared/store/auth_store.dart';
 import '../../reports/pages/intervenant_detail_page.dart';
 import '../../reports/pages/report_camera_page.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
@@ -39,18 +41,12 @@ extension _TakeoverStatusExt on _TakeoverStatus {
   }
 }
 
-class _PriseEnCharge {
-  final HomeReportModel report;
-  final _TakeoverStatus takeoverStatus;
-  final DateTime takenAt;
-  final DateTime? deadline;
-
-  const _PriseEnCharge({
-    required this.report,
-    required this.takeoverStatus,
-    required this.takenAt,
-    this.deadline,
-  });
+_TakeoverStatus _takeoverStatusOf(HomeReportModel r) {
+  if (r.status == ReportStatus.traite) return _TakeoverStatus.traite;
+  final outcome = r.intervenant?.outcome;
+  if (outcome == InterventionOutcome.abandoned) return _TakeoverStatus.abandonne;
+  if (outcome == InterventionOutcome.rejected) return _TakeoverStatus.rejete;
+  return _TakeoverStatus.enCours;
 }
 
 class _FilterOption {
@@ -67,163 +63,42 @@ class MesPrisesEnChargePage extends StatefulWidget {
 }
 
 class _MesPrisesEnChargePageState extends State<MesPrisesEnChargePage> {
-  static final DateTime _takenAt1 = DateTime.now().subtract(const Duration(hours: 36));
-
-  static final List<_PriseEnCharge> _allItems = [
-    _PriseEnCharge(
-      report: HomeReportModel(
-        id: 'CLN-2810',
-        reference: '#CLN-2810',
-        title: 'Caniveaux bouchés',
-        location: 'Cocody, Angré 8e tranche',
-        description: 'Eaux stagnantes, odeurs nauséabondes et risque sanitaire élevé.',
-        severity: ReportSeverity.eleve,
-        category: ReportCategory.caniveauxBouches,
-        distance: '400 m',
-        timeAgo: 'Il y a 1j',
-        imageAsset: 'assets/images/caniveau.jpg',
-        status: ReportStatus.enCours,
-        intervenant: IntervenantModel(
-          id: 'current-user',
-          name: 'Vous',
-          takenAgo: 'Il y a 36h',
-          takenAt: _takenAt1,
-        ),
-        views: 18,
-        comments: 3,
-        shares: 7,
-      ),
-      takeoverStatus: _TakeoverStatus.enCours,
-      takenAt: _takenAt1,
-      deadline: _takenAt1.add(const Duration(hours: 72)),
-    ),
-    _PriseEnCharge(
-      report: HomeReportModel(
-        id: 'CLN-3102',
-        reference: '#CLN-3102',
-        title: 'Eaux usées',
-        location: 'Abobo, PK18',
-        description: 'Risque sanitaire élevé pour les habitants du quartier.',
-        severity: ReportSeverity.eleve,
-        category: ReportCategory.eauxUsees,
-        distance: '650 m',
-        timeAgo: 'Il y a 2j',
-        imageAsset: 'assets/images/depot.jpg',
-        status: ReportStatus.traite,
-        intervenant: IntervenantModel(
-          id: 'current-user',
-          name: 'Vous',
-          takenAt: DateTime(2025, 5, 10, 10, 30),
-          treatedAt: DateTime(2025, 5, 12, 14, 45),
-        ),
-        views: 15,
-        comments: 2,
-        shares: 6,
-      ),
-      takeoverStatus: _TakeoverStatus.traite,
-      takenAt: DateTime(2025, 5, 10, 10, 30),
-    ),
-    _PriseEnCharge(
-      report: HomeReportModel(
-        id: 'CLN-1845',
-        reference: '#CLN-1845',
-        title: 'Dépôts sauvages',
-        location: 'Yopougon, Sicogi',
-        description: 'Accumulation importante d\'ordures ménagères non collectées.',
-        severity: ReportSeverity.critique,
-        category: ReportCategory.depotsSauvages,
-        distance: '800 m',
-        timeAgo: 'Il y a 7j',
-        imageAsset: 'assets/images/depot.jpg',
-        status: ReportStatus.disponible,
-        intervenant: IntervenantModel(
-          id: 'current-user',
-          name: 'Vous',
-          takenAt: DateTime(2025, 4, 28, 9, 0),
-          outcome: InterventionOutcome.abandoned,
-        ),
-        history: [
-          ReportHistoryEntry(
-              type: HistoryEventType.signalementCree,
-              dateTime: DateTime(2025, 4, 27, 8, 0)),
-          ReportHistoryEntry(
-              type: HistoryEventType.prisEnCharge,
-              dateTime: DateTime(2025, 4, 28, 9, 0),
-              actorName: 'Vous'),
-          ReportHistoryEntry(
-              type: HistoryEventType.abandonne,
-              dateTime: DateTime(2025, 5, 1, 9, 0),
-              isCurrentStep: true),
-        ],
-        views: 42,
-        comments: 6,
-        shares: 11,
-      ),
-      takeoverStatus: _TakeoverStatus.abandonne,
-      takenAt: DateTime(2025, 4, 28, 9, 0),
-    ),
-    _PriseEnCharge(
-      report: HomeReportModel(
-        id: 'CLN-2201',
-        reference: '#CLN-2201',
-        title: 'Zone insalubre',
-        location: 'Marcory, Zone 4',
-        description: 'Zone de décharge illicite avec accumulation de déchets divers.',
-        severity: ReportSeverity.eleve,
-        category: ReportCategory.zoneInsalubre,
-        distance: '1.2 km',
-        timeAgo: 'Il y a 14j',
-        imageAsset: 'assets/images/caniveau.jpg',
-        status: ReportStatus.disponible,
-        intervenant: IntervenantModel(
-          id: 'current-user',
-          name: 'Vous',
-          takenAt: DateTime(2025, 4, 17, 11, 0),
-          outcome: InterventionOutcome.rejected,
-        ),
-        history: [
-          ReportHistoryEntry(
-              type: HistoryEventType.signalementCree,
-              dateTime: DateTime(2025, 4, 16, 8, 0)),
-          ReportHistoryEntry(
-              type: HistoryEventType.prisEnCharge,
-              dateTime: DateTime(2025, 4, 17, 11, 0),
-              actorName: 'Vous'),
-          ReportHistoryEntry(
-              type: HistoryEventType.rejete,
-              dateTime: DateTime(2025, 4, 19, 15, 30),
-              isCurrentStep: true),
-        ],
-        views: 29,
-        comments: 4,
-        shares: 9,
-      ),
-      takeoverStatus: _TakeoverStatus.rejete,
-      takenAt: DateTime(2025, 4, 17, 11, 0),
-    ),
-  ];
-
   _TakeoverStatus? _selectedFilter;
 
-  List<_PriseEnCharge> get _filtered {
-    if (_selectedFilter == null) return _allItems;
-    return _allItems.where((i) => i.takeoverStatus == _selectedFilter).toList();
+  List<HomeReportModel> get _myTakeovers {
+    final userId = AuthStore.instance.currentUser?.id;
+    if (userId == null) return const [];
+    return ReportStore.instance.reports
+        .where((r) => r.intervenant?.id == userId)
+        .toList();
   }
 
-  int _count(_TakeoverStatus? status) {
-    if (status == null) return _allItems.length;
-    return _allItems.where((i) => i.takeoverStatus == status).length;
+  List<HomeReportModel> _filtered(List<HomeReportModel> myTakeovers) {
+    if (_selectedFilter == null) return myTakeovers;
+    return myTakeovers
+        .where((r) => _takeoverStatusOf(r) == _selectedFilter)
+        .toList();
   }
 
-  List<_FilterOption> get _filters => [
-        _FilterOption(null, 'Tous (${_count(null)})'),
-        _FilterOption(_TakeoverStatus.enCours, 'En cours (${_count(_TakeoverStatus.enCours)})'),
-        _FilterOption(_TakeoverStatus.traite, 'Traités (${_count(_TakeoverStatus.traite)})'),
-        _FilterOption(_TakeoverStatus.abandonne, 'Abandonnés (${_count(_TakeoverStatus.abandonne)})'),
-        _FilterOption(_TakeoverStatus.rejete, 'Rejetés (${_count(_TakeoverStatus.rejete)})'),
+  int _count(List<HomeReportModel> myTakeovers, _TakeoverStatus? status) {
+    if (status == null) return myTakeovers.length;
+    return myTakeovers.where((r) => _takeoverStatusOf(r) == status).length;
+  }
+
+  List<_FilterOption> _filters(List<HomeReportModel> myTakeovers) => [
+        _FilterOption(null, 'Tous (${_count(myTakeovers, null)})'),
+        _FilterOption(_TakeoverStatus.enCours,
+            'En cours (${_count(myTakeovers, _TakeoverStatus.enCours)})'),
+        _FilterOption(_TakeoverStatus.traite,
+            'Traités (${_count(myTakeovers, _TakeoverStatus.traite)})'),
+        _FilterOption(_TakeoverStatus.abandonne,
+            'Abandonnés (${_count(myTakeovers, _TakeoverStatus.abandonne)})'),
+        _FilterOption(_TakeoverStatus.rejete,
+            'Rejetés (${_count(myTakeovers, _TakeoverStatus.rejete)})'),
       ];
 
-  String _formatTakenAt(DateTime date) {
+  String _formatTakenAt(DateTime? date) {
+    if (date == null) return '—';
     const months = [
       'janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin',
       'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.',
@@ -247,55 +122,63 @@ class _MesPrisesEnChargePageState extends State<MesPrisesEnChargePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: CliinAppColors.background,
-      body: SafeArea(
-        top: true,
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(context),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Text(
-                'Suivez tous les cas que vous avez pris en charge.',
-                style: CliinAppTextStyles.bodyMedium,
-              ),
+    return ListenableBuilder(
+      listenable: ReportStore.instance,
+      builder: (context, _) {
+        final myTakeovers = _myTakeovers;
+        final filtered = _filtered(myTakeovers);
+        return Scaffold(
+          backgroundColor: CliinAppColors.background,
+          body: SafeArea(
+            top: true,
+            bottom: false,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(context),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Text(
+                    'Suivez tous les cas que vous avez pris en charge.',
+                    style: CliinAppTextStyles.bodyMedium,
+                  ),
+                ),
+                _buildFilterRow(myTakeovers),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: filtered.isEmpty
+                      ? Center(
+                          child: Text(
+                            'Aucune prise en charge dans cette catégorie.',
+                            style: CliinAppTextStyles.bodyMedium,
+                          ),
+                        )
+                      : ListView.separated(
+                          padding: EdgeInsets.fromLTRB(16, 0, 16,
+                              MediaQuery.of(context).padding.bottom + 80),
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, _) => const SizedBox(height: 12),
+                          itemBuilder: (context, i) =>
+                              _buildCard(context, filtered[i]),
+                        ),
+                ),
+              ],
             ),
-            _buildFilterRow(),
-            const SizedBox(height: 12),
-            Expanded(
-              child: _filtered.isEmpty
-                  ? Center(
-                      child: Text(
-                        'Aucune prise en charge dans cette catégorie.',
-                        style: CliinAppTextStyles.bodyMedium,
-                      ),
-                    )
-                  : ListView.separated(
-                      padding: EdgeInsets.fromLTRB(
-                          16, 0, 16, MediaQuery.of(context).padding.bottom + 80),
-                      itemCount: _filtered.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 12),
-                      itemBuilder: (context, i) => _buildCard(context, _filtered[i]),
-                    ),
+          ),
+          bottomNavigationBar: AppBottomNav(
+            currentIndex: 4,
+            onTap: (index) {
+              if (index != 4) {
+                Navigator.popUntil(context, (route) => route.isFirst);
+              }
+            },
+            onSignalerTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ReportCameraPage()),
             ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: AppBottomNav(
-        currentIndex: 4,
-        onTap: (index) {
-          if (index != 4) {
-            Navigator.popUntil(context, (route) => route.isFirst);
-          }
-        },
-        onSignalerTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ReportCameraPage()),
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -325,12 +208,12 @@ class _MesPrisesEnChargePageState extends State<MesPrisesEnChargePage> {
     );
   }
 
-  Widget _buildFilterRow() {
+  Widget _buildFilterRow(List<HomeReportModel> myTakeovers) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
-        children: _filters.map((f) {
+        children: _filters(myTakeovers).map((f) {
           final isSelected = _selectedFilter == f.status;
           return GestureDetector(
             onTap: () => setState(() => _selectedFilter = f.status),
@@ -358,10 +241,14 @@ class _MesPrisesEnChargePageState extends State<MesPrisesEnChargePage> {
     );
   }
 
-  Widget _buildCard(BuildContext context, _PriseEnCharge item) {
-    final report = item.report;
-    final deadlineText = _formatDeadline(item.deadline);
-    final deadlineUrgent = _isDeadlineUrgent(item.deadline);
+  Widget _buildCard(BuildContext context, HomeReportModel report) {
+    final takeoverStatus = _takeoverStatusOf(report);
+    final takenAt = report.intervenant?.takenAt;
+    final deadline = takeoverStatus == _TakeoverStatus.enCours && takenAt != null
+        ? takenAt.add(const Duration(hours: 72))
+        : null;
+    final deadlineText = _formatDeadline(deadline);
+    final deadlineUrgent = _isDeadlineUrgent(deadline);
 
     return GestureDetector(
       onTap: () => Navigator.push(
@@ -431,8 +318,8 @@ class _MesPrisesEnChargePageState extends State<MesPrisesEnChargePage> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              _buildStatusBadge(item.takeoverStatus),
-                              if (item.takeoverStatus == _TakeoverStatus.enCours &&
+                              _buildStatusBadge(takeoverStatus),
+                              if (takeoverStatus == _TakeoverStatus.enCours &&
                                   deadlineText != null) ...[
                                 const SizedBox(height: 4),
                                 Container(
@@ -487,7 +374,7 @@ class _MesPrisesEnChargePageState extends State<MesPrisesEnChargePage> {
                           const SizedBox(width: 3),
                           Flexible(
                             child: Text(
-                              _formatTakenAt(item.takenAt),
+                              _formatTakenAt(takenAt),
                               style: CliinAppTextStyles.bodySmall.copyWith(fontSize: 10),
                               overflow: TextOverflow.ellipsis,
                             ),

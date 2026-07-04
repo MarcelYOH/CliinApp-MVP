@@ -83,7 +83,10 @@ class _ReportSuccessPageState extends State<ReportSuccessPage>
         views: 0,
         comments: 0,
         shares: 0,
-        signalePar: 'Vous',
+        signalePar: r.signaleParNom ?? 'Vous',
+        signaleParId: r.signaleParId,
+        groupId: r.groupId,
+        isAnonyme: r.isAnonyme,
         gpsCoords: r.latitude != null
             ? '${r.latitude!.toStringAsFixed(4)}, ${r.longitude!.toStringAsFixed(4)}'
             : null,
