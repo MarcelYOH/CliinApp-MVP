@@ -19,11 +19,6 @@ class AuthStore extends ChangeNotifier {
   bool get isAuthenticated => _currentUser != null;
   bool get isLoading => _isLoading;
 
-  // Statistiques factices — à brancher sur Firebase au pilote
-  int get casPublies => 24;
-  int get prisEnCharge => 12;
-  int get casTraites => 8;
-
   // Exposé pour affichage debug du code OTP dans l'UI
   String? get lastDebugCode => _repository.lastDebugCode;
 

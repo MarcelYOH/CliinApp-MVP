@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
-import 'package:image_picker/image_picker.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/utils/user_location_service.dart';
@@ -16,6 +15,7 @@ import '../../../../shared/widgets/report_card.dart' show buildReportImage;
 import '../../../../features/home/models/home_report_model.dart';
 import '../data/report_dummy_data.dart';
 import '../widgets/report_stepper.dart';
+import 'report_camera_page.dart';
 import 'report_upload_page.dart';
 
 String _generateReportCode() {
@@ -129,17 +129,19 @@ class _ReportFormPageState extends State<ReportFormPage> {
     }
   }
 
-  // Remplacement photo en mode édition — caméra uniquement (règle
-  // anti-fraude : pas d'accès galerie pour éviter la substitution
-  // d'une photo qui ne correspond pas au terrain).
+  // Remplacement photo en mode édition — même interface caméra que la
+  // création du signalement (règle anti-fraude : pas d'accès galerie
+  // pour éviter la substitution d'une photo qui ne correspond pas au
+  // terrain).
   Future<void> _changePhoto() async {
-    final photo = await ImagePicker().pickImage(
-      source: ImageSource.camera,
-      preferredCameraDevice: CameraDevice.rear,
-      imageQuality: 90,
+    final newPath = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const ReportCameraPage(replaceMode: true),
+      ),
     );
-    if (photo != null && mounted) {
-      setState(() => _newImagePath = photo.path);
+    if (newPath != null && mounted) {
+      setState(() => _newImagePath = newPath);
     }
   }
 
@@ -738,6 +740,7 @@ class _ReportFormPageState extends State<ReportFormPage> {
             controller: _descController,
             maxLines: 3,
             maxLength: ReportDummyData.formDescriptionMaxLength,
+            textCapitalization: TextCapitalization.sentences,
             onChanged: (_) => setState(() {}),
             style: GoogleFonts.inter(
                 fontSize: 13, color: CliinAppColors.textDark),

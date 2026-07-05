@@ -1,6 +1,6 @@
 // lib/features/reports/pages/proof_camera_page.dart
 // Caméra preuve d'intervention (APRÈS)
-// Design identique à ReportCameraPage — sans galerie
+// Réutilise les mêmes composants visuels que ReportCameraPage — sans galerie
 
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -12,6 +12,12 @@ import 'package:geocoding/geocoding.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../features/home/models/home_report_model.dart';
+import '../widgets/report_camera_header.dart';
+import '../widgets/report_camera_tip_banner.dart';
+import '../widgets/report_camera_side_controls.dart';
+import '../widgets/report_camera_position_chip.dart';
+import '../widgets/report_camera_bottom_bar.dart';
+import '../widgets/report_camera_viewfinder_corners.dart';
 import 'proof_preview_page.dart';
 
 class ProofCameraPage extends StatefulWidget {
@@ -179,6 +185,7 @@ class _ProofCameraPageState extends State<ProofCameraPage>
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 10),
         ),
       );
 
@@ -262,6 +269,34 @@ class _ProofCameraPageState extends State<ProofCameraPage>
     await _initCamera();
   }
 
+  void _showHelpDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
+        ),
+        title: const Text('Aide — Photo preuve'),
+        content: const Text(
+          'Prenez une photo claire du lieu après intervention, pour prouver '
+          'que le problème a bien été traité.\n\n'
+          '• Cadrez le même endroit que la photo initiale\n'
+          '• Assurez-vous d\'un bon éclairage\n'
+          '• Évitez les photos floues',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Compris',
+              style: TextStyle(color: CliinAppColors.primary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -269,8 +304,12 @@ class _ProofCameraPageState extends State<ProofCameraPage>
       body: SafeArea(
         child: Column(
           children: [
-            // ── Header ──────────────────────────────────────────
-            _buildHeader(),
+            ReportCameraHeader(
+              onBackTap: () => Navigator.pop(context),
+              onHelpTap: _showHelpDialog,
+              title: 'Preuve d\'intervention',
+              subtitle: 'Photo APRÈS — ${widget.report.reference}',
+            ),
 
             // ── Preview + overlays ───────────────────────────────
             Expanded(
@@ -283,26 +322,42 @@ class _ProofCameraPageState extends State<ProofCameraPage>
                     top: CliinAppConstants.spacingM,
                     left: 0,
                     right: 0,
-                    child: _buildTipBanner(),
+                    child: const ReportCameraTipBanner(
+                      text:
+                          'Prenez une photo APRÈS intervention pour prouver le traitement.',
+                      highlightWord: 'photo APRÈS',
+                    ),
                   ),
 
                   // Coins viewfinder
-                  const Positioned.fill(child: _ViewfinderCorners()),
+                  const Positioned.fill(child: ReportCameraViewfinderCorners()),
 
                   // Contrôles latéraux (flash + flip) — sans galerie
-                  Positioned(
-                    right: CliinAppConstants.pagePadding,
-                    top: 0,
-                    bottom: 0,
-                    child: Center(child: _buildSideControls()),
-                  ),
+                  if (!_useWebFallback)
+                    Positioned(
+                      right: CliinAppConstants.pagePadding,
+                      top: 0,
+                      bottom: 0,
+                      child: Center(
+                        child: ReportCameraSideControls(
+                          flashMode: _flashMode,
+                          onFlashTap: _toggleFlash,
+                          onFlipTap: _flipCamera,
+                        ),
+                      ),
+                    ),
 
                   // Chip position GPS
                   Positioned(
                     bottom: CliinAppConstants.spacingL,
                     left: 0,
                     right: 0,
-                    child: Center(child: _buildPositionChip()),
+                    child: Center(
+                      child: ReportCameraPositionChip(
+                        address: _address,
+                        isLoading: _isLoadingLocation,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -313,176 +368,15 @@ class _ProofCameraPageState extends State<ProofCameraPage>
               color: Colors.black,
               padding: const EdgeInsets.symmetric(
                   vertical: CliinAppConstants.spacingXL),
-              child: _buildBottomBar(),
+              child: ReportCameraBottomBar(
+                onShutterTap:
+                    _useWebFallback ? _captureViaImagePicker : _takePhoto,
+                isCapturing: _isCapturing,
+              ),
             ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      color: Colors.black,
-      padding: const EdgeInsets.symmetric(
-          horizontal: CliinAppConstants.pagePadding,
-          vertical: CliinAppConstants.spacingM),
-      child: Row(children: [
-        GestureDetector(
-          onTap: () => Navigator.pop(context),
-          child: Container(
-            width: 40, height: 40,
-            decoration: BoxDecoration(
-              color: Colors.white12,
-              borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
-            ),
-            child: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
-          ),
-        ),
-        const SizedBox(width: CliinAppConstants.spacingM),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Preuve d\'intervention',
-                style: TextStyle(color: Colors.white,
-                    fontSize: 16, fontWeight: FontWeight.bold)),
-            Text('Photo APRÈS — ${widget.report.reference}',
-                style: const TextStyle(color: Colors.white54, fontSize: 11)),
-          ]),
-        ),
-      ]),
-    );
-  }
-
-  Widget _buildTipBanner() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-          horizontal: CliinAppConstants.pagePadding),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.65),
-          borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
-        ),
-        child: Row(children: [
-          Container(
-            width: 32, height: 32,
-            decoration: BoxDecoration(
-              color: CliinAppColors.primary,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(Icons.camera_alt_rounded,
-                color: Colors.white, size: 16),
-          ),
-          const SizedBox(width: 10),
-          const Expanded(
-            child: Text.rich(
-              TextSpan(
-                text: 'Prenez une ',
-                style: TextStyle(color: Colors.white, fontSize: 12),
-                children: [
-                  TextSpan(
-                    text: 'photo APRÈS',
-                    style: TextStyle(
-                        color: CliinAppColors.primary,
-                        fontWeight: FontWeight.bold),
-                  ),
-                  TextSpan(text: ' intervention pour prouver le traitement.'),
-                ],
-              ),
-            ),
-          ),
-        ]),
-      ),
-    );
-  }
-
-  Widget _buildSideControls() {
-    // En mode fallback (image_picker), flash et changement de caméra
-    // sont gérés par l'interface native du téléphone — on les masque ici.
-    if (_useWebFallback) return const SizedBox.shrink();
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Flash
-        _SideButton(
-          icon: _flashMode == FlashMode.off
-              ? Icons.flash_off_rounded
-              : Icons.flash_on_rounded,
-          label: 'Flash',
-          onTap: _toggleFlash,
-          active: _flashMode != FlashMode.off,
-        ),
-        const SizedBox(height: CliinAppConstants.spacingL),
-        // Changer caméra
-        _SideButton(
-          icon: Icons.flip_camera_ios_rounded,
-          label: 'Changer\ncaméra',
-          onTap: _flipCamera,
-        ),
-        // Pas de bouton galerie — galerie désactivée pour les preuves
-      ],
-    );
-  }
-
-  Widget _buildPositionChip() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.65),
-        borderRadius: BorderRadius.circular(CliinAppConstants.radiusLarge),
-      ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.location_on_rounded,
-            color: CliinAppColors.primary, size: 16),
-        const SizedBox(width: 6),
-        _isLoadingLocation
-            ? const SizedBox(
-                width: 12, height: 12,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2, color: CliinAppColors.primary))
-            : Text(_address,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600)),
-      ]),
-    );
-  }
-
-  Widget _buildBottomBar() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        // Placeholder gauche — symétrie visuelle
-        const SizedBox(width: 72),
-        const SizedBox(width: 48),
-
-        // Bouton capture
-        GestureDetector(
-          onTap: _isCapturing
-              ? null
-              : (_useWebFallback ? _captureViaImagePicker : _takePhoto),
-          child: Container(
-            width: 72, height: 72,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 3),
-              color: _isCapturing
-                  ? Colors.white.withValues(alpha: 0.3)
-                  : Colors.white.withValues(alpha: 0.15),
-            ),
-            child: _isCapturing
-                ? const CircularProgressIndicator(
-                    color: CliinAppColors.primary, strokeWidth: 3)
-                : const Icon(Icons.camera_alt_rounded,
-                    color: Colors.white, size: 32),
-          ),
-        ),
-
-        const SizedBox(width: 48),
-        const SizedBox(width: 72),
-      ],
     );
   }
 
@@ -534,117 +428,4 @@ class _ProofCameraPageState extends State<ProofCameraPage>
       ),
     );
   }
-}
-
-// ─────────────────────────────────────────
-// Bouton latéral réutilisable
-// ─────────────────────────────────────────
-class _SideButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool active;
-
-  const _SideButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.active = false,
-  });
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Container(
-        width: 48, height: 48,
-        decoration: BoxDecoration(
-          color: active
-              ? CliinAppColors.primary.withValues(alpha: 0.9)
-              : Colors.black.withValues(alpha: 0.55),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon, color: Colors.white, size: 22),
-      ),
-      const SizedBox(height: 4),
-      Text(label,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-              color: Colors.white, fontSize: 10, fontWeight: FontWeight.w500)),
-    ]),
-  );
-}
-
-// ─────────────────────────────────────────
-// Coins viewfinder — identique à ReportCameraPage
-// ─────────────────────────────────────────
-class _ViewfinderCorners extends StatelessWidget {
-  const _ViewfinderCorners();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(CliinAppConstants.spacingXL),
-      child: Stack(children: [
-        Positioned(top: 0, left: 0, child: _Corner(topLeft: true)),
-        Positioned(top: 0, right: 0, child: _Corner(topRight: true)),
-        Positioned(bottom: 0, left: 0, child: _Corner(bottomLeft: true)),
-        Positioned(bottom: 0, right: 0, child: _Corner(bottomRight: true)),
-      ]),
-    );
-  }
-}
-
-class _Corner extends StatelessWidget {
-  final bool topLeft, topRight, bottomLeft, bottomRight;
-  const _Corner({
-    this.topLeft = false, this.topRight = false,
-    this.bottomLeft = false, this.bottomRight = false,
-  });
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    width: 24, height: 24,
-    child: CustomPaint(painter: _CornerPainter(
-      topLeft: topLeft, topRight: topRight,
-      bottomLeft: bottomLeft, bottomRight: bottomRight,
-    )),
-  );
-}
-
-class _CornerPainter extends CustomPainter {
-  final bool topLeft, topRight, bottomLeft, bottomRight;
-  _CornerPainter({
-    required this.topLeft, required this.topRight,
-    required this.bottomLeft, required this.bottomRight,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.square;
-
-    if (topLeft) {
-      canvas.drawLine(Offset(0, size.height), Offset.zero, paint);
-      canvas.drawLine(Offset.zero, Offset(size.width, 0), paint);
-    }
-    if (topRight) {
-      canvas.drawLine(Offset(0, 0), Offset(size.width, 0), paint);
-      canvas.drawLine(Offset(size.width, 0), Offset(size.width, size.height), paint);
-    }
-    if (bottomLeft) {
-      canvas.drawLine(Offset.zero, Offset(0, size.height), paint);
-      canvas.drawLine(Offset(0, size.height), Offset(size.width, size.height), paint);
-    }
-    if (bottomRight) {
-      canvas.drawLine(Offset(size.width, 0), Offset(size.width, size.height), paint);
-      canvas.drawLine(Offset(size.width, size.height), Offset(0, size.height), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_CornerPainter old) => false;
 }

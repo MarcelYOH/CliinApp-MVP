@@ -14,11 +14,15 @@ import 'report_form_page.dart';
 class ReportPreviewPage extends StatefulWidget {
   final String imagePath;
   final String address;
+  // Mode remplacement de photo : "Continuer" renvoie le chemin de la
+  // photo à l'appelant au lieu d'enchaîner sur un nouveau signalement.
+  final bool replaceMode;
 
   const ReportPreviewPage({
     super.key,
     required this.imagePath,
     required this.address,
+    this.replaceMode = false,
   });
 
   @override
@@ -435,6 +439,10 @@ class _ReportPreviewPageState extends State<ReportPreviewPage> {
               Expanded(
                 child: GestureDetector(
                   onTap: () {
+                    if (widget.replaceMode) {
+                      Navigator.pop(context, widget.imagePath);
+                      return;
+                    }
                     Navigator.push(
                       context,
                       MaterialPageRoute(

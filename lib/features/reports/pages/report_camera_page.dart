@@ -13,13 +13,19 @@ import '../widgets/report_camera_tip_banner.dart';
 import '../widgets/report_camera_side_controls.dart';
 import '../widgets/report_camera_position_chip.dart';
 import '../widgets/report_camera_bottom_bar.dart';
+import '../widgets/report_camera_viewfinder_corners.dart';
 import 'report_preview_page.dart';
 
 // ─────────────────────────────────────────
 // Page — ReportCameraPage
 // ─────────────────────────────────────────
 class ReportCameraPage extends StatefulWidget {
-  const ReportCameraPage({super.key});
+  // Mode remplacement de photo (édition d'un cas existant) : au lieu
+  // d'enchaîner sur un nouveau signalement, la page renvoie le chemin
+  // de la photo prise à l'appelant via Navigator.pop.
+  final bool replaceMode;
+
+  const ReportCameraPage({super.key, this.replaceMode = false});
 
   @override
   State<ReportCameraPage> createState() => _ReportCameraPageState();
@@ -162,6 +168,7 @@ class _ReportCameraPageState extends State<ReportCameraPage>
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 10),
         ),
       );
 
@@ -240,14 +247,22 @@ class _ReportCameraPageState extends State<ReportCameraPage>
   }
 
   void _navigateToPreview(String imagePath) {
-    Navigator.push(
+    Navigator.push<String>(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            ReportPreviewPage(imagePath: imagePath, address: _address),
+        builder: (_) => ReportPreviewPage(
+          imagePath: imagePath,
+          address: _address,
+          replaceMode: widget.replaceMode,
+        ),
       ),
-    ).then((_) {
-      if (mounted) setState(() => _isCapturing = false);
+    ).then((result) {
+      if (!mounted) return;
+      if (widget.replaceMode && result != null) {
+        Navigator.pop(context, result);
+        return;
+      }
+      setState(() => _isCapturing = false);
     });
   }
 
@@ -276,7 +291,7 @@ class _ReportCameraPageState extends State<ReportCameraPage>
                       highlightWord: ReportDummyData.cameraHighlightWord,
                     ),
                   ),
-                  const Positioned.fill(child: _ViewfinderCorners()),
+                  const Positioned.fill(child: ReportCameraViewfinderCorners()),
                   // Contrôles latéraux masqués en mode fallback :
                   // flash et changement de caméra sont gérés par
                   // l'app caméra native du téléphone dans ce mode.
@@ -449,110 +464,3 @@ class _FallbackGalleryButton extends StatelessWidget {
       );
 }
 
-// ─────────────────────────────────────────
-// Coins viewfinder
-// ─────────────────────────────────────────
-class _ViewfinderCorners extends StatelessWidget {
-  const _ViewfinderCorners();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(CliinAppConstants.spacingXL),
-      child: Stack(
-        children: [
-          Positioned(top: 0, left: 0, child: _Corner(topLeft: true)),
-          Positioned(top: 0, right: 0, child: _Corner(topRight: true)),
-          Positioned(bottom: 0, left: 0, child: _Corner(bottomLeft: true)),
-          Positioned(bottom: 0, right: 0, child: _Corner(bottomRight: true)),
-        ],
-      ),
-    );
-  }
-}
-
-class _Corner extends StatelessWidget {
-  final bool topLeft;
-  final bool topRight;
-  final bool bottomLeft;
-  final bool bottomRight;
-
-  const _Corner({
-    this.topLeft = false,
-    this.topRight = false,
-    this.bottomLeft = false,
-    this.bottomRight = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 24,
-      height: 24,
-      child: CustomPaint(
-        painter: _CornerPainter(
-          topLeft: topLeft,
-          topRight: topRight,
-          bottomLeft: bottomLeft,
-          bottomRight: bottomRight,
-        ),
-      ),
-    );
-  }
-}
-
-class _CornerPainter extends CustomPainter {
-  final bool topLeft, topRight, bottomLeft, bottomRight;
-
-  _CornerPainter({
-    required this.topLeft,
-    required this.topRight,
-    required this.bottomLeft,
-    required this.bottomRight,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.square;
-
-    if (topLeft) {
-      canvas.drawLine(Offset(0, size.height), Offset.zero, paint);
-      canvas.drawLine(Offset.zero, Offset(size.width, 0), paint);
-    }
-    if (topRight) {
-      canvas.drawLine(Offset(0, 0), Offset(size.width, 0), paint);
-      canvas.drawLine(
-        Offset(size.width, 0),
-        Offset(size.width, size.height),
-        paint,
-      );
-    }
-    if (bottomLeft) {
-      canvas.drawLine(Offset.zero, Offset(0, size.height), paint);
-      canvas.drawLine(
-        Offset(0, size.height),
-        Offset(size.width, size.height),
-        paint,
-      );
-    }
-    if (bottomRight) {
-      canvas.drawLine(
-        Offset(size.width, 0),
-        Offset(size.width, size.height),
-        paint,
-      );
-      canvas.drawLine(
-        Offset(size.width, size.height),
-        Offset(0, size.height),
-        paint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_CornerPainter old) => false;
-}

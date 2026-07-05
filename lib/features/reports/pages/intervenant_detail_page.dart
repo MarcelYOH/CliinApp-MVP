@@ -950,8 +950,12 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
                 Expanded(child: _InfoTile(
                   icon: Icons.verified_outlined,
                   label: 'GPS AVANT/APRÈS',
-                  value: 'En attente',
-                  valueColor: CliinAppColors.alertOrange,
+                  value: _report.status == ReportStatus.traite
+                      ? 'Conforme'
+                      : 'En attente',
+                  valueColor: _report.status == ReportStatus.traite
+                      ? const Color(0xFF2DB84B)
+                      : CliinAppColors.alertOrange,
                 )),
               ]),
           ]),
@@ -1083,20 +1087,17 @@ class _HistoryTile extends StatelessWidget {
                           fontSize: 10, color: CliinAppColors.textSecondary)),
               ]),
             ),
-            if (entry.isCurrentStep &&
-                entry.type != HistoryEventType.abandonne &&
-                entry.type != HistoryEventType.rejete)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                decoration: BoxDecoration(
-                  color: CliinAppColors.alertOrange.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(CliinAppConstants.radiusSmall),
-                ),
-                child: Text('En cours',
-                    style: GoogleFonts.inter(
-                        fontSize: 9, color: CliinAppColors.alertOrange,
-                        fontWeight: FontWeight.w600)),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+              decoration: BoxDecoration(
+                color: entry.type.statusBadgeBgColor,
+                borderRadius: BorderRadius.circular(CliinAppConstants.radiusSmall),
               ),
+              child: Text(entry.type.statusBadgeLabel,
+                  style: GoogleFonts.inter(
+                      fontSize: 9, color: entry.type.statusBadgeColor,
+                      fontWeight: FontWeight.w600)),
+            ),
           ]),
         ),
       ]),

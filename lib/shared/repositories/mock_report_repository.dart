@@ -79,7 +79,6 @@ class MockReportRepository implements ReportRepository {
           type: HistoryEventType.signalementCree,
           dateTime: now,
           actorName: report.signalePar ?? 'Vous',
-          isCurrentStep: true,
         ),
       ],
     );
@@ -116,7 +115,6 @@ class MockReportRepository implements ReportRepository {
         type: HistoryEventType.prisEnCharge,
         dateTime: now,
         actorName: intervenant.name,
-        isCurrentStep: true,
       ));
 
     final updated = report.copyWith(
@@ -238,13 +236,11 @@ class MockReportRepository implements ReportRepository {
       ..add(ReportHistoryEntry(
         type: HistoryEventType.enCoursDeTraitement,
         dateTime: now,
-        isCurrentStep: false,
       ))
       ..add(ReportHistoryEntry(
         type: HistoryEventType.traite,
         dateTime: now,
         actorName: report.intervenant?.name,
-        isCurrentStep: true,
       ));
 
     final updated = report.copyWith(

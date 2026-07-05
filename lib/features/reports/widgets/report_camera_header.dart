@@ -10,11 +10,15 @@ import '../../../../core/constants/app_constants.dart';
 class ReportCameraHeader extends StatelessWidget {
   final VoidCallback onBackTap;
   final VoidCallback onHelpTap;
+  final String title;
+  final String? subtitle;
 
   const ReportCameraHeader({
     super.key,
     required this.onBackTap,
     required this.onHelpTap,
+    this.title = 'Signaler un cas d\'insalubrité',
+    this.subtitle,
   });
 
   @override
@@ -46,14 +50,30 @@ class ReportCameraHeader extends StatelessWidget {
 
           // ── Titre centré ──
           Expanded(
-            child: Text(
-              'Signaler un cas d\'insalubrité',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: CliinAppColors.textWhite,
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: CliinAppColors.textWhite,
+                  ),
+                ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle!,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: CliinAppColors.textWhite.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
 

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/store/auth_store.dart';
+import '../../../shared/store/report_store.dart';
 import '../../../shared/models/auth_user_model.dart';
 
 class PublicProfilePage extends StatelessWidget {
@@ -75,7 +76,10 @@ class PublicProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = AuthStore.instance.currentUser;
-    final store = AuthStore.instance;
+    final store = ReportStore.instance;
+    final casPublies = user != null ? store.casPubliesCount(user.id) : 0;
+    final prisEnCharge = user != null ? store.prisEnChargeCount(user.id) : 0;
+    final casTraites = user != null ? store.casTraitesCount(user.id) : 0;
 
     return Scaffold(
       backgroundColor: CliinAppColors.background,
@@ -217,21 +221,21 @@ class PublicProfilePage extends StatelessWidget {
                         children: [
                           _buildStatItem(
                             Icons.description_outlined,
-                            '${store.casPublies}',
+                            '$casPublies',
                             'Cas publiés',
                             const Color(0xFF2DB84B),
                           ),
                           const VerticalDivider(width: 1, thickness: 1, color: Color(0xFFE0E0E0)),
                           _buildStatItem(
                             Icons.volunteer_activism_outlined,
-                            '${store.prisEnCharge}',
+                            '$prisEnCharge',
                             'Pris en charge',
                             const Color(0xFFFF9800),
                           ),
                           const VerticalDivider(width: 1, thickness: 1, color: Color(0xFFE0E0E0)),
                           _buildStatItem(
                             Icons.check_circle_outline_rounded,
-                            '${store.casTraites}',
+                            '$casTraites',
                             'Cas traités',
                             const Color(0xFF1E88E5),
                           ),

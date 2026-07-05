@@ -12,14 +12,14 @@ class ReportCameraSideControls extends StatelessWidget {
   final FlashMode flashMode;
   final VoidCallback onFlashTap;
   final VoidCallback onFlipTap;
-  final VoidCallback onGalleryTap;
+  final VoidCallback? onGalleryTap;
 
   const ReportCameraSideControls({
     super.key,
     required this.flashMode,
     required this.onFlashTap,
     required this.onFlipTap,
-    required this.onGalleryTap,
+    this.onGalleryTap,
   });
 
   @override
@@ -39,12 +39,14 @@ class ReportCameraSideControls extends StatelessWidget {
           label: 'Changer\ncaméra',
           onTap: onFlipTap,
         ),
-        const SizedBox(height: CliinAppConstants.spacingL),
-        _SideControlButton(
-          icon: Icons.image_outlined,
-          label: 'Galerie',
-          onTap: onGalleryTap,
-        ),
+        if (onGalleryTap != null) ...[
+          const SizedBox(height: CliinAppConstants.spacingL),
+          _SideControlButton(
+            icon: Icons.image_outlined,
+            label: 'Galerie',
+            onTap: onGalleryTap!,
+          ),
+        ],
       ],
     );
   }

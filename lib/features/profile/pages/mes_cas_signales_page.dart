@@ -9,6 +9,7 @@ import '../../../shared/store/auth_store.dart';
 import '../../reports/pages/report_detail_page.dart';
 import '../../reports/pages/report_camera_page.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
+import '../../../shared/widgets/report_card.dart' show buildReportImage;
 
 class MesCasSignalesPage extends StatefulWidget {
   const MesCasSignalesPage({super.key});
@@ -214,7 +215,7 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Image.asset(
+                    buildReportImage(
                       report.imageAsset,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) => Container(
@@ -222,13 +223,11 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
                         child: const Icon(Icons.image_outlined, color: Colors.grey, size: 32),
                       ),
                     ),
-                    if (report.severity == ReportSeverity.critique ||
-                        report.severity == ReportSeverity.eleve)
-                      Positioned(
-                        top: 8,
-                        left: 8,
-                        child: _buildUrgencyBadge(report.severity),
-                      ),
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: _buildSeverityBadge(report.severity),
+                    ),
                   ],
                 ),
               ),
@@ -309,17 +308,23 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
     );
   }
 
-  Widget _buildUrgencyBadge(ReportSeverity severity) {
-    final isUrgent = severity == ReportSeverity.critique;
+  Widget _buildSeverityBadge(ReportSeverity severity) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
-        color: isUrgent ? CliinAppColors.alertRed : CliinAppColors.alertOrange,
+        color: severity.color,
         borderRadius: BorderRadius.circular(4),
       ),
-      child: Text(
-        isUrgent ? 'Urgent' : 'Élevé',
-        style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(severity.icon, color: Colors.white, size: 10),
+          const SizedBox(width: 3),
+          Text(
+            severity.label,
+            style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700),
+          ),
+        ],
       ),
     );
   }

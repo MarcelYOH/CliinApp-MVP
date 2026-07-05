@@ -99,6 +99,18 @@ class ReportStore extends ChangeNotifier {
     }
   }
 
+  // ── Statistiques profil — source unique pour "Cas publiés" /
+  // "Pris en charge" / "Cas traités" (profile_page.dart, public_profile_page.dart) ──
+  int casPubliesCount(String userId) =>
+      _reports.where((r) => r.signaleParId == userId).length;
+
+  int prisEnChargeCount(String userId) =>
+      _reports.where((r) => r.intervenant?.id == userId).length;
+
+  int casTraitesCount(String userId) => _reports
+      .where((r) => r.intervenant?.id == userId && r.status == ReportStatus.traite)
+      .length;
+
   // ── Initialisation ────────────────────────────────────────────
   Future<void> init() async {
     _setLoading(true);

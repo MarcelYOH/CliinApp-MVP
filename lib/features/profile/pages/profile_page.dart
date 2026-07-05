@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/store/auth_store.dart';
+import '../../../shared/store/report_store.dart';
 import '../../../shared/models/auth_user_model.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../reports/pages/report_camera_page.dart';
@@ -108,7 +109,7 @@ class _ProfilePageState extends State<ProfilePage> {
         top: true,
         bottom: false,
         child: ListenableBuilder(
-          listenable: AuthStore.instance,
+          listenable: Listenable.merge([AuthStore.instance, ReportStore.instance]),
           builder: (ctx, _) {
             final user = AuthStore.instance.currentUser;
             return Column(
@@ -120,7 +121,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     children: [
                       _buildIdentityCard(context, user),
                       const SizedBox(height: 16),
-                      _buildStatsCard(),
+                      _buildStatsCard(user?.id),
                       const SizedBox(height: 16),
                       _buildMenuCard(context),
                       const SizedBox(height: 16),
@@ -334,8 +335,11 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildStatsCard() {
-    final store = AuthStore.instance;
+  Widget _buildStatsCard(String? userId) {
+    final store = ReportStore.instance;
+    final casPublies = userId != null ? store.casPubliesCount(userId) : 0;
+    final prisEnCharge = userId != null ? store.prisEnChargeCount(userId) : 0;
+    final casTraites = userId != null ? store.casTraitesCount(userId) : 0;
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -347,21 +351,21 @@ class _ProfilePageState extends State<ProfilePage> {
           children: [
             _buildStatItem(
               Icons.description_outlined,
-              '${store.casPublies}',
+              '$casPublies',
               'Cas publiés',
               const Color(0xFF2DB84B),
             ),
             const VerticalDivider(width: 1, thickness: 1, color: Color(0xFFE0E0E0)),
             _buildStatItem(
               Icons.volunteer_activism_outlined,
-              '${store.prisEnCharge}',
+              '$prisEnCharge',
               'Pris en charge',
               const Color(0xFFFF9800),
             ),
             const VerticalDivider(width: 1, thickness: 1, color: Color(0xFFE0E0E0)),
             _buildStatItem(
               Icons.check_circle_outline_rounded,
-              '${store.casTraites}',
+              '$casTraites',
               'Cas traités',
               const Color(0xFF1E88E5),
             ),
