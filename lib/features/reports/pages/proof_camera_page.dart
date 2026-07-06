@@ -67,6 +67,13 @@ class _ProofCameraPageState extends State<ProofCameraPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Voir ReportCameraPage._didChangeAppLifecycleState — Android efface le
+    // mode immersif (barre de statut réapparaît par-dessus le header) dès
+    // qu'un dialogue système (permission caméra/localisation) est affiché ;
+    // il faut le réappliquer à chaque retour au premier plan.
+    if (state == AppLifecycleState.resumed) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    }
     if (_controller == null || !_controller!.value.isInitialized) return;
     if (state == AppLifecycleState.inactive) {
       _controller?.dispose();
@@ -207,7 +214,9 @@ class _ProofCameraPageState extends State<ProofCameraPage>
           parts.add(place.locality!);
         }
         setState(() {
-          _address = parts.isNotEmpty ? parts.join(', ') : widget.report.location;
+          _address = parts.isNotEmpty
+              ? parts.join(', ')
+              : widget.report.location;
           _isLoadingLocation = false;
         });
       }
@@ -367,10 +376,12 @@ class _ProofCameraPageState extends State<ProofCameraPage>
             Container(
               color: Colors.black,
               padding: const EdgeInsets.symmetric(
-                  vertical: CliinAppConstants.spacingXL),
+                vertical: CliinAppConstants.spacingXL,
+              ),
               child: ReportCameraBottomBar(
-                onShutterTap:
-                    _useWebFallback ? _captureViaImagePicker : _takePhoto,
+                onShutterTap: _useWebFallback
+                    ? _captureViaImagePicker
+                    : _takePhoto,
                 isCapturing: _isCapturing,
               ),
             ),
@@ -391,18 +402,24 @@ class _ProofCameraPageState extends State<ProofCameraPage>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 72, height: 72,
+                width: 72,
+                height: 72,
                 decoration: BoxDecoration(
                   color: Colors.white10,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.camera_alt_outlined,
-                    color: Colors.white54, size: 36),
+                child: const Icon(
+                  Icons.camera_alt_outlined,
+                  color: Colors.white54,
+                  size: 36,
+                ),
               ),
               const SizedBox(height: 20),
-              const Text('Appuyez sur le bouton ci-dessous\npour prendre la photo',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white70, fontSize: 14)),
+              const Text(
+                'Appuyez sur le bouton ci-dessous\npour prendre la photo',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white70, fontSize: 14),
+              ),
             ],
           ),
         ),

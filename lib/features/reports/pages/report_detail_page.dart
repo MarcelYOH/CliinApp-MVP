@@ -26,19 +26,30 @@ class ReportDetailPage extends StatefulWidget {
   final HomeReportModel data;
   final bool isAuthor;
 
-  const ReportDetailPage({super.key, required this.data, this.isAuthor = false});
+  const ReportDetailPage({
+    super.key,
+    required this.data,
+    this.isAuthor = false,
+  });
 
   @override
   State<ReportDetailPage> createState() => _ReportDetailPageState();
 }
 
 class _ReportDetailPageState extends State<ReportDetailPage> {
+  // Toujours relire la version à jour depuis ReportStore (par id) plutôt
+  // que le snapshot capturé à la navigation — sinon une modification
+  // (ReportFormPage._saveEdit) n'est jamais reflétée ici tant que la page
+  // n'est pas rouverte depuis zéro.
+  HomeReportModel get _data =>
+      ReportStore.instance.reportById(widget.data.id) ?? widget.data;
+
   void _onTakeCharge() async {
     if (await requireAuth(context)) {
       if (!mounted) return;
       showTakeChargeFlow(
         context: context,
-        report: widget.data,
+        report: _data,
         onSuccess: (updated) {
           if (mounted) {
             Navigator.pushReplacement(
@@ -54,35 +65,33 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
   }
 
   void _onContact() {
-    openWhatsApp(
-      context: context,
-      intervenant: widget.data.intervenant,
-    );
+    openWhatsApp(context: context, intervenant: _data.intervenant);
   }
 
   void _onIntervenantTap() {
     Navigator.push(
       context,
       MaterialPageRoute<void>(
-          builder: (_) =>
-              IntervenantDetailPage(report: widget.data)),
+        builder: (_) => IntervenantDetailPage(report: _data),
+      ),
     );
   }
 
   void _onShare() {
-    copyReportCode(context, widget.data.reference);
+    copyReportCode(context, _data.reference);
   }
 
   void _onEdit() {
     Navigator.push(
       context,
       MaterialPageRoute<void>(
-          builder: (_) => ReportFormPage(existingReport: widget.data)),
+        builder: (_) => ReportFormPage(existingReport: _data),
+      ),
     );
   }
 
   Future<void> _onDelete() async {
-    await ReportStore.instance.deleteReport(widget.data.id);
+    await ReportStore.instance.deleteReport(_data.id);
     if (mounted) Navigator.pop(context);
   }
 
@@ -90,16 +99,16 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-          builder: (_) => ReportDetailPage(data: widget.data, isAuthor: false)),
+        builder: (_) => ReportDetailPage(data: _data, isAuthor: false),
+      ),
     );
   }
 
-  bool get _canTapAuthor =>
-      !widget.data.isAnonyme && widget.data.signaleParId != null;
+  bool get _canTapAuthor => !_data.isAnonyme && _data.signaleParId != null;
 
   void _onAuthorTap() {
     if (!_canTapAuthor) return;
-    if (widget.data.groupId != null) {
+    if (_data.groupId != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Module Groupes bientôt disponible')),
       );
@@ -113,68 +122,81 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Écoute ReportStore pour refléter automatiquement toute modification
+    // (édition, prise en charge, etc.) sans devoir rouvrir la page.
+    return ListenableBuilder(
+      listenable: ReportStore.instance,
+      builder: (context, _) => _buildScaffold(context),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     return Scaffold(
       backgroundColor: CliinAppColors.background,
       body: SafeArea(
         bottom: false,
-        child: Column(children: [
-          _buildHeader(context),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _DetailPhotoSection(data: widget.data),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
+        child: Column(
+          children: [
+            _buildHeader(context),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _DetailPhotoSection(data: _data),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
                         CliinAppConstants.pagePadding,
                         CliinAppConstants.pagePadding,
                         CliinAppConstants.pagePadding,
-                        0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildTitleRow(),
-                        const SizedBox(height: 4),
-                        _buildLocationRow(),
-                        const SizedBox(height: 16),
-                        _buildDescriptionCard(),
-                        const SizedBox(height: 16),
-                        _buildInformationsSection(),
-                        const SizedBox(height: 16),
-                        _buildLocationSection(),
-                        const SizedBox(height: 16),
-                        ReportActionZone(
-                          key: ValueKey(widget.data.id),
-                          data: widget.data,
-                          compact: false,
-                          isAuthor: widget.isAuthor,
-                          onTakeCharge: _onTakeCharge,
-                          onContact: _onContact,
-                          onIntervenantTap: _onIntervenantTap,
-                          onEdit: _onEdit,
-                          onDelete: _onDelete,
-                        ),
-                        if (widget.isAuthor) ...[
-                          const SizedBox(height: 12),
-                          PublicViewLinkButton(onTap: _onViewPublic),
+                        0,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildTitleRow(),
+                          const SizedBox(height: 4),
+                          _buildLocationRow(),
+                          const SizedBox(height: 16),
+                          _buildDescriptionCard(),
+                          const SizedBox(height: 16),
+                          _buildInformationsSection(),
+                          const SizedBox(height: 16),
+                          _buildLocationSection(),
+                          const SizedBox(height: 16),
+                          ReportActionZone(
+                            key: ValueKey(_data.id),
+                            data: _data,
+                            compact: false,
+                            isAuthor: widget.isAuthor,
+                            onTakeCharge: _onTakeCharge,
+                            onContact: _onContact,
+                            onIntervenantTap: _onIntervenantTap,
+                            onEdit: _onEdit,
+                            onDelete: _onDelete,
+                          ),
+                          if (widget.isAuthor) ...[
+                            const SizedBox(height: 12),
+                            PublicViewLinkButton(onTap: _onViewPublic),
+                          ],
+                          const SizedBox(height: 24),
+                          ReportStatsRow(
+                            views: _data.views,
+                            comments: _data.comments,
+                            shares: _data.shares,
+                          ),
+                          const SizedBox(height: 16),
+                          ReportCommentsSection(count: _data.comments),
+                          const SizedBox(height: 100),
                         ],
-                        const SizedBox(height: 24),
-                        ReportStatsRow(
-                            views: widget.data.views,
-                            comments: widget.data.comments,
-                            shares: widget.data.shares),
-                        const SizedBox(height: 16),
-                        ReportCommentsSection(count: widget.data.comments),
-                        const SizedBox(height: 100),
-                      ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        ]),
+          ],
+        ),
       ),
       bottomNavigationBar: const ReportCommentBar(),
     );
@@ -185,70 +207,116 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
     return Container(
       color: CliinAppColors.cardWhite,
       padding: const EdgeInsets.symmetric(
-          horizontal: CliinAppConstants.pagePadding, vertical: 12),
-      child: Row(children: [
-        GestureDetector(
-          onTap: () => Navigator.pop(context),
-          child: Container(
-            width: 38,
-            height: 38,
-            decoration: const BoxDecoration(
-                color: CliinAppColors.primaryLight, shape: BoxShape.circle),
-            child: const Icon(Icons.arrow_back_rounded,
-                color: CliinAppColors.primary, size: 20),
+        horizontal: CliinAppConstants.pagePadding,
+        vertical: 12,
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: const BoxDecoration(
+                color: CliinAppColors.primaryLight,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.arrow_back_rounded,
+                color: CliinAppColors.primary,
+                size: 20,
+              ),
+            ),
           ),
-        ),
-        Expanded(
-          child: Text('Détails du cas',
+          Expanded(
+            child: Text(
+              'Détails du cas',
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: CliinAppColors.textDark),
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: CliinAppColors.textDark,
+              ),
               maxLines: 1,
-              overflow: TextOverflow.ellipsis),
-        ),
-        GestureDetector(
-          onTap: _onShare,
-          child: Container(
-            width: 38,
-            height: 38,
-            decoration: const BoxDecoration(
-                color: CliinAppColors.primaryLight, shape: BoxShape.circle),
-            child: const Icon(Icons.ios_share_rounded,
-                color: CliinAppColors.primary, size: 18),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
-        ),
-      ]),
+          GestureDetector(
+            onTap: _onShare,
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: const BoxDecoration(
+                color: CliinAppColors.primaryLight,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.ios_share_rounded,
+                color: CliinAppColors.primary,
+                size: 18,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  // ── Titre + badge statut ─────────────────────────────────────
+  // ── Titre + badge ─────────────────────────────────────────────
+  // Vue auteur + statut Traité : le badge "Traité" est déjà affiché sur
+  // la photo (_TraiteChipDetail) — ici on affiche plutôt le badge de
+  // criticité (ReportSeverity) pour éviter le doublon. Vue publique
+  // (et tout autre statut) : badge de statut inchangé.
   Widget _buildTitleRow() {
-    final status = widget.data.status;
+    final status = _data.status;
+    final showSeverityInstead =
+        widget.isAuthor && status == ReportStatus.traite;
+    final severity = _data.severity;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: Text(widget.data.title,
-              style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: CliinAppColors.textDark,
-                  height: 1.25)),
+          child: Text(
+            _data.title,
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: CliinAppColors.textDark,
+              height: 1.25,
+            ),
+          ),
         ),
         const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
-              color: status.bgColor,
-              borderRadius:
-                  BorderRadius.circular(CliinAppConstants.radiusSmall)),
-          child: Text(status.label,
-              style: CliinAppTextStyles.badge.copyWith(
-                  color: status.color,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700)),
+            color: showSeverityInstead ? severity.bgColor : status.bgColor,
+            borderRadius: BorderRadius.circular(CliinAppConstants.radiusSmall),
+          ),
+          child: showSeverityInstead
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(severity.icon, color: severity.color, size: 13),
+                    const SizedBox(width: 4),
+                    Text(
+                      severity.label,
+                      style: CliinAppTextStyles.badge.copyWith(
+                        color: severity.color,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                )
+              : Text(
+                  status.label,
+                  style: CliinAppTextStyles.badge.copyWith(
+                    color: status.color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
         ),
       ],
     );
@@ -256,25 +324,33 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
 
   // ── Localisation ─────────────────────────────────────────────
   Widget _buildLocationRow() {
-    return Row(children: [
-      const Icon(Icons.location_on_rounded,
-          color: CliinAppColors.primary, size: 13),
-      const SizedBox(width: 4),
-      Expanded(
-        child: Text(widget.data.location,
+    return Row(
+      children: [
+        const Icon(
+          Icons.location_on_rounded,
+          color: CliinAppColors.primary,
+          size: 13,
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            _data.location,
             style: CliinAppTextStyles.bodySmall.copyWith(
-                color: CliinAppColors.primary,
-                fontWeight: FontWeight.w500,
-                fontSize: 12.5),
+              color: CliinAppColors.primary,
+              fontWeight: FontWeight.w500,
+              fontSize: 12.5,
+            ),
             maxLines: 1,
-            overflow: TextOverflow.ellipsis),
-      ),
-    ]);
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
   }
 
   // ── Description card ─────────────────────────────────────────
   Widget _buildDescriptionCard() {
-    final createdAt = widget.data.createdAt;
+    final createdAt = _data.createdAt;
     final pubDate = createdAt != null ? _formatPubDate(createdAt) : null;
 
     return Container(
@@ -282,31 +358,41 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: CliinAppColors.cardWhite,
-        borderRadius:
-            BorderRadius.circular(CliinAppConstants.radiusMedium),
+        borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
         border: Border.all(color: CliinAppColors.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(widget.data.description,
-              style: CliinAppTextStyles.bodySmall.copyWith(
-                  color: CliinAppColors.textDark,
-                  fontSize: 13,
-                  height: 1.6)),
+          Text(
+            _data.description,
+            style: CliinAppTextStyles.bodySmall.copyWith(
+              color: CliinAppColors.textDark,
+              fontSize: 13,
+              height: 1.6,
+            ),
+          ),
           if (pubDate != null) ...[
             const SizedBox(height: 10),
             const Divider(height: 1, color: CliinAppColors.divider),
             const SizedBox(height: 8),
-            Row(children: [
-              const Icon(Icons.calendar_today_rounded,
-                  size: 12, color: CliinAppColors.textSecondary),
-              const SizedBox(width: 5),
-              Text(pubDate,
+            Row(
+              children: [
+                const Icon(
+                  Icons.calendar_today_rounded,
+                  size: 12,
+                  color: CliinAppColors.textSecondary,
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  pubDate,
                   style: CliinAppTextStyles.bodySmall.copyWith(
-                      fontSize: 11,
-                      color: CliinAppColors.textSecondary)),
-            ]),
+                    fontSize: 11,
+                    color: CliinAppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
           ],
         ],
       ),
@@ -315,62 +401,78 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
 
   // ── Informations — grille 2 colonnes, 4 tuiles ────────────────
   Widget _buildInformationsSection() {
-    final status = widget.data.status;
-    final signalePar = widget.data.signalePar ?? 'Citoyen';
+    final status = _data.status;
+    final signalePar = _data.signalePar ?? 'Citoyen';
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: CliinAppColors.cardWhite,
-        borderRadius:
-            BorderRadius.circular(CliinAppConstants.radiusMedium),
+        borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
         border: Border.all(color: CliinAppColors.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Informations',
-              style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: CliinAppColors.textDark)),
+          Text(
+            'Informations',
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: CliinAppColors.textDark,
+            ),
+          ),
           const SizedBox(height: 12),
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Expanded(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
                 child: _InfoGridTile(
-                    icon: Icons.delete_outline_rounded,
-                    iconColor: CliinAppColors.primary,
-                    iconBg: CliinAppColors.primaryLight,
-                    label: 'Catégorie',
-                    value: widget.data.category.label)),
-            const SizedBox(width: 10),
-            Expanded(
+                  icon: Icons.delete_outline_rounded,
+                  iconColor: CliinAppColors.primary,
+                  iconBg: CliinAppColors.primaryLight,
+                  label: 'Catégorie',
+                  value: _data.category.label,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
                 child: _InfoGridTile(
-                    icon: Icons.person_outline_rounded,
-                    iconColor: CliinAppColors.primary,
-                    iconBg: CliinAppColors.primaryLight,
-                    label: 'Signalé par',
-                    value: signalePar,
-                    onTap: _canTapAuthor ? _onAuthorTap : null)),
-          ]),
+                  icon: Icons.person_outline_rounded,
+                  iconColor: CliinAppColors.primary,
+                  iconBg: CliinAppColors.primaryLight,
+                  label: 'Signalé par',
+                  value: signalePar,
+                  onTap: _canTapAuthor ? _onAuthorTap : null,
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 12),
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Expanded(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
                 child: _InfoGridTile(
-                    icon: Icons.description_outlined,
-                    iconColor: CliinAppColors.primary,
-                    iconBg: CliinAppColors.primaryLight,
-                    label: 'Référence',
-                    value: widget.data.reference)),
-            const SizedBox(width: 10),
-            Expanded(
+                  icon: Icons.description_outlined,
+                  iconColor: CliinAppColors.primary,
+                  iconBg: CliinAppColors.primaryLight,
+                  label: 'Référence',
+                  value: _data.reference,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
                 child: _InfoGridTile(
-                    icon: Icons.check_rounded,
-                    iconColor: status.color,
-                    iconBg: status.bgColor,
-                    label: 'Statut',
-                    value: status.label)),
-          ]),
+                  icon: Icons.check_rounded,
+                  iconColor: status.color,
+                  iconBg: status.bgColor,
+                  label: 'Statut',
+                  value: status.label,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -383,62 +485,81 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: CliinAppColors.cardWhite,
-        borderRadius:
-            BorderRadius.circular(CliinAppConstants.radiusMedium),
+        borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
         border: Border.all(color: CliinAppColors.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Localisation',
-              style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: CliinAppColors.textDark)),
+          Text(
+            'Localisation',
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: CliinAppColors.textDark,
+            ),
+          ),
           const SizedBox(height: 10),
-          Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-            Container(
-              width: 90,
-              height: 70,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE4E8EC),
-                borderRadius:
-                    BorderRadius.circular(CliinAppConstants.radiusSmall),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 90,
+                height: 70,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE4E8EC),
+                  borderRadius: BorderRadius.circular(
+                    CliinAppConstants.radiusSmall,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.location_on_rounded,
+                  color: CliinAppColors.primary,
+                  size: 26,
+                ),
               ),
-              child: const Icon(Icons.location_on_rounded,
-                  color: CliinAppColors.primary, size: 26),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(widget.data.location,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _data.location,
                       style: GoogleFonts.inter(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w600,
-                          color: CliinAppColors.textDark),
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: CliinAppColors.textDark,
+                      ),
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 6),
-                  Row(children: [
-                    const Icon(Icons.navigation_rounded,
-                        color: CliinAppColors.primary, size: 13),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                          '${widget.data.distance} de votre position',
-                          style: GoogleFonts.inter(
-                              fontSize: 11,
-                              color: CliinAppColors.textSecondary),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ]),
-                ],
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.navigation_rounded,
+                          color: CliinAppColors.primary,
+                          size: 13,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            '${_data.distance} de votre position',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: CliinAppColors.textSecondary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ]),
+            ],
+          ),
         ],
       ),
     );
@@ -446,8 +567,18 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
 
   String _formatPubDate(DateTime dt) {
     const months = [
-      'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
-      'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
+      'janvier',
+      'février',
+      'mars',
+      'avril',
+      'mai',
+      'juin',
+      'juillet',
+      'août',
+      'septembre',
+      'octobre',
+      'novembre',
+      'décembre',
     ];
     final h = dt.hour.toString().padLeft(2, '0');
     final m = dt.minute.toString().padLeft(2, '0');
@@ -463,9 +594,11 @@ class _DetailPhotoSection extends StatelessWidget {
   const _DetailPhotoSection({required this.data});
 
   void _openPhoto(BuildContext context, String path) {
-    Navigator.of(context).push(MaterialPageRoute<void>(
-      builder: (_) => _PhotoFullScreen(imagePath: path),
-    ));
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => _PhotoFullScreen(imagePath: path),
+      ),
+    );
   }
 
   @override
@@ -473,41 +606,52 @@ class _DetailPhotoSection extends StatelessWidget {
     final isTraite = data.status == ReportStatus.traite;
     return SizedBox(
       height: isTraite ? 200 : 220,
-      child: Stack(fit: StackFit.expand, children: [
-        isTraite
-            ? _BeforeAfterDetail(data: data, onOpenPhoto: _openPhoto)
-            : buildReportImage(data.imageAsset,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) =>
-                    Container(color: const Color(0xFFCFD3D8))),
-        // Badges
-        if (!isTraite)
-          Positioned(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          isTraite
+              ? _BeforeAfterDetail(data: data, onOpenPhoto: _openPhoto)
+              : buildReportImage(
+                  data.imageAsset,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) =>
+                      Container(color: const Color(0xFFCFD3D8)),
+                ),
+          // Badges
+          if (!isTraite)
+            Positioned(
               top: CliinAppConstants.spacingS,
               left: CliinAppConstants.spacingS,
-              child: _SeverityBadgeDetail(severity: data.severity)),
-        if (isTraite)
-          Positioned(
+              child: _SeverityBadgeDetail(severity: data.severity),
+            ),
+          if (isTraite)
+            Positioned(
               top: CliinAppConstants.spacingS,
               left: CliinAppConstants.spacingS,
-              child: _TraiteChipDetail()),
-        Positioned(
+              child: _TraiteChipDetail(),
+            ),
+          Positioned(
             top: CliinAppConstants.spacingS,
             right: CliinAppConstants.spacingS,
-            child: _IdChipDetail(reference: data.reference)),
-        if (!isTraite)
-          Positioned(
+            child: _IdChipDetail(reference: data.reference),
+          ),
+          if (!isTraite)
+            Positioned(
               bottom: CliinAppConstants.spacingS,
               left: CliinAppConstants.spacingS,
-              child: _DistanceBadgeDetail(data: data)),
-        // Zoom sur photo simple
-        if (!isTraite)
-          Positioned(
+              child: _DistanceBadgeDetail(data: data),
+            ),
+          // Zoom sur photo simple
+          if (!isTraite)
+            Positioned(
               bottom: CliinAppConstants.spacingS,
               right: CliinAppConstants.spacingS,
               child: _ZoomBtn(
-                  onTap: () => _openPhoto(context, data.imageAsset))),
-      ]),
+                onTap: () => _openPhoto(context, data.imageAsset),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -515,52 +659,68 @@ class _DetailPhotoSection extends StatelessWidget {
 class _BeforeAfterDetail extends StatelessWidget {
   final HomeReportModel data;
   final void Function(BuildContext, String) onOpenPhoto;
-  const _BeforeAfterDetail(
-      {required this.data, required this.onOpenPhoto});
+  const _BeforeAfterDetail({required this.data, required this.onOpenPhoto});
 
   @override
   Widget build(BuildContext context) {
-    return Row(children: [
-      Expanded(
-        child: Stack(fit: StackFit.expand, children: [
-          buildReportImage(data.imageAsset,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) =>
-                  Container(color: CliinAppColors.background)),
-          Positioned(
-              bottom: CliinAppConstants.spacingS,
-              left: CliinAppConstants.spacingS,
-              child: _PhotoLabelDetail(label: 'AVANT', dark: true)),
-          Positioned(
-              top: CliinAppConstants.spacingS,
-              right: CliinAppConstants.spacingS,
-              child: _ZoomBtn(
-                  onTap: () => onOpenPhoto(context, data.imageAsset))),
-        ]),
-      ),
-      Container(width: 2, color: CliinAppColors.background),
-      Expanded(
-        child: Stack(fit: StackFit.expand, children: [
-          data.imageAfterAsset != null
-              ? buildReportImage(data.imageAfterAsset!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) =>
-                      Container(color: CliinAppColors.background))
-              : Container(color: CliinAppColors.background),
-          Positioned(
-              bottom: CliinAppConstants.spacingS,
-              right: CliinAppConstants.spacingS,
-              child: _PhotoLabelDetail(label: 'APRÈS', dark: false)),
-          if (data.imageAfterAsset != null)
-            Positioned(
-                top: CliinAppConstants.spacingS,
+    return Row(
+      children: [
+        Expanded(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              buildReportImage(
+                data.imageAsset,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) =>
+                    Container(color: CliinAppColors.background),
+              ),
+              Positioned(
+                bottom: CliinAppConstants.spacingS,
                 left: CliinAppConstants.spacingS,
+                child: _PhotoLabelDetail(label: 'AVANT', dark: true),
+              ),
+              Positioned(
+                top: CliinAppConstants.spacingS,
+                right: CliinAppConstants.spacingS,
                 child: _ZoomBtn(
-                    onTap: () =>
-                        onOpenPhoto(context, data.imageAfterAsset!))),
-        ]),
-      ),
-    ]);
+                  onTap: () => onOpenPhoto(context, data.imageAsset),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Container(width: 2, color: CliinAppColors.background),
+        Expanded(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              data.imageAfterAsset != null
+                  ? buildReportImage(
+                      data.imageAfterAsset!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) =>
+                          Container(color: CliinAppColors.background),
+                    )
+                  : Container(color: CliinAppColors.background),
+              Positioned(
+                bottom: CliinAppConstants.spacingS,
+                right: CliinAppConstants.spacingS,
+                child: _PhotoLabelDetail(label: 'APRÈS', dark: false),
+              ),
+              if (data.imageAfterAsset != null)
+                Positioned(
+                  top: CliinAppConstants.spacingS,
+                  left: CliinAppConstants.spacingS,
+                  child: _ZoomBtn(
+                    onTap: () => onOpenPhoto(context, data.imageAfterAsset!),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -569,35 +729,45 @@ class _PhotoFullScreen extends StatelessWidget {
   const _PhotoFullScreen({required this.imagePath});
   @override
   Widget build(BuildContext context) => Scaffold(
-        backgroundColor: Colors.black,
-        body: SafeArea(
-          child: Stack(children: [
-            Center(
-              child: buildReportImage(imagePath,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, _, _) => const Icon(
-                      Icons.broken_image_rounded,
-                      color: Colors.white38,
-                      size: 64)),
+    backgroundColor: Colors.black,
+    body: SafeArea(
+      child: Stack(
+        children: [
+          Center(
+            child: buildReportImage(
+              imagePath,
+              fit: BoxFit.contain,
+              errorBuilder: (_, _, _) => const Icon(
+                Icons.broken_image_rounded,
+                color: Colors.white38,
+                size: 64,
+              ),
             ),
-            Positioned(
-              top: 12, right: 12,
-              child: GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Container(
-                  width: 36, height: 36,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.close_rounded,
-                      color: Colors.white, size: 20),
+          ),
+          Positioned(
+            top: 12,
+            right: 12,
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.close_rounded,
+                  color: Colors.white,
+                  size: 20,
                 ),
               ),
             ),
-          ]),
-        ),
-      );
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -608,16 +778,17 @@ class _ZoomBtn extends StatelessWidget {
   const _ZoomBtn({this.onTap});
   @override
   Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        child: Container(
-          width: 28, height: 28,
-          decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.55),
-              shape: BoxShape.circle),
-          child: const Icon(Icons.zoom_in_rounded,
-              color: Colors.white, size: 15),
-        ),
-      );
+    onTap: onTap,
+    child: Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.55),
+        shape: BoxShape.circle,
+      ),
+      child: const Icon(Icons.zoom_in_rounded, color: Colors.white, size: 15),
+    ),
+  );
 }
 
 class _PhotoLabelDetail extends StatelessWidget {
@@ -626,19 +797,21 @@ class _PhotoLabelDetail extends StatelessWidget {
   const _PhotoLabelDetail({required this.label, required this.dark});
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: dark
-              ? Colors.black.withValues(alpha: 0.75)
-              : CliinAppColors.primary,
-          borderRadius:
-              BorderRadius.circular(CliinAppConstants.radiusSmall),
-        ),
-        child: Text(label,
-            style: CliinAppTextStyles.badge.copyWith(
-                color: CliinAppColors.textWhite,
-                fontWeight: FontWeight.w700)),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+    decoration: BoxDecoration(
+      color: dark
+          ? Colors.black.withValues(alpha: 0.75)
+          : CliinAppColors.primary,
+      borderRadius: BorderRadius.circular(CliinAppConstants.radiusSmall),
+    ),
+    child: Text(
+      label,
+      style: CliinAppTextStyles.badge.copyWith(
+        color: CliinAppColors.textWhite,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+  );
 }
 
 class _SeverityBadgeDetail extends StatelessWidget {
@@ -646,38 +819,51 @@ class _SeverityBadgeDetail extends StatelessWidget {
   const _SeverityBadgeDetail({required this.severity});
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-            color: severity.color,
-            borderRadius:
-                BorderRadius.circular(CliinAppConstants.radiusSmall)),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(severity.icon, color: Colors.white, size: 13),
-          const SizedBox(width: 4),
-          Text(severity.label.toUpperCase(),
-              style: CliinAppTextStyles.badge.copyWith(
-                  color: Colors.white, fontWeight: FontWeight.w800)),
-        ]),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+    decoration: BoxDecoration(
+      color: severity.color,
+      borderRadius: BorderRadius.circular(CliinAppConstants.radiusSmall),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(severity.icon, color: Colors.white, size: 13),
+        const SizedBox(width: 4),
+        Text(
+          severity.label.toUpperCase(),
+          style: CliinAppTextStyles.badge.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _TraiteChipDetail extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-            color: CliinAppColors.alertRed,
-            borderRadius:
-                BorderRadius.circular(CliinAppConstants.radiusSmall)),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.check_circle_rounded,
-              color: Colors.white, size: 13),
-          const SizedBox(width: 4),
-          Text('TRAITÉ',
-              style: CliinAppTextStyles.badge.copyWith(
-                  color: Colors.white, fontWeight: FontWeight.w800)),
-        ]),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+    decoration: BoxDecoration(
+      color: CliinAppColors.alertRed,
+      borderRadius: BorderRadius.circular(CliinAppConstants.radiusSmall),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.check_circle_rounded, color: Colors.white, size: 13),
+        const SizedBox(width: 4),
+        Text(
+          'TRAITÉ',
+          style: CliinAppTextStyles.badge.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _IdChipDetail extends StatelessWidget {
@@ -685,22 +871,29 @@ class _IdChipDetail extends StatelessWidget {
   const _IdChipDetail({required this.reference});
   @override
   Widget build(BuildContext context) => GestureDetector(
-        onTap: () => copyReportCode(context, reference),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-          decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.75),
-              borderRadius:
-                  BorderRadius.circular(CliinAppConstants.radiusSmall)),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Text(reference,
-                style: CliinAppTextStyles.badge.copyWith(
-                    color: Colors.white, fontWeight: FontWeight.w600)),
-            const SizedBox(width: 5),
-            const Icon(Icons.copy_rounded, color: Colors.white, size: 12),
-          ]),
-        ),
-      );
+    onTap: () => copyReportCode(context, reference),
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.75),
+        borderRadius: BorderRadius.circular(CliinAppConstants.radiusSmall),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            reference,
+            style: CliinAppTextStyles.badge.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 5),
+          const Icon(Icons.copy_rounded, color: Colors.white, size: 12),
+        ],
+      ),
+    ),
+  );
 }
 
 class _DistanceBadgeDetail extends StatelessWidget {
@@ -708,30 +901,35 @@ class _DistanceBadgeDetail extends StatelessWidget {
   const _DistanceBadgeDetail({required this.data});
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.65),
-            borderRadius:
-                BorderRadius.circular(CliinAppConstants.radiusSmall)),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.location_on_rounded,
-              color: Colors.white, size: 12),
-          const SizedBox(width: 4),
-          Text(data.distance,
-              style: CliinAppTextStyles.badge
-                  .copyWith(color: Colors.white)),
-          Container(
-              margin: const EdgeInsets.symmetric(horizontal: 6),
-              width: 1, height: 10,
-              color: Colors.white38),
-          const Icon(Icons.access_time_rounded,
-              color: Colors.white, size: 12),
-          const SizedBox(width: 4),
-          Text(reportTimeAgoLabel(data.createdAt, data.timeAgo),
-              style: CliinAppTextStyles.badge
-                  .copyWith(color: Colors.white)),
-        ]),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+    decoration: BoxDecoration(
+      color: Colors.black.withValues(alpha: 0.65),
+      borderRadius: BorderRadius.circular(CliinAppConstants.radiusSmall),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.location_on_rounded, color: Colors.white, size: 12),
+        const SizedBox(width: 4),
+        Text(
+          data.distance,
+          style: CliinAppTextStyles.badge.copyWith(color: Colors.white),
+        ),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 6),
+          width: 1,
+          height: 10,
+          color: Colors.white38,
+        ),
+        const Icon(Icons.access_time_rounded, color: Colors.white, size: 12),
+        const SizedBox(width: 4),
+        Text(
+          reportTimeAgoLabel(data.createdAt, data.timeAgo),
+          style: CliinAppTextStyles.badge.copyWith(color: Colors.white),
+        ),
+      ],
+    ),
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -770,22 +968,28 @@ class _InfoGridTile extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label,
-                  style: GoogleFonts.inter(
-                      fontSize: 10, color: CliinAppColors.textSecondary)),
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  color: CliinAppColors.textSecondary,
+                ),
+              ),
               const SizedBox(height: 2),
-              Text(value,
-                  style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: tappable
-                          ? CliinAppColors.primary
-                          : CliinAppColors.textDark,
-                      decoration:
-                          tappable ? TextDecoration.underline : null,
-                      decorationColor: CliinAppColors.primary),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis),
+              Text(
+                value,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: tappable
+                      ? CliinAppColors.primary
+                      : CliinAppColors.textDark,
+                  decoration: tappable ? TextDecoration.underline : null,
+                  decorationColor: CliinAppColors.primary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ],
           ),
         ),
@@ -794,4 +998,3 @@ class _InfoGridTile extends StatelessWidget {
     return tappable ? GestureDetector(onTap: onTap, child: row) : row;
   }
 }
-

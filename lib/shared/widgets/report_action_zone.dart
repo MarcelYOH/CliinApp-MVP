@@ -29,33 +29,33 @@ class ReportIntervenantAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: CliinAppColors.primaryLight,
-          border: Border.all(color: CliinAppColors.primary, width: 1.5),
-        ),
-        clipBehavior: Clip.hardEdge,
-        child: intervenant.logoAsset != null
-            ? Image.asset(intervenant.logoAsset!,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => _fallback())
-            : _fallback(),
-      );
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      color: CliinAppColors.primaryLight,
+      border: Border.all(color: CliinAppColors.primary, width: 1.5),
+    ),
+    clipBehavior: Clip.hardEdge,
+    child: intervenant.logoAsset != null
+        ? Image.asset(
+            intervenant.logoAsset!,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => _fallback(),
+          )
+        : _fallback(),
+  );
 
   Widget _fallback() => Center(
-        child: Text(
-          intervenant.name.isNotEmpty
-              ? intervenant.name[0].toUpperCase()
-              : '?',
-          style: TextStyle(
-            color: CliinAppColors.primary,
-            fontWeight: FontWeight.bold,
-            fontSize: size * 0.4,
-          ),
-        ),
-      );
+    child: Text(
+      intervenant.name.isNotEmpty ? intervenant.name[0].toUpperCase() : '?',
+      style: TextStyle(
+        color: CliinAppColors.primary,
+        fontWeight: FontWeight.bold,
+        fontSize: size * 0.4,
+      ),
+    ),
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -72,6 +72,10 @@ class ReportActionZone extends StatefulWidget {
   final VoidCallback? onIntervenantTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  // La confirmation de résolution est une action PUBLIQUE uniquement —
+  // un intervenant ne doit pas pouvoir confirmer sa propre intervention
+  // depuis sa vue interne (IntervenantDetailPage passe false ici).
+  final bool showResolutionConfirm;
 
   const ReportActionZone({
     super.key,
@@ -83,6 +87,7 @@ class ReportActionZone extends StatefulWidget {
     this.onIntervenantTap,
     this.onEdit,
     this.onDelete,
+    this.showResolutionConfirm = true,
   });
 
   @override
@@ -123,18 +128,26 @@ class _ReportActionZoneState extends State<ReportActionZone> {
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: widget.onTakeCharge,
-                  icon: const Icon(Icons.volunteer_activism_rounded,
-                      color: CliinAppColors.textWhite, size: 20),
-                  label: Text('Prendre en charge',
-                      style: CliinAppTextStyles.button
-                          .copyWith(color: CliinAppColors.textWhite)),
+                  icon: const Icon(
+                    Icons.volunteer_activism_rounded,
+                    color: CliinAppColors.textWhite,
+                    size: 20,
+                  ),
+                  label: Text(
+                    'Prendre en charge',
+                    style: CliinAppTextStyles.button.copyWith(
+                      color: CliinAppColors.textWhite,
+                    ),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: CliinAppColors.primary,
                     disabledBackgroundColor: CliinAppColors.primary,
                     disabledForegroundColor: CliinAppColors.textWhite,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(
-                            CliinAppConstants.radiusMedium)),
+                      borderRadius: BorderRadius.circular(
+                        CliinAppConstants.radiusMedium,
+                      ),
+                    ),
                     elevation: 0,
                   ),
                 ),
@@ -155,50 +168,74 @@ class _ReportActionZoneState extends State<ReportActionZone> {
           if (_showDeleteConfirm)
             _deleteConfirmDialog()
           else
-            Row(children: [
-              Expanded(
-                child: SizedBox(
-                  height: 44,
-                  child: OutlinedButton.icon(
-                    onPressed: widget.onEdit,
-                    icon: const Icon(Icons.edit_outlined,
-                        color: CliinAppColors.primary, size: 16),
-                    label: Text('Modifier',
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 44,
+                    child: OutlinedButton.icon(
+                      onPressed: widget.onEdit,
+                      icon: const Icon(
+                        Icons.edit_outlined,
+                        color: CliinAppColors.primary,
+                        size: 16,
+                      ),
+                      label: Text(
+                        'Modifier',
                         style: CliinAppTextStyles.button.copyWith(
-                            color: CliinAppColors.primary, fontSize: 13)),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(
-                          color: CliinAppColors.primary, width: 1.5),
-                      shape: RoundedRectangleBorder(
+                          color: CliinAppColors.primary,
+                          fontSize: 13,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(
+                          color: CliinAppColors.primary,
+                          width: 1.5,
+                        ),
+                        shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(
-                              CliinAppConstants.radiusMedium)),
+                            CliinAppConstants.radiusMedium,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: _kSpacing),
-              Expanded(
-                child: SizedBox(
-                  height: 44,
-                  child: OutlinedButton.icon(
-                    onPressed: () =>
-                        setState(() => _showDeleteConfirm = true),
-                    icon: const Icon(Icons.delete_outline_rounded,
-                        color: CliinAppColors.alertRed, size: 16),
-                    label: Text('Supprimer',
+                const SizedBox(width: _kSpacing),
+                Expanded(
+                  child: SizedBox(
+                    height: 44,
+                    child: OutlinedButton.icon(
+                      onPressed: () =>
+                          setState(() => _showDeleteConfirm = true),
+                      icon: const Icon(
+                        Icons.delete_outline_rounded,
+                        color: CliinAppColors.alertRed,
+                        size: 16,
+                      ),
+                      label: Text(
+                        'Supprimer',
                         style: CliinAppTextStyles.button.copyWith(
-                            color: CliinAppColors.alertRed, fontSize: 13)),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(
-                          color: CliinAppColors.alertRed, width: 1.5),
-                      shape: RoundedRectangleBorder(
+                          color: CliinAppColors.alertRed,
+                          fontSize: 13,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(
+                          color: CliinAppColors.alertRed,
+                          width: 1.5,
+                        ),
+                        shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(
-                              CliinAppConstants.radiusMedium)),
+                            CliinAppConstants.radiusMedium,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ]),
+              ],
+            ),
         ],
       ],
     );
@@ -209,55 +246,69 @@ class _ReportActionZoneState extends State<ReportActionZone> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: CliinAppColors.alertRedBg,
-        borderRadius:
-            BorderRadius.circular(CliinAppConstants.radiusMedium),
+        borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
         border: Border.all(color: CliinAppColors.alertRed),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Supprimer définitivement ce cas ?',
-              style: CliinAppTextStyles.bodySmall.copyWith(
-                  fontSize: 11.5, color: CliinAppColors.textDark),
-              textAlign: TextAlign.center),
+          Text(
+            'Supprimer définitivement ce cas ?',
+            style: CliinAppTextStyles.bodySmall.copyWith(
+              fontSize: 11.5,
+              color: CliinAppColors.textDark,
+            ),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 8),
-          Row(children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () =>
-                    setState(() => _showDeleteConfirm = false),
-                style: OutlinedButton.styleFrom(
-                  backgroundColor: CliinAppColors.cardWhite,
-                  side: const BorderSide(color: CliinAppColors.divider),
-                  shape: RoundedRectangleBorder(
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => setState(() => _showDeleteConfirm = false),
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: CliinAppColors.cardWhite,
+                    side: const BorderSide(color: CliinAppColors.divider),
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(
-                          CliinAppConstants.radiusMedium)),
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                ),
-                child: Text('Annuler',
-                    style: CliinAppTextStyles.badge
-                        .copyWith(color: CliinAppColors.textSecondary)),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: widget.onDelete,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: CliinAppColors.alertRed,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                          CliinAppConstants.radiusMedium)),
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  elevation: 0,
-                ),
-                child: Text('Oui, supprimer',
+                        CliinAppConstants.radiusMedium,
+                      ),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                  child: Text(
+                    'Annuler',
                     style: CliinAppTextStyles.badge.copyWith(
-                        color: CliinAppColors.textWhite,
-                        fontWeight: FontWeight.w700)),
+                      color: CliinAppColors.textSecondary,
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ]),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: widget.onDelete,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: CliinAppColors.alertRed,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        CliinAppConstants.radiusMedium,
+                      ),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    'Oui, supprimer',
+                    style: CliinAppTextStyles.badge.copyWith(
+                      color: CliinAppColors.textWhite,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -283,8 +334,7 @@ class _ReportActionZoneState extends State<ReportActionZone> {
               color: active ? CliinAppColors.primary : CliinAppColors.divider,
               width: active ? 1.5 : 1.0,
             ),
-            borderRadius:
-                BorderRadius.circular(CliinAppConstants.radiusMedium),
+            borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
           ),
           child: Icon(
             active
@@ -310,23 +360,21 @@ class _ReportActionZoneState extends State<ReportActionZone> {
             ? Icons.notifications_active_rounded
             : Icons.notifications_none_rounded,
         size: 18,
-        color:
-            active ? CliinAppColors.primary : CliinAppColors.textSecondary,
+        color: active ? CliinAppColors.primary : CliinAppColors.textSecondary,
       ),
       label: Text(
         'Suivre',
         style: CliinAppTextStyles.button.copyWith(
-            color: active
-                ? CliinAppColors.primary
-                : CliinAppColors.textSecondary),
+          color: active ? CliinAppColors.primary : CliinAppColors.textSecondary,
+        ),
       ),
       style: OutlinedButton.styleFrom(
         side: BorderSide(
-            color:
-                active ? CliinAppColors.primary : CliinAppColors.divider),
+          color: active ? CliinAppColors.primary : CliinAppColors.divider,
+        ),
         shape: RoundedRectangleBorder(
-            borderRadius:
-                BorderRadius.circular(CliinAppConstants.radiusMedium)),
+          borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
+        ),
       ),
     );
   }
@@ -349,9 +397,10 @@ class _ReportActionZoneState extends State<ReportActionZone> {
               child: Text(
                 '🔔 Vous serez notifié dès que ce cas sera traité',
                 style: CliinAppTextStyles.bodySmall.copyWith(
-                    color: CliinAppColors.primary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 11),
+                  color: CliinAppColors.primary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
+                ),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -367,10 +416,10 @@ class _ReportActionZoneState extends State<ReportActionZone> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: const Color(0xFFFFF8F0),
-        borderRadius:
-            BorderRadius.circular(CliinAppConstants.radiusMedium),
+        borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
         border: Border.all(
-            color: CliinAppColors.alertOrange.withValues(alpha: 0.3)),
+          color: CliinAppColors.alertOrange.withValues(alpha: 0.3),
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -382,59 +431,91 @@ class _ReportActionZoneState extends State<ReportActionZone> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('Pris en charge par',
-                    style: CliinAppTextStyles.bodySmall.copyWith(
-                        color: CliinAppColors.textSecondary, fontSize: 10),
-                    maxLines: 1),
-                GestureDetector(
-                  onTap: widget.onIntervenantTap,
-                  child: Text(
-                      intervenant.groupName ?? intervenant.name,
-                      style: CliinAppTextStyles.headingSmall.copyWith(
-                        color: CliinAppColors.primary,
-                        fontSize: 13,
-                        decoration: TextDecoration.underline,
-                        decorationColor: CliinAppColors.primary,
+                Text(
+                  'Pris en charge par',
+                  style: CliinAppTextStyles.bodySmall.copyWith(
+                    color: CliinAppColors.textSecondary,
+                    fontSize: 10,
+                  ),
+                  maxLines: 1,
+                ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: widget.onIntervenantTap,
+                        child: Text(
+                          intervenant.groupName ?? intervenant.name,
+                          style: CliinAppTextStyles.headingSmall.copyWith(
+                            color: CliinAppColors.primary,
+                            fontSize: 13,
+                            decoration: TextDecoration.underline,
+                            decorationColor: CliinAppColors.primary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
+                    ),
+                    // Contacter — même ligne que le nom, aligné à droite.
+                    // Conditionnel : visible UNIQUEMENT si isContactable.
+                    if (intervenant.isContactable &&
+                        widget.onContact != null) ...[
+                      const SizedBox(width: 6),
+                      OutlinedButton.icon(
+                        onPressed: widget.onContact,
+                        icon: const Icon(
+                          Icons.chat_bubble_outline_rounded,
+                          size: 13,
+                          color: CliinAppColors.alertOrange,
+                        ),
+                        label: Text(
+                          'Contacter',
+                          style: CliinAppTextStyles.badge.copyWith(
+                            color: CliinAppColors.alertOrange,
+                            fontSize: 11,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          side: const BorderSide(
+                            color: CliinAppColors.alertOrange,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              CliinAppConstants.radiusMedium,
+                            ),
+                          ),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 if (intervenant.takenAgo != null)
-                  Row(children: [
-                    const Icon(Icons.access_time_rounded,
-                        size: 10, color: CliinAppColors.textSecondary),
-                    const SizedBox(width: 2),
-                    Text(intervenant.takenAgo!,
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.access_time_rounded,
+                        size: 10,
+                        color: CliinAppColors.textSecondary,
+                      ),
+                      const SizedBox(width: 2),
+                      Text(
+                        intervenant.takenAgo!,
                         style: CliinAppTextStyles.bodySmall.copyWith(
-                            color: CliinAppColors.textSecondary,
-                            fontSize: 10),
-                        maxLines: 1),
-                  ]),
-                // Contacter — conditionnel : visible UNIQUEMENT si isContactable
-                if (intervenant.isContactable &&
-                    widget.onContact != null) ...[
-                  const SizedBox(height: 4),
-                  OutlinedButton.icon(
-                    onPressed: widget.onContact,
-                    icon: const Icon(Icons.chat_bubble_outline_rounded,
-                        size: 13, color: CliinAppColors.alertOrange),
-                    label: Text('Contacter',
-                        style: CliinAppTextStyles.badge.copyWith(
-                            color: CliinAppColors.alertOrange,
-                            fontSize: 11)),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      side: const BorderSide(
-                          color: CliinAppColors.alertOrange),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                              CliinAppConstants.radiusMedium)),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
+                          color: CliinAppColors.textSecondary,
+                          fontSize: 10,
+                        ),
+                        maxLines: 1,
+                      ),
+                    ],
                   ),
-                ],
               ],
             ),
           ),
@@ -478,85 +559,99 @@ class _ReportActionZoneState extends State<ReportActionZone> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _ResolutionBlock(
-            data: widget.data, onIntervenantTap: widget.onIntervenantTap),
-        const SizedBox(height: _kSpacing),
-        // Compteur confirmations
-        Center(
-          child: Text(
-            '👍 $_confirmCount personne${_confirmCount > 1 ? 's' : ''}'
-            ' confirm${_confirmCount > 1 ? 'ent' : 'e'} que c\'est résolu',
-            style: CliinAppTextStyles.bodySmall
-                .copyWith(fontSize: 12, color: CliinAppColors.textDark),
-            textAlign: TextAlign.center,
-          ),
+          data: widget.data,
+          onIntervenantTap: widget.onIntervenantTap,
         ),
-        const SizedBox(height: _kSpacing),
-        // Bouton confirmer ou état post-confirmation
-        if (_isConfirmed)
+        if (widget.showResolutionConfirm) ...[
+          const SizedBox(height: _kSpacing),
+          // Compteur confirmations
           Center(
             child: Text(
-              'Merci ! $_confirmCount confirmations au total',
-              style: CliinAppTextStyles.badge.copyWith(
-                  color: CliinAppColors.primary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600),
+              '👍 $_confirmCount personne${_confirmCount > 1 ? 's' : ''}'
+              ' confirm${_confirmCount > 1 ? 'ent' : 'e'} que c\'est résolu',
+              style: CliinAppTextStyles.bodySmall.copyWith(
+                fontSize: 12,
+                color: CliinAppColors.textDark,
+              ),
               textAlign: TextAlign.center,
             ),
-          )
-        else if (_showConfirmPrompt)
-          _inlineDialog(
-            question:
-                'Confirmer que ce problème est bien résolu sur place ?',
-            yesLabel: 'Oui, confirmer',
-            onYes: () => setState(() {
-              _confirmCount++;
-              _isConfirmed = true;
-              _showConfirmPrompt = false;
-            }),
-            onCancel: () =>
-                setState(() => _showConfirmPrompt = false),
-          )
-        else
-          SizedBox(
-            height: _kBtnHeight,
-            child: ElevatedButton.icon(
-              onPressed: () async {
-                if (await requireAuth(context)) {
-                  setState(() => _showConfirmPrompt = true);
-                }
-              },
-              icon: const Icon(Icons.check_circle_outline_rounded,
-                  color: CliinAppColors.textWhite, size: 20),
-              label: Text('Confirmer la résolution',
-                  style: CliinAppTextStyles.button
-                      .copyWith(color: CliinAppColors.textWhite)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: CliinAppColors.primary,
-                shape: RoundedRectangleBorder(
+          ),
+          const SizedBox(height: _kSpacing),
+          // Bouton confirmer ou état post-confirmation
+          if (_isConfirmed)
+            Center(
+              child: Text(
+                'Merci ! $_confirmCount confirmations au total',
+                style: CliinAppTextStyles.badge.copyWith(
+                  color: CliinAppColors.primary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            )
+          else if (_showConfirmPrompt)
+            _inlineDialog(
+              question: 'Confirmer que ce problème est bien résolu sur place ?',
+              yesLabel: 'Oui, confirmer',
+              onYes: () => setState(() {
+                _confirmCount++;
+                _isConfirmed = true;
+                _showConfirmPrompt = false;
+              }),
+              onCancel: () => setState(() => _showConfirmPrompt = false),
+            )
+          else
+            SizedBox(
+              height: _kBtnHeight,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  if (await requireAuth(context)) {
+                    setState(() => _showConfirmPrompt = true);
+                  }
+                },
+                icon: const Icon(
+                  Icons.check_circle_outline_rounded,
+                  color: CliinAppColors.textWhite,
+                  size: 20,
+                ),
+                label: Text(
+                  'Confirmer la résolution',
+                  style: CliinAppTextStyles.button.copyWith(
+                    color: CliinAppColors.textWhite,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: CliinAppColors.primary,
+                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(
-                        CliinAppConstants.radiusMedium)),
-                elevation: 0,
+                      CliinAppConstants.radiusMedium,
+                    ),
+                  ),
+                  elevation: 0,
+                ),
               ),
             ),
-          ),
+        ],
         // Lien "persiste" ou message contesté
         if (_isContested) ...[
           const SizedBox(height: 6),
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: CliinAppColors.alertOrange.withValues(alpha: 0.1),
-              borderRadius:
-                  BorderRadius.circular(CliinAppConstants.radiusMedium),
+              borderRadius: BorderRadius.circular(
+                CliinAppConstants.radiusMedium,
+              ),
             ),
             child: Text(
               'Cas remis en cours — ${intervenant?.name ?? 'l\'intervenant'}'
               ' a été notifié et doit fournir une nouvelle preuve',
               style: CliinAppTextStyles.bodySmall.copyWith(
-                  fontSize: 11,
-                  color: CliinAppColors.alertOrange,
-                  fontWeight: FontWeight.w500),
+                fontSize: 11,
+                color: CliinAppColors.alertOrange,
+                fontWeight: FontWeight.w500,
+              ),
               textAlign: TextAlign.center,
             ),
           ),
@@ -570,8 +665,7 @@ class _ReportActionZoneState extends State<ReportActionZone> {
               _isContested = true;
               _showPersistPrompt = false;
             }),
-            onCancel: () =>
-                setState(() => _showPersistPrompt = false),
+            onCancel: () => setState(() => _showPersistPrompt = false),
           ),
         ] else ...[
           const SizedBox(height: 6),
@@ -585,11 +679,12 @@ class _ReportActionZoneState extends State<ReportActionZone> {
               child: Text(
                 'Le problème persiste encore ?',
                 style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                    color: CliinAppColors.textSecondary,
-                    decoration: TextDecoration.underline,
-                    decorationColor: CliinAppColors.textSecondary),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                  color: CliinAppColors.textSecondary,
+                  decoration: TextDecoration.underline,
+                  decorationColor: CliinAppColors.textSecondary,
+                ),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -609,52 +704,67 @@ class _ReportActionZoneState extends State<ReportActionZone> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: CliinAppColors.background,
-        borderRadius:
-            BorderRadius.circular(CliinAppConstants.radiusMedium),
+        borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
         border: Border.all(color: CliinAppColors.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(question,
-              style: CliinAppTextStyles.bodySmall.copyWith(
-                  fontSize: 11, color: CliinAppColors.textDark),
-              textAlign: TextAlign.center),
+          Text(
+            question,
+            style: CliinAppTextStyles.bodySmall.copyWith(
+              fontSize: 11,
+              color: CliinAppColors.textDark,
+            ),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 8),
-          Row(children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: onCancel,
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: CliinAppColors.divider),
-                  shape: RoundedRectangleBorder(
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: onCancel,
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: CliinAppColors.divider),
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(
-                          CliinAppConstants.radiusMedium)),
-                  padding: const EdgeInsets.symmetric(vertical: 6),
+                        CliinAppConstants.radiusMedium,
+                      ),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                  ),
+                  child: Text(
+                    'Annuler',
+                    style: CliinAppTextStyles.badge.copyWith(
+                      color: CliinAppColors.textSecondary,
+                    ),
+                  ),
                 ),
-                child: Text('Annuler',
-                    style: CliinAppTextStyles.badge
-                        .copyWith(color: CliinAppColors.textSecondary)),
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: onYes,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: CliinAppColors.primary,
-                  shape: RoundedRectangleBorder(
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: onYes,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: CliinAppColors.primary,
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(
-                          CliinAppConstants.radiusMedium)),
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  elevation: 0,
+                        CliinAppConstants.radiusMedium,
+                      ),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    yesLabel,
+                    style: CliinAppTextStyles.badge.copyWith(
+                      color: CliinAppColors.textWhite,
+                    ),
+                  ),
                 ),
-                child: Text(yesLabel,
-                    style: CliinAppTextStyles.badge
-                        .copyWith(color: CliinAppColors.textWhite)),
               ),
-            ),
-          ]),
+            ],
+          ),
         ],
       ),
     );
@@ -669,36 +779,41 @@ class _ReportActionZoneState extends State<ReportActionZone> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: widget.data.status.bannerBgColor,
-          borderRadius:
-              BorderRadius.circular(CliinAppConstants.radiusMedium),
+          borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
         ),
         child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                width: 26,
-                height: 26,
-                decoration: BoxDecoration(
-                    color: widget.data.status.bannerIconColor,
-                    shape: BoxShape.circle),
-                child: Icon(widget.data.status.bannerIcon,
-                    color: CliinAppColors.textWhite, size: 14),
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 26,
+              height: 26,
+              decoration: BoxDecoration(
+                color: widget.data.status.bannerIconColor,
+                shape: BoxShape.circle,
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  widget.data.status == ReportStatus.disponible
-                      ? 'Cas disponible, tout utilisateur peut le prendre en charge.'
-                      : 'Ce cas est déjà pris en charge. Merci pour votre engagement !',
-                  style: CliinAppTextStyles.bodySmall.copyWith(
-                      color: CliinAppColors.textDark,
-                      fontSize: 11,
-                      height: 1.3),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+              child: Icon(
+                widget.data.status.bannerIcon,
+                color: CliinAppColors.textWhite,
+                size: 14,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                widget.data.status == ReportStatus.disponible
+                    ? 'Cas disponible, tout utilisateur peut le prendre en charge.'
+                    : 'Ce cas est déjà pris en charge. Merci pour votre engagement !',
+                style: CliinAppTextStyles.bodySmall.copyWith(
+                  color: CliinAppColors.textDark,
+                  fontSize: 11,
+                  height: 1.3,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-            ]),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -714,8 +829,18 @@ class _ResolutionBlock extends StatelessWidget {
 
   String _formatDate(DateTime dt) {
     const months = [
-      'Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin',
-      'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'
+      'Jan',
+      'Fév',
+      'Mar',
+      'Avr',
+      'Mai',
+      'Juin',
+      'Juil',
+      'Août',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Déc',
     ];
     return '${dt.day} ${months[dt.month - 1]} ${dt.year}  '
         '${dt.hour.toString().padLeft(2, '0')}:'
@@ -730,40 +855,47 @@ class _ResolutionBlock extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: CliinAppColors.primaryLight,
-        borderRadius:
-            BorderRadius.circular(CliinAppConstants.radiusMedium),
+        borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
       ),
-      child:
-          Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-        Container(
-          width: 32,
-          height: 32,
-          decoration: const BoxDecoration(
-              color: CliinAppColors.primary, shape: BoxShape.circle),
-          child: const Icon(Icons.check_rounded,
-              color: CliinAppColors.textWhite, size: 18),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                intervenant != null
-                    ? 'Ce problème a été résolu par'
-                    : 'Ce problème a été résolu.',
-                style: CliinAppTextStyles.bodySmall.copyWith(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: const BoxDecoration(
+              color: CliinAppColors.primary,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.check_rounded,
+              color: CliinAppColors.textWhite,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  intervenant != null
+                      ? 'Ce problème a été résolu par'
+                      : 'Ce problème a été résolu.',
+                  style: CliinAppTextStyles.bodySmall.copyWith(
                     fontWeight: FontWeight.w600,
                     color: CliinAppColors.textDark,
-                    fontSize: 11),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (intervenant != null)
-                GestureDetector(
-                  onTap: onIntervenantTap,
-                  child: Text(intervenant.name,
+                    fontSize: 11,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (intervenant != null)
+                  GestureDetector(
+                    onTap: onIntervenantTap,
+                    child: Text(
+                      intervenant.name,
                       style: CliinAppTextStyles.bodySmall.copyWith(
                         color: CliinAppColors.primary,
                         fontWeight: FontWeight.w700,
@@ -772,26 +904,35 @@ class _ResolutionBlock extends StatelessWidget {
                         decorationColor: CliinAppColors.primary,
                       ),
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.calendar_today_rounded,
+                      size: 10,
+                      color: CliinAppColors.textSecondary,
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      intervenant?.treatedAt != null
+                          ? _formatDate(intervenant!.treatedAt!)
+                          : 'Date de traitement non renseignée',
+                      style: CliinAppTextStyles.bodySmall.copyWith(
+                        color: CliinAppColors.textSecondary,
+                        fontSize: 10,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
-              Row(children: [
-                const Icon(Icons.calendar_today_rounded,
-                    size: 10, color: CliinAppColors.textSecondary),
-                const SizedBox(width: 3),
-                Text(
-                  intervenant?.treatedAt != null
-                      ? _formatDate(intervenant!.treatedAt!)
-                      : 'Date de traitement non renseignée',
-                  style: CliinAppTextStyles.bodySmall.copyWith(
-                      color: CliinAppColors.textSecondary, fontSize: 10),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ]),
-            ],
+              ],
+            ),
           ),
-        ),
-      ]),
+        ],
+      ),
     );
   }
 }

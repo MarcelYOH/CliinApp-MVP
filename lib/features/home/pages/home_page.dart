@@ -6,6 +6,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../shared/widgets/app_header.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
+import '../../../shared/widgets/more_menu_sheet.dart';
 import '../../../shared/models/user_model.dart';
 import '../../../shared/store/auth_store.dart';
 import '../../../shared/store/report_store.dart';
@@ -59,23 +60,25 @@ class _HomePageState extends State<HomePage> {
   void _openCamera() async {
     if (await requireAuth(context)) {
       if (!mounted) return;
-      Navigator.push(context,
-          MaterialPageRoute(builder: (_) => const ReportCameraPage()));
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ReportCameraPage()),
+      );
     }
   }
 
   void _onNavTap(int index) {
-    if (index == 1) { _goToMap(); return; }
-    if (index == 4) { _goToProfile(); return; }
-    setState(() => _currentNavIndex = index);
-  }
-
-  void _goToProfile() {
-    if (AuthStore.instance.isAuthenticated) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()));
-    } else {
-      showAuthGateSheet(context);
+    if (index == 1) {
+      _goToMap();
+      return;
     }
+    // "Plus" n'ouvre plus le Profil — uniquement un menu des modules à
+    // venir. Le Profil reste accessible uniquement via l'avatar du header.
+    if (index == 4) {
+      showMoreMenuSheet(context);
+      return;
+    }
+    setState(() => _currentNavIndex = index);
   }
 
   void _goToMap({
@@ -99,23 +102,23 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _goToMapUrgents()    => _goToMap(priorities: {MapPriorityFilter.urgents});
-  void _goToMapProches()    => _goToMap(priorities: {MapPriorityFilter.proches});
-  void _goToMapRecents()    => _goToMap(priorities: {MapPriorityFilter.recents});
+  void _goToMapUrgents() => _goToMap(priorities: {MapPriorityFilter.urgents});
+  void _goToMapProches() => _goToMap(priorities: {MapPriorityFilter.proches});
+  void _goToMapRecents() => _goToMap(priorities: {MapPriorityFilter.recents});
   void _goToMapCategorie(ReportCategory cat) => _goToMap(categories: {cat});
   void _goToMapCategories() => _goToMap();
 
   ReportCategory? _labelToCategory(String label) {
     const map = {
       'Bac/Poubelle saturée': ReportCategory.bacPoubelleSature,
-      'Dépôts sauvages':      ReportCategory.depotsSauvages,
-      'Caniveaux bouchés':    ReportCategory.caniveauxBouches,
-      'Eaux usées':           ReportCategory.eauxUsees,
-      'Conteneur saturé':     ReportCategory.conteneurSature,
-      'Zone insalubre':       ReportCategory.zoneInsalubre,
-      'Brûlage des déchets':  ReportCategory.brulageDesDechets,
-      'Déchets industriels':  ReportCategory.dechetsIndustriels,
-      'Déchets médicaux':     ReportCategory.dechetsMedicaux,
+      'Dépôts sauvages': ReportCategory.depotsSauvages,
+      'Caniveaux bouchés': ReportCategory.caniveauxBouches,
+      'Eaux usées': ReportCategory.eauxUsees,
+      'Conteneur saturé': ReportCategory.conteneurSature,
+      'Zone insalubre': ReportCategory.zoneInsalubre,
+      'Brûlage des déchets': ReportCategory.brulageDesDechets,
+      'Déchets industriels': ReportCategory.dechetsIndustriels,
+      'Déchets médicaux': ReportCategory.dechetsMedicaux,
     };
     return map[label];
   }
@@ -123,8 +126,7 @@ class _HomePageState extends State<HomePage> {
   void _onCardTap(HomeReportModel report) {
     Navigator.push(
       context,
-      MaterialPageRoute<void>(
-          builder: (_) => ReportDetailPage(data: report)),
+      MaterialPageRoute<void>(builder: (_) => ReportDetailPage(data: report)),
     );
   }
 
@@ -152,10 +154,7 @@ class _HomePageState extends State<HomePage> {
   // Déclenché uniquement si intervenant.isContactable = true
   // (whatsAppVisible = true ET whatsAppNumber != null)
   void _onContact(HomeReportModel report) {
-    openWhatsApp(
-      context: context,
-      intervenant: report.intervenant,
-    );
+    openWhatsApp(context: context, intervenant: report.intervenant);
   }
 
   Widget _buildInitialsWidget(String username) {
@@ -189,14 +188,16 @@ class _HomePageState extends State<HomePage> {
     final recentReports = store.recentReports.isNotEmpty
         ? store.recentReports
         : HomeDummyData.recentReports
-            .where((r) => r.status == ReportStatus.disponible)
-            .take(1)
-            .toList();
+              .where((r) => r.status == ReportStatus.disponible)
+              .take(1)
+              .toList();
 
     final sections = <Widget>[
       HomeQuickReport(data: HomeDummyData.quickReport, onTap: _openCamera),
       HomeAlertBanner(
-          data: HomeDummyData.alertBanner, onVoirTap: _goToMapUrgents),
+        data: HomeDummyData.alertBanner,
+        onVoirTap: _goToMapUrgents,
+      ),
       HomeNearbyReports(
         reports: nearbyReports,
         onVoirTout: _goToMapProches,
@@ -206,9 +207,10 @@ class _HomePageState extends State<HomePage> {
       ),
       HomeActionBanner(data: HomeDummyData.actionBanner, onTap: () {}),
       HomeGroups(
-          groups: HomeDummyData.groups,
-          onVoirTout: () {},
-          onCardTap: (_) {}),
+        groups: HomeDummyData.groups,
+        onVoirTout: () {},
+        onCardTap: (_) {},
+      ),
       HomeCategories(
         categories: HomeDummyData.categories,
         onVoirTout: _goToMapCategories,
@@ -250,8 +252,11 @@ class _HomePageState extends State<HomePage> {
                 if (!isAuthed) {
                   avatarContent = Container(
                     color: Colors.grey.shade200,
-                    child: Icon(Icons.person_rounded,
-                        color: Colors.grey.shade500, size: 22),
+                    child: Icon(
+                      Icons.person_rounded,
+                      color: Colors.grey.shade500,
+                      size: 22,
+                    ),
                   );
                 } else if (authUser!.avatarPath != null &&
                     authUser.avatarPath!.isNotEmpty) {
@@ -267,18 +272,23 @@ class _HomePageState extends State<HomePage> {
 
                 return AppHeader(
                   user: const UserModel(
-                      id: 'guest',
-                      name: '',
-                      avatarUrl: '',
-                      notificationCount: 0),
+                    id: 'guest',
+                    name: '',
+                    avatarUrl: '',
+                    notificationCount: 0,
+                  ),
                   greeting: greeting,
                   contextLine: contextLine,
                   avatarOverride: avatarContent,
                   onSearch: (_) {},
                   onNotificationTap: () {},
                   onAvatarTap: isAuthed
-                      ? () => Navigator.push(context,
-                            MaterialPageRoute(builder: (_) => const ProfilePage()))
+                      ? () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ProfilePage(),
+                          ),
+                        )
                       : () => showAuthGateSheet(context),
                 );
               },
@@ -289,7 +299,9 @@ class _HomePageState extends State<HomePage> {
                 itemCount: sections.length,
                 itemBuilder: (_, i) => sections[i],
                 separatorBuilder: (_, i) {
-                  if (i == 0) return const SizedBox(height: CliinAppConstants.spacingM);
+                  if (i == 0) {
+                    return const SizedBox(height: CliinAppConstants.spacingM);
+                  }
                   if (i == sections.length - 2) return const SizedBox.shrink();
                   return const SizedBox(height: 32);
                 },

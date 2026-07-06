@@ -10,6 +10,7 @@ import '../../../../shared/store/report_store.dart';
 import '../../../../shared/widgets/report_action_zone.dart';
 import '../../../../shared/widgets/report_stats_comments.dart';
 import '../../../../shared/widgets/public_view_link_button.dart';
+import '../../../../shared/widgets/report_card.dart' show buildReportImage;
 import '../../../../features/home/models/home_report_model.dart';
 import 'proof_camera_page.dart';
 import 'report_detail_page.dart';
@@ -92,10 +93,12 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Erreur : ${e.toString()}'),
-          backgroundColor: CliinAppColors.alertRed,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur : ${e.toString()}'),
+            backgroundColor: CliinAppColors.alertRed,
+          ),
+        );
       }
     }
   }
@@ -133,8 +136,11 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
             children: [
               Center(
                 child: Container(
-                  margin: const EdgeInsets.only(top: CliinAppConstants.spacingM),
-                  width: 40, height: 4,
+                  margin: const EdgeInsets.only(
+                    top: CliinAppConstants.spacingM,
+                  ),
+                  width: 40,
+                  height: 4,
                   decoration: BoxDecoration(
                     color: CliinAppColors.divider,
                     borderRadius: BorderRadius.circular(2),
@@ -142,62 +148,94 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
                 ),
               ),
               const SizedBox(height: CliinAppConstants.spacingL),
-              Text('Ajouter un numéro WhatsApp',
-                  style: GoogleFonts.poppins(
-                      fontSize: 16, fontWeight: FontWeight.bold,
-                      color: CliinAppColors.textDark)),
+              Text(
+                'Ajouter un numéro WhatsApp',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: CliinAppColors.textDark,
+                ),
+              ),
               const SizedBox(height: CliinAppConstants.spacingL),
 
               // Champ numéro
               Container(
                 decoration: BoxDecoration(
                   color: CliinAppColors.background,
-                  borderRadius: BorderRadius.circular(CliinAppConstants.radiusSmall),
+                  borderRadius: BorderRadius.circular(
+                    CliinAppConstants.radiusSmall,
+                  ),
                   border: Border.all(color: CliinAppColors.divider),
                 ),
-                child: Row(children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                    child: Text(indicatif,
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 14,
+                      ),
+                      child: Text(
+                        indicatif,
                         style: GoogleFonts.poppins(
-                            fontSize: 13, fontWeight: FontWeight.w600,
-                            color: CliinAppColors.textDark)),
-                  ),
-                  Container(width: 1, height: 24, color: CliinAppColors.divider),
-                  Expanded(
-                    child: TextField(
-                      controller: phoneController,
-                      keyboardType: TextInputType.phone,
-                      autofocus: true,
-                      style: GoogleFonts.inter(fontSize: 14, color: CliinAppColors.textDark),
-                      decoration: InputDecoration(
-                        hintText: '07 XX XX XX XX',
-                        hintStyle: GoogleFonts.inter(
-                            fontSize: 14, color: CliinAppColors.textSecondary),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 14),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: CliinAppColors.textDark,
+                        ),
                       ),
                     ),
-                  ),
-                ]),
+                    Container(
+                      width: 1,
+                      height: 24,
+                      color: CliinAppColors.divider,
+                    ),
+                    Expanded(
+                      child: TextField(
+                        controller: phoneController,
+                        keyboardType: TextInputType.phone,
+                        autofocus: true,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: CliinAppColors.textDark,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: '07 XX XX XX XX',
+                          hintStyle: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: CliinAppColors.textSecondary,
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
 
               const SizedBox(height: CliinAppConstants.spacingM),
 
               // Toggle visible au public
-              Row(children: [
-                Expanded(
-                  child: Text('Visible au public',
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Visible au public',
                       style: GoogleFonts.inter(
-                          fontSize: 13, color: CliinAppColors.textDark)),
-                ),
-                Switch(
-                  value: visible,
-                  onChanged: (v) => setModal(() => visible = v),
-                  activeThumbColor: CliinAppColors.primary,
-                ),
-              ]),
+                        fontSize: 13,
+                        color: CliinAppColors.textDark,
+                      ),
+                    ),
+                  ),
+                  Switch(
+                    value: visible,
+                    onChanged: (v) => setModal(() => visible = v),
+                    activeThumbColor: CliinAppColors.primary,
+                  ),
+                ],
+              ),
 
               const SizedBox(height: CliinAppConstants.spacingL),
 
@@ -209,18 +247,27 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
                     final local = phoneController.text.trim();
                     if (local.isEmpty) return;
                     // Même règle trunk prefix que take_charge_flow
-                    const removeTrunkZero = {'+33', '+32', '+44', '+31', '+39', '+34'};
-                    final shouldRemove = local.startsWith('0') &&
+                    const removeTrunkZero = {
+                      '+33',
+                      '+32',
+                      '+44',
+                      '+31',
+                      '+39',
+                      '+34',
+                    };
+                    final shouldRemove =
+                        local.startsWith('0') &&
                         removeTrunkZero.contains(indicatif);
                     final cleaned = shouldRemove ? local.substring(1) : local;
                     final fullNumber = '$indicatif$cleaned';
                     Navigator.pop(ctx);
                     try {
-                      final updated = await ReportStore.instance.updateWhatsAppNumber(
-                        reportId: _report.id,
-                        number: fullNumber,
-                        visible: visible,
-                      );
+                      final updated = await ReportStore.instance
+                          .updateWhatsAppNumber(
+                            reportId: _report.id,
+                            number: fullNumber,
+                            visible: visible,
+                          );
                       if (mounted) {
                         setState(() {
                           _report = updated;
@@ -229,24 +276,33 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
                       }
                     } catch (e) {
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text('Erreur : ${e.toString()}'),
-                          backgroundColor: CliinAppColors.alertRed,
-                        ));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Erreur : ${e.toString()}'),
+                            backgroundColor: CliinAppColors.alertRed,
+                          ),
+                        );
                       }
                     }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: CliinAppColors.primary,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium)),
+                      borderRadius: BorderRadius.circular(
+                        CliinAppConstants.radiusMedium,
+                      ),
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     elevation: 0,
                   ),
-                  child: Text('Enregistrer',
-                      style: GoogleFonts.poppins(
-                          fontSize: 14, fontWeight: FontWeight.w600,
-                          color: Colors.white)),
+                  child: Text(
+                    'Enregistrer',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -272,7 +328,8 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-          builder: (_) => ReportDetailPage(data: _report, isAuthor: false)),
+        builder: (_) => ReportDetailPage(data: _report, isAuthor: false),
+      ),
     );
   }
 
@@ -288,8 +345,20 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
   }
 
   String _formatDate(DateTime dt) {
-    const months = ['Jan','Fév','Mar','Avr','Mai','Juin',
-        'Juil','Août','Sep','Oct','Nov','Déc'];
+    const months = [
+      'Jan',
+      'Fév',
+      'Mar',
+      'Avr',
+      'Mai',
+      'Juin',
+      'Juil',
+      'Août',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Déc',
+    ];
     return '${dt.day} ${months[dt.month - 1]} ${dt.year} • '
         '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
@@ -322,7 +391,11 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
                     ],
                     if (_report.status == ReportStatus.traite) ...[
                       const SizedBox(height: CliinAppConstants.spacingM),
-                      ReportActionZone(data: _report, compact: false),
+                      ReportActionZone(
+                        data: _report,
+                        compact: false,
+                        showResolutionConfirm: false,
+                      ),
                     ] else if (_report.intervenant?.outcome ==
                         InterventionOutcome.abandoned) ...[
                       const SizedBox(height: CliinAppConstants.spacingM),
@@ -343,9 +416,10 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
                     _buildInfoAndHistory(),
                     const SizedBox(height: CliinAppConstants.spacingXL),
                     ReportStatsRow(
-                        views: _report.views,
-                        comments: _report.comments,
-                        shares: _report.shares),
+                      views: _report.views,
+                      comments: _report.comments,
+                      shares: _report.shares,
+                    ),
                     const SizedBox(height: CliinAppConstants.spacingL),
                     ReportCommentsSection(count: _report.comments),
                     const SizedBox(height: CliinAppConstants.spacingXL),
@@ -368,27 +442,43 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
         color: const Color(0xFFF0F0F0),
         borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
       ),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Icon(Icons.hourglass_bottom_rounded,
-            color: Color(0xFF6B7280), size: 22),
-        const SizedBox(width: CliinAppConstants.spacingM),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Délai de 72h expiré',
-                style: GoogleFonts.poppins(
-                    fontSize: 13, fontWeight: FontWeight.w700,
-                    color: CliinAppColors.textDark)),
-            const SizedBox(height: 3),
-            Text(
-                'Aucune preuve n\'a été soumise dans le délai. Ce cas est '
-                'redevenu Disponible — un autre intervenant peut désormais le '
-                'prendre en charge.',
-                style: GoogleFonts.inter(
-                    fontSize: 11, color: CliinAppColors.textSecondary,
-                    height: 1.4)),
-          ]),
-        ),
-      ]),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.hourglass_bottom_rounded,
+            color: Color(0xFF6B7280),
+            size: 22,
+          ),
+          const SizedBox(width: CliinAppConstants.spacingM),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Délai de 72h expiré',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: CliinAppColors.textDark,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Aucune preuve n\'a été soumise dans le délai. Ce cas est '
+                  'redevenu Disponible — un autre intervenant peut désormais le '
+                  'prendre en charge.',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: CliinAppColors.textSecondary,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -401,65 +491,100 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
         borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
         border: Border.all(color: const Color(0xFF8E24AA)),
       ),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Icon(Icons.error_outline_rounded,
-            color: Color(0xFF8E24AA), size: 22),
-        const SizedBox(width: CliinAppConstants.spacingM),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Preuve refusée',
-                style: GoogleFonts.poppins(
-                    fontSize: 13, fontWeight: FontWeight.w700,
-                    color: CliinAppColors.textDark)),
-            const SizedBox(height: 3),
-            Text(
-                'La position GPS de votre photo \'après\' ne correspondait '
-                'pas à celle du cas signalé (écart supérieur à la marge '
-                'tolérée). Ce cas est redevenu Disponible. Assurez-vous '
-                'd\'être bien sur place au moment de la photo la prochaine '
-                'fois.',
-                style: GoogleFonts.inter(
-                    fontSize: 11, color: CliinAppColors.textSecondary,
-                    height: 1.4)),
-          ]),
-        ),
-      ]),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.error_outline_rounded,
+            color: Color(0xFF8E24AA),
+            size: 22,
+          ),
+          const SizedBox(width: CliinAppConstants.spacingM),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Preuve refusée',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: CliinAppColors.textDark,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'La position GPS de votre photo \'après\' ne correspondait '
+                  'pas à celle du cas signalé (écart supérieur à la marge '
+                  'tolérée). Ce cas est redevenu Disponible. Assurez-vous '
+                  'd\'être bien sur place au moment de la photo la prochaine '
+                  'fois.',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: CliinAppColors.textSecondary,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(
-          horizontal: CliinAppConstants.pagePadding,
-          vertical: CliinAppConstants.spacingM),
-      child: Row(children: [
-        GestureDetector(
-          onTap: () => Navigator.pop(context),
-          child: Container(
-            width: 40, height: 40,
-            decoration: BoxDecoration(
-              color: CliinAppColors.primaryLight,
-              borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
+        horizontal: CliinAppConstants.pagePadding,
+        vertical: CliinAppConstants.spacingM,
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: CliinAppColors.primaryLight,
+                borderRadius: BorderRadius.circular(
+                  CliinAppConstants.radiusMedium,
+                ),
+              ),
+              child: const Icon(
+                Icons.arrow_back,
+                color: CliinAppColors.primary,
+                size: 20,
+              ),
             ),
-            child: const Icon(Icons.arrow_back,
-                color: CliinAppColors.primary, size: 20),
           ),
-        ),
-        Expanded(
-          child: Text('Ma prise en charge',
+          Expanded(
+            child: Text(
+              'Ma prise en charge',
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
-                  fontSize: 17, fontWeight: FontWeight.bold,
-                  color: CliinAppColors.textDark)),
-        ),
-        Container(
-          width: 40, height: 40,
-          decoration: BoxDecoration(
-              color: CliinAppColors.background, shape: BoxShape.circle),
-          child: const Icon(Icons.more_vert_rounded,
-              color: CliinAppColors.textDark, size: 20),
-        ),
-      ]),
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: CliinAppColors.textDark,
+              ),
+            ),
+          ),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: CliinAppColors.background,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.more_vert_rounded,
+              color: CliinAppColors.textDark,
+              size: 20,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -500,7 +625,7 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
 
   // ── Colonne de droite — dépend du statut réel ──────────────────
   ({String label, String value, Color color, Color bg, IconData icon})
-      get _secondaryDisplay {
+  get _secondaryDisplay {
     if (_report.status == ReportStatus.traite) {
       final treatedAt = _report.intervenant?.treatedAt;
       return (
@@ -545,64 +670,102 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
     final secondary = _secondaryDisplay;
     return Container(
       padding: const EdgeInsets.symmetric(
-          horizontal: CliinAppConstants.spacingL,
-          vertical: CliinAppConstants.spacingM),
+        horizontal: CliinAppConstants.spacingL,
+        vertical: CliinAppConstants.spacingM,
+      ),
       decoration: BoxDecoration(
         color: CliinAppColors.cardWhite,
         borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
         border: Border.all(color: CliinAppColors.divider),
       ),
-      child: Row(children: [
-        Expanded(
-          child: Row(children: [
-            Container(
-              width: 36, height: 36,
-              decoration: BoxDecoration(
-                color: status.bg,
-                borderRadius: BorderRadius.circular(CliinAppConstants.radiusSmall),
-              ),
-              child: Icon(status.icon, color: status.color, size: 18),
+      child: Row(
+        children: [
+          Expanded(
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: status.bg,
+                    borderRadius: BorderRadius.circular(
+                      CliinAppConstants.radiusSmall,
+                    ),
+                  ),
+                  child: Icon(status.icon, color: status.color, size: 18),
+                ),
+                const SizedBox(width: CliinAppConstants.spacingS),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Statut',
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          color: CliinAppColors.textSecondary,
+                        ),
+                      ),
+                      Text(
+                        status.label,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: status.color,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: CliinAppConstants.spacingS),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Statut', style: GoogleFonts.inter(
-                    fontSize: 10, color: CliinAppColors.textSecondary)),
-                Text(status.label, style: GoogleFonts.poppins(
-                    fontSize: 13, fontWeight: FontWeight.w700,
-                    color: status.color),
-                    overflow: TextOverflow.ellipsis),
-              ]),
+          ),
+          Container(width: 1, height: 32, color: CliinAppColors.divider),
+          const SizedBox(width: CliinAppConstants.spacingM),
+          Expanded(
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: secondary.bg,
+                    borderRadius: BorderRadius.circular(
+                      CliinAppConstants.radiusSmall,
+                    ),
+                  ),
+                  child: Icon(secondary.icon, color: secondary.color, size: 18),
+                ),
+                const SizedBox(width: CliinAppConstants.spacingS),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        secondary.label,
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          color: CliinAppColors.textSecondary,
+                        ),
+                      ),
+                      Text(
+                        secondary.value,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: secondary.color,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ]),
-        ),
-        Container(width: 1, height: 32, color: CliinAppColors.divider),
-        const SizedBox(width: CliinAppConstants.spacingM),
-        Expanded(
-          child: Row(children: [
-            Container(
-              width: 36, height: 36,
-              decoration: BoxDecoration(
-                color: secondary.bg,
-                borderRadius: BorderRadius.circular(CliinAppConstants.radiusSmall),
-              ),
-              child: Icon(secondary.icon, color: secondary.color, size: 18),
-            ),
-            const SizedBox(width: CliinAppConstants.spacingS),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(secondary.label, style: GoogleFonts.inter(
-                    fontSize: 10, color: CliinAppColors.textSecondary)),
-                Text(secondary.value,
-                    style: GoogleFonts.poppins(
-                        fontSize: 13, fontWeight: FontWeight.w700,
-                        color: secondary.color),
-                    overflow: TextOverflow.ellipsis),
-              ]),
-            ),
-          ]),
-        ),
-      ]),
+          ),
+        ],
+      ),
     );
   }
 
@@ -614,65 +777,117 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
         borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
         border: Border.all(color: CliinAppColors.divider),
       ),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(CliinAppConstants.radiusSmall),
-          child: Stack(children: [
-            Image.asset(
-              _report.imageAsset,
-              width: 96, height: 88, fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => Container(
-                  width: 96, height: 88, color: CliinAppColors.background),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(CliinAppConstants.radiusSmall),
+            child: Stack(
+              children: [
+                SizedBox(
+                  width: 96,
+                  height: 88,
+                  child: buildReportImage(
+                    _report.imageAsset,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => Container(
+                      width: 96,
+                      height: 88,
+                      color: CliinAppColors.background,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 5,
+                  left: 5,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _report.severity.color,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      _report.severity.label.toUpperCase(),
+                      style: CliinAppTextStyles.badge.copyWith(
+                        color: Colors.white,
+                        fontSize: 8,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            Positioned(
-              top: 5, left: 5,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                decoration: BoxDecoration(
-                    color: _report.severity.color,
-                    borderRadius: BorderRadius.circular(4)),
-                child: Text(_report.severity.label.toUpperCase(),
-                    style: CliinAppTextStyles.badge.copyWith(
-                        color: Colors.white, fontSize: 8)),
-              ),
+          ),
+          const SizedBox(width: CliinAppConstants.spacingM),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _report.title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: CliinAppColors.textDark,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.location_on_rounded,
+                      color: CliinAppColors.primary,
+                      size: 12,
+                    ),
+                    const SizedBox(width: 2),
+                    Expanded(
+                      child: Text(
+                        _report.location,
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: CliinAppColors.primary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _report.description,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: CliinAppColors.textSecondary,
+                    height: 1.4,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    _MiniChip(
+                      label: _report.reference,
+                      icon: Icons.tag_rounded,
+                    ),
+                    const SizedBox(width: 6),
+                    _MiniChip(
+                      label: _report.distance,
+                      icon: Icons.near_me_outlined,
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ]),
-        ),
-        const SizedBox(width: CliinAppConstants.spacingM),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(_report.title,
-                style: GoogleFonts.poppins(
-                    fontSize: 14, fontWeight: FontWeight.bold,
-                    color: CliinAppColors.textDark),
-                maxLines: 1, overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 2),
-            Row(children: [
-              const Icon(Icons.location_on_rounded,
-                  color: CliinAppColors.primary, size: 12),
-              const SizedBox(width: 2),
-              Expanded(
-                child: Text(_report.location,
-                    style: GoogleFonts.inter(
-                        fontSize: 11, color: CliinAppColors.primary),
-                    maxLines: 1, overflow: TextOverflow.ellipsis),
-              ),
-            ]),
-            const SizedBox(height: 4),
-            Text(_report.description,
-                style: GoogleFonts.inter(
-                    fontSize: 11, color: CliinAppColors.textSecondary,
-                    height: 1.4),
-                maxLines: 2, overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 6),
-            Row(children: [
-              _MiniChip(label: _report.reference, icon: Icons.tag_rounded),
-              const SizedBox(width: 6),
-              _MiniChip(label: _report.distance, icon: Icons.near_me_outlined),
-            ]),
-          ]),
-        ),
-      ]),
+          ),
+        ],
+      ),
     );
   }
 
@@ -693,159 +908,240 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
         borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
         border: Border.all(color: CliinAppColors.divider),
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-
-        // ── Ligne 1 : Avatar + nom (colonne) ─────────────────────
-        // CORRECTION overflow : on ne met plus tout dans une Row
-        // Le bouton Contacter passe en bas
-        Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-          // Avatar
-          Container(
-            width: 44, height: 44,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: CliinAppColors.primaryLight,
-              border: Border.all(color: CliinAppColors.primary, width: 1.5),
-            ),
-            child: Center(
-              child: Text(
-                intervenant.name.isNotEmpty
-                    ? intervenant.name[0].toUpperCase() : '?',
-                style: GoogleFonts.poppins(
-                    fontSize: 18, fontWeight: FontWeight.bold,
-                    color: CliinAppColors.primary),
-              ),
-            ),
-          ),
-          const SizedBox(width: CliinAppConstants.spacingM),
-          // Nom + "Pris en charge par"
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Pris en charge par',
-                  style: GoogleFonts.inter(
-                      fontSize: 10, color: CliinAppColors.textSecondary)),
-              Text(intervenant.name,
-                  style: GoogleFonts.poppins(
-                      fontSize: 14, fontWeight: FontWeight.bold,
-                      color: CliinAppColors.primary),
-                  maxLines: 1, overflow: TextOverflow.ellipsis),
-            ]),
-          ),
-        ]),
-
-        const SizedBox(height: CliinAppConstants.spacingS),
-
-        // ── "Pour le compte de" — ligne séparée ──────────────────
-        Row(children: [
-          const SizedBox(width: 56), // aligne avec le texte après l'avatar
-          Text('Pour le compte de : ',
-              style: GoogleFonts.inter(
-                  fontSize: 12, color: CliinAppColors.textSecondary)),
-          Flexible(
-            child: Text(accountLabel,
-                style: GoogleFonts.poppins(
-                    fontSize: 12, fontWeight: FontWeight.w600,
-                    color: CliinAppColors.textDark),
-                maxLines: 1, overflow: TextOverflow.ellipsis),
-          ),
-        ]),
-
-        // ── Date prise en charge ──────────────────────────────────
-        if (intervenant.takenAt != null) ...[
-          const SizedBox(height: 4),
-          Row(children: [
-            const SizedBox(width: 56),
-            const Icon(Icons.calendar_today_outlined,
-                size: 11, color: CliinAppColors.textSecondary),
-            const SizedBox(width: 4),
-            Flexible(
-              child: Text('Pris en charge le ${_formatDate(intervenant.takenAt!)}',
-                  style: GoogleFonts.inter(
-                      fontSize: 11, color: CliinAppColors.textSecondary),
-                  maxLines: 1, overflow: TextOverflow.ellipsis),
-            ),
-          ]),
-        ],
-
-        // Le bouton "Contacter" n'apparaît PAS dans le tableau de bord intervenant
-        // L'intervenant ne peut pas se contacter lui-même — spec
-
-        // ── Séparateur + bloc WhatsApp ──────────────────────────────
-        const SizedBox(height: CliinAppConstants.spacingM),
-        const Divider(height: 1, color: Color(0xFFEEEEEE)),
-        const SizedBox(height: CliinAppConstants.spacingM),
-
-        Row(children: [
-          Container(
-            width: 36, height: 36,
-            decoration: const BoxDecoration(
-                color: Color(0xFF25D366), shape: BoxShape.circle),
-            child: const Icon(Icons.phone_iphone_rounded,
-                color: Colors.white, size: 18),
-          ),
-          const SizedBox(width: CliinAppConstants.spacingM),
-          Expanded(
-            child: Text('Contact WhatsApp',
-                style: GoogleFonts.poppins(
-                    fontSize: 13, fontWeight: FontWeight.w600,
-                    color: CliinAppColors.textDark)),
-          ),
-        ]),
-
-        const SizedBox(height: CliinAppConstants.spacingM),
-
-        // ── CAS 1 : Aucun numéro enregistré ──────────────────────
-        if (number == null) ...[
-          Text('Aucun numéro enregistré.',
-              style: GoogleFonts.inter(
-                  fontSize: 12, color: CliinAppColors.textSecondary)),
-          const SizedBox(height: CliinAppConstants.spacingM),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: _openAddNumberSheet,
-              icon: const Icon(Icons.add_rounded,
-                  size: 16, color: CliinAppColors.primary),
-              label: Text('Ajouter un numéro',
-                  style: GoogleFonts.poppins(
-                      fontSize: 13, fontWeight: FontWeight.w600,
-                      color: CliinAppColors.primary)),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                side: const BorderSide(color: CliinAppColors.primary),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium)),
-              ),
-            ),
-          ),
-        ],
-
-        // ── CAS 2 : Numéro enregistré ─────────────────────────────
-        if (number != null) ...[
-          Row(children: [
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(number,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Ligne 1 : Avatar + nom (colonne) ─────────────────────
+          // CORRECTION overflow : on ne met plus tout dans une Row
+          // Le bouton Contacter passe en bas
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Avatar
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: CliinAppColors.primaryLight,
+                  border: Border.all(color: CliinAppColors.primary, width: 1.5),
+                ),
+                child: Center(
+                  child: Text(
+                    intervenant.name.isNotEmpty
+                        ? intervenant.name[0].toUpperCase()
+                        : '?',
                     style: GoogleFonts.poppins(
-                        fontSize: 14, fontWeight: FontWeight.w600,
-                        color: CliinAppColors.textDark)),
-                Text('Visible au public',
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: CliinAppColors.primary,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: CliinAppConstants.spacingM),
+              // Nom + "Pris en charge par"
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Pris en charge par',
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        color: CliinAppColors.textSecondary,
+                      ),
+                    ),
+                    Text(
+                      intervenant.name,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: CliinAppColors.primary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: CliinAppConstants.spacingS),
+
+          // ── "Pour le compte de" — ligne séparée ──────────────────
+          Row(
+            children: [
+              const SizedBox(width: 56), // aligne avec le texte après l'avatar
+              Text(
+                'Pour le compte de : ',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: CliinAppColors.textSecondary,
+                ),
+              ),
+              Flexible(
+                child: Text(
+                  accountLabel,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: CliinAppColors.textDark,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+
+          // ── Date prise en charge ──────────────────────────────────
+          if (intervenant.takenAt != null) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const SizedBox(width: 56),
+                const Icon(
+                  Icons.calendar_today_outlined,
+                  size: 11,
+                  color: CliinAppColors.textSecondary,
+                ),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    'Pris en charge le ${_formatDate(intervenant.takenAt!)}',
                     style: GoogleFonts.inter(
-                        fontSize: 11, color: CliinAppColors.textSecondary)),
-              ]),
+                      fontSize: 11,
+                      color: CliinAppColors.textSecondary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
-            Transform.scale(
-              scale: 0.9,
-              child: Switch(
-                value: _whatsAppVisible,
-                onChanged: _toggleWhatsApp,
-                activeThumbColor: CliinAppColors.primary,
-                activeTrackColor: CliinAppColors.primaryLight,
+          ],
+
+          // Le bouton "Contacter" n'apparaît PAS dans le tableau de bord intervenant
+          // L'intervenant ne peut pas se contacter lui-même — spec
+
+          // ── Séparateur + bloc WhatsApp ──────────────────────────────
+          const SizedBox(height: CliinAppConstants.spacingM),
+          const Divider(height: 1, color: Color(0xFFEEEEEE)),
+          const SizedBox(height: CliinAppConstants.spacingM),
+
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF25D366),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.phone_iphone_rounded,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: CliinAppConstants.spacingM),
+              Expanded(
+                child: Text(
+                  'Contact WhatsApp',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: CliinAppColors.textDark,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: CliinAppConstants.spacingM),
+
+          // ── CAS 1 : Aucun numéro enregistré ──────────────────────
+          if (number == null) ...[
+            Text(
+              'Aucun numéro enregistré.',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: CliinAppColors.textSecondary,
               ),
             ),
-          ]),
+            const SizedBox(height: CliinAppConstants.spacingM),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _openAddNumberSheet,
+                icon: const Icon(
+                  Icons.add_rounded,
+                  size: 16,
+                  color: CliinAppColors.primary,
+                ),
+                label: Text(
+                  'Ajouter un numéro',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: CliinAppColors.primary,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  side: const BorderSide(color: CliinAppColors.primary),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(
+                      CliinAppConstants.radiusMedium,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+
+          // ── CAS 2 : Numéro enregistré ─────────────────────────────
+          if (number != null) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        number,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: CliinAppColors.textDark,
+                        ),
+                      ),
+                      Text(
+                        'Visible au public',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: CliinAppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Transform.scale(
+                  scale: 0.9,
+                  child: Switch(
+                    value: _whatsAppVisible,
+                    onChanged: _toggleWhatsApp,
+                    activeThumbColor: CliinAppColors.primary,
+                    activeTrackColor: CliinAppColors.primaryLight,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
-      ]),
+      ),
     );
   }
 
@@ -856,43 +1152,74 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
         color: CliinAppColors.primaryLight,
         borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
         border: Border.all(
-            color: CliinAppColors.primary.withValues(alpha: 0.3)),
+          color: CliinAppColors.primary.withValues(alpha: 0.3),
+        ),
       ),
-      child: Row(children: [
-        const Icon(Icons.camera_alt_outlined,
-            color: CliinAppColors.primary, size: 28),
-        const SizedBox(width: CliinAppConstants.spacingM),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Marquer comme traité',
-                style: GoogleFonts.poppins(
-                    fontSize: 13, fontWeight: FontWeight.bold,
-                    color: CliinAppColors.textDark)),
-            Text('Ajoutez une photo APRÈS pour valider l\'intervention.',
-                style: GoogleFonts.inter(
-                    fontSize: 11, color: CliinAppColors.textSecondary),
-                maxLines: 2),
-          ]),
-        ),
-        const SizedBox(width: CliinAppConstants.spacingS),
-        ElevatedButton(
-          onPressed: _openProofCamera,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: CliinAppColors.primary,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium)),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            elevation: 0,
+      child: Row(
+        children: [
+          const Icon(
+            Icons.camera_alt_outlined,
+            color: CliinAppColors.primary,
+            size: 28,
           ),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 18),
-            Text('Photo APRÈS',
-                style: GoogleFonts.poppins(
-                    fontSize: 10, fontWeight: FontWeight.w600,
-                    color: Colors.white)),
-          ]),
-        ),
-      ]),
+          const SizedBox(width: CliinAppConstants.spacingM),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Marquer comme traité',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: CliinAppColors.textDark,
+                  ),
+                ),
+                Text(
+                  'Ajoutez une photo APRÈS pour valider l\'intervention.',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: CliinAppColors.textSecondary,
+                  ),
+                  maxLines: 2,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: CliinAppConstants.spacingS),
+          ElevatedButton(
+            onPressed: _openProofCamera,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: CliinAppColors.primary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(
+                  CliinAppConstants.radiusMedium,
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              elevation: 0,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.camera_alt_rounded,
+                  color: Colors.white,
+                  size: 18,
+                ),
+                Text(
+                  'Photo APRÈS',
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -906,81 +1233,111 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
         borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
         border: Border.all(color: CliinAppColors.divider),
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-              CliinAppConstants.spacingL,
-              CliinAppConstants.spacingL,
-              CliinAppConstants.spacingL,
-              CliinAppConstants.spacingM),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Informations',
-                style: GoogleFonts.poppins(
-                    fontSize: 14, fontWeight: FontWeight.bold,
-                    color: CliinAppColors.textDark)),
-            const SizedBox(height: CliinAppConstants.spacingM),
-            Row(children: [
-              Expanded(child: _InfoTile(
-                icon: Icons.calendar_today_outlined,
-                label: 'Signalé le',
-                value: createdAt != null ? _formatDate(createdAt) : '—',
-              )),
-              const SizedBox(width: CliinAppConstants.spacingM),
-              Expanded(child: _InfoTile(
-                icon: Icons.location_on_outlined,
-                label: 'Localisation',
-                value: _report.location,
-              )),
-            ]),
-            const SizedBox(height: CliinAppConstants.spacingM),
-            if (_isTerminalOutcome)
-              _InfoTile(
-                icon: Icons.tag_rounded,
-                label: 'Référence',
-                value: _report.reference,
-              )
-            else
-              Row(children: [
-                Expanded(child: _InfoTile(
-                  icon: Icons.tag_rounded,
-                  label: 'Référence',
-                  value: _report.reference,
-                )),
-                const SizedBox(width: CliinAppConstants.spacingM),
-                Expanded(child: _InfoTile(
-                  icon: Icons.verified_outlined,
-                  label: 'GPS AVANT/APRÈS',
-                  value: _report.status == ReportStatus.traite
-                      ? 'Conforme'
-                      : 'En attente',
-                  valueColor: _report.status == ReportStatus.traite
-                      ? const Color(0xFF2DB84B)
-                      : CliinAppColors.alertOrange,
-                )),
-              ]),
-          ]),
-        ),
-
-        if (history.isNotEmpty) ...[
-          const Divider(height: 1, color: Color(0xFFEEEEEE)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Padding(
-            padding: const EdgeInsets.all(CliinAppConstants.spacingL),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Historique',
+            padding: const EdgeInsets.fromLTRB(
+              CliinAppConstants.spacingL,
+              CliinAppConstants.spacingL,
+              CliinAppConstants.spacingL,
+              CliinAppConstants.spacingM,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Informations',
                   style: GoogleFonts.poppins(
-                      fontSize: 14, fontWeight: FontWeight.bold,
-                      color: CliinAppColors.textDark)),
-              const SizedBox(height: CliinAppConstants.spacingM),
-              ...history.asMap().entries.map((entry) {
-                final i = entry.key;
-                final item = entry.value;
-                final isLast = i == history.length - 1;
-                return _HistoryTile(entry: item, isLast: isLast);
-              }),
-            ]),
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: CliinAppColors.textDark,
+                  ),
+                ),
+                const SizedBox(height: CliinAppConstants.spacingM),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _InfoTile(
+                        icon: Icons.calendar_today_outlined,
+                        label: 'Signalé le',
+                        value: createdAt != null ? _formatDate(createdAt) : '—',
+                      ),
+                    ),
+                    const SizedBox(width: CliinAppConstants.spacingM),
+                    Expanded(
+                      child: _InfoTile(
+                        icon: Icons.location_on_outlined,
+                        label: 'Localisation',
+                        value: _report.location,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: CliinAppConstants.spacingM),
+                if (_isTerminalOutcome)
+                  _InfoTile(
+                    icon: Icons.tag_rounded,
+                    label: 'Référence',
+                    value: _report.reference,
+                  )
+                else
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _InfoTile(
+                          icon: Icons.tag_rounded,
+                          label: 'Référence',
+                          value: _report.reference,
+                        ),
+                      ),
+                      const SizedBox(width: CliinAppConstants.spacingM),
+                      Expanded(
+                        child: _InfoTile(
+                          icon: Icons.verified_outlined,
+                          label: 'GPS AVANT/APRÈS',
+                          value: _report.status == ReportStatus.traite
+                              ? 'Conforme'
+                              : 'En attente',
+                          valueColor: _report.status == ReportStatus.traite
+                              ? const Color(0xFF2DB84B)
+                              : CliinAppColors.alertOrange,
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
           ),
+
+          if (history.isNotEmpty) ...[
+            const Divider(height: 1, color: Color(0xFFEEEEEE)),
+            Padding(
+              padding: const EdgeInsets.all(CliinAppConstants.spacingL),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Historique',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: CliinAppColors.textDark,
+                    ),
+                  ),
+                  const SizedBox(height: CliinAppConstants.spacingM),
+                  ...history.asMap().entries.map((entry) {
+                    final i = entry.key;
+                    final item = entry.value;
+                    final isLast = i == history.length - 1;
+                    return _HistoryTile(entry: item, isLast: isLast);
+                  }),
+                ],
+              ),
+            ),
+          ],
         ],
-      ]),
+      ),
     );
   }
 }
@@ -1001,14 +1358,21 @@ class _MiniChip extends StatelessWidget {
       color: CliinAppColors.background,
       borderRadius: BorderRadius.circular(CliinAppConstants.radiusSmall),
     ),
-    child: Row(mainAxisSize: MainAxisSize.min, children: [
-      Icon(icon, size: 11, color: CliinAppColors.textSecondary),
-      const SizedBox(width: 3),
-      Text(label,
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 11, color: CliinAppColors.textSecondary),
+        const SizedBox(width: 3),
+        Text(
+          label,
           style: GoogleFonts.inter(
-              fontSize: 10, color: CliinAppColors.textDark,
-              fontWeight: FontWeight.w500)),
-    ]),
+            fontSize: 10,
+            color: CliinAppColors.textDark,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    ),
   );
 }
 
@@ -1018,7 +1382,9 @@ class _InfoTile extends StatelessWidget {
   final String value;
   final Color? valueColor;
   const _InfoTile({
-    required this.icon, required this.label, required this.value,
+    required this.icon,
+    required this.label,
+    required this.value,
     this.valueColor,
   });
 
@@ -1026,18 +1392,30 @@ class _InfoTile extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Row(children: [
-        Icon(icon, size: 12, color: CliinAppColors.textSecondary),
-        const SizedBox(width: 4),
-        Text(label, style: GoogleFonts.inter(
-            fontSize: 10, color: CliinAppColors.textSecondary)),
-      ]),
+      Row(
+        children: [
+          Icon(icon, size: 12, color: CliinAppColors.textSecondary),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              color: CliinAppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
       const SizedBox(height: 2),
-      Text(value,
-          style: GoogleFonts.inter(
-              fontSize: 12, fontWeight: FontWeight.w600,
-              color: valueColor ?? CliinAppColors.textDark),
-          maxLines: 2, overflow: TextOverflow.ellipsis),
+      Text(
+        value,
+        style: GoogleFonts.inter(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: valueColor ?? CliinAppColors.textDark,
+        ),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
     ],
   );
 }
@@ -1048,8 +1426,20 @@ class _HistoryTile extends StatelessWidget {
   const _HistoryTile({required this.entry, required this.isLast});
 
   String _formatDate(DateTime dt) {
-    const months = ['Jan','Fév','Mar','Avr','Mai','Juin',
-        'Juil','Août','Sep','Oct','Nov','Déc'];
+    const months = [
+      'Jan',
+      'Fév',
+      'Mar',
+      'Avr',
+      'Mai',
+      'Juin',
+      'Juil',
+      'Août',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Déc',
+    ];
     return '${dt.day} ${months[dt.month - 1]} ${dt.year} • '
         '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
@@ -1058,49 +1448,84 @@ class _HistoryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(bottom: isLast ? 0 : CliinAppConstants.spacingM),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Column(children: [
-          Container(
-            width: 28, height: 28,
-            decoration: BoxDecoration(
-                color: entry.type.color, shape: BoxShape.circle),
-            child: Icon(entry.type.icon, color: Colors.white, size: 14),
-          ),
-          if (!isLast)
-            Container(width: 2, height: 24, color: CliinAppColors.divider),
-        ]),
-        const SizedBox(width: CliinAppConstants.spacingM),
-        Expanded(
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(entry.type.label,
-                    style: GoogleFonts.poppins(
-                        fontSize: 12, fontWeight: FontWeight.w600,
-                        color: CliinAppColors.textDark)),
-                Text(_formatDate(entry.dateTime),
-                    style: GoogleFonts.inter(
-                        fontSize: 10, color: CliinAppColors.textSecondary)),
-                if (entry.actorName != null)
-                  Text('Par ${entry.actorName}',
-                      style: GoogleFonts.inter(
-                          fontSize: 10, color: CliinAppColors.textSecondary)),
-              ]),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-              decoration: BoxDecoration(
-                color: entry.type.statusBadgeBgColor,
-                borderRadius: BorderRadius.circular(CliinAppConstants.radiusSmall),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Column(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: entry.type.color,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(entry.type.icon, color: Colors.white, size: 14),
               ),
-              child: Text(entry.type.statusBadgeLabel,
-                  style: GoogleFonts.inter(
-                      fontSize: 9, color: entry.type.statusBadgeColor,
-                      fontWeight: FontWeight.w600)),
+              if (!isLast)
+                Container(width: 2, height: 24, color: CliinAppColors.divider),
+            ],
+          ),
+          const SizedBox(width: CliinAppConstants.spacingM),
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        entry.type.label,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: CliinAppColors.textDark,
+                        ),
+                      ),
+                      Text(
+                        _formatDate(entry.dateTime),
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          color: CliinAppColors.textSecondary,
+                        ),
+                      ),
+                      if (entry.actorName != null)
+                        Text(
+                          'Par ${entry.actorName}',
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            color: CliinAppColors.textSecondary,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: entry.type.statusBadgeBgColor,
+                    borderRadius: BorderRadius.circular(
+                      CliinAppConstants.radiusSmall,
+                    ),
+                  ),
+                  child: Text(
+                    entry.type.statusBadgeLabel,
+                    style: GoogleFonts.inter(
+                      fontSize: 9,
+                      color: entry.type.statusBadgeColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ]),
-        ),
-      ]),
+          ),
+        ],
+      ),
     );
   }
 }

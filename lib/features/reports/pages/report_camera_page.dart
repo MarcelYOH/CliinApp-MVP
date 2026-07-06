@@ -69,6 +69,15 @@ class _ReportCameraPageState extends State<ReportCameraPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Android efface le mode immersif (et réaffiche la barre de statut,
+    // qui recouvre alors le header) dès qu'un dialogue système apparaît
+    // par-dessus l'app — ce qui arrive systématiquement ici via les
+    // demandes de permission caméra/localisation au tout premier frame.
+    // Il faut donc le réappliquer à chaque retour au premier plan, pas
+    // seulement une fois dans initState().
+    if (state == AppLifecycleState.resumed) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    }
     if (_controller == null || !_controller!.value.isInitialized) return;
     if (state == AppLifecycleState.inactive) {
       _controller?.dispose();
@@ -339,8 +348,9 @@ class _ReportCameraPageState extends State<ReportCameraPage>
                 vertical: CliinAppConstants.spacingXL,
               ),
               child: ReportCameraBottomBar(
-                onShutterTap:
-                    _useWebFallback ? _captureViaImagePicker : _takePhoto,
+                onShutterTap: _useWebFallback
+                    ? _captureViaImagePicker
+                    : _takePhoto,
                 isCapturing: _isCapturing,
               ),
             ),
@@ -367,8 +377,11 @@ class _ReportCameraPageState extends State<ReportCameraPage>
                   color: Colors.white10,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.camera_alt_outlined,
-                    color: Colors.white54, size: 36),
+                child: const Icon(
+                  Icons.camera_alt_outlined,
+                  color: Colors.white54,
+                  size: 36,
+                ),
               ),
               const SizedBox(height: 20),
               const Text(
@@ -439,28 +452,33 @@ class _FallbackGalleryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.55),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.photo_library_outlined,
-                  color: Colors.white, size: 22),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Galerie',
-              style: TextStyle(
-                  color: Colors.white, fontSize: 10, fontWeight: FontWeight.w500),
-            ),
-          ],
+    onTap: onTap,
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.55),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.photo_library_outlined,
+            color: Colors.white,
+            size: 22,
+          ),
         ),
-      );
+        const SizedBox(height: 4),
+        const Text(
+          'Galerie',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    ),
+  );
 }
-
