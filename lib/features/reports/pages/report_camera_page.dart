@@ -40,13 +40,19 @@ class _ReportCameraPageState extends State<ReportCameraPage>
   bool _isCapturing = false;
   bool _isCameraReady = false;
 
-  String _address = 'Détection en cours...';
-  bool _isLoadingLocation = true;
+  String _address = 'Recherche de position...';
 
   // Fallback : utilisé quand le plugin camera natif n'arrive pas à
   // s'initialiser (contexte non sécurisé, http via IP locale,
   // permissions navigateur bloquées silencieusement, etc.)
   bool _useWebFallback = false;
+
+  // Ouvrir la galerie fait passer l'app par inactive/resumed (comme un
+  // dialogue système). Sans ce flag, didChangeAppLifecycleState dispose
+  // puis réinitialise la caméra à la fermeture du sélecteur, ce qui
+  // provoque un flash de la page caméra juste avant la navigation vers
+  // l'aperçu.
+  bool _isPickingFromGallery = false;
 
   final ImagePicker _imagePicker = ImagePicker();
 
@@ -78,6 +84,10 @@ class _ReportCameraPageState extends State<ReportCameraPage>
     if (state == AppLifecycleState.resumed) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     }
+    // Sélection galerie en cours : ne pas toucher au contrôleur caméra,
+    // sinon il se dispose puis se réinitialise pendant la fermeture du
+    // sélecteur, ce qui fait clignoter la page caméra avant l'aperçu.
+    if (_isPickingFromGallery) return;
     if (_controller == null || !_controller!.value.isInitialized) return;
     if (state == AppLifecycleState.inactive) {
       _controller?.dispose();
@@ -159,7 +169,7 @@ class _ReportCameraPageState extends State<ReportCameraPage>
 
   // ─────────────────────────────────────────
   Future<void> _detectLocation() async {
-    setState(() => _isLoadingLocation = true);
+    setState(() => _address = 'Recherche de position...');
     try {
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
@@ -167,17 +177,18 @@ class _ReportCameraPageState extends State<ReportCameraPage>
       }
       if (permission == LocationPermission.deniedForever ||
           permission == LocationPermission.denied) {
-        setState(() {
-          _address = ReportDummyData.detectedAddress;
-          _isLoadingLocation = false;
-        });
+        // Permission refusée : aucune adresse inventée, champ vide —
+        // la saisie manuelle prendra le relais à l'étape suivante.
+        setState(() => _address = '');
         return;
       }
 
+      // Précision maximale, sans timeLimit : le GPS cherche aussi
+      // longtemps que nécessaire, c'est l'utilisateur qui décide de
+      // continuer sans attendre (pas un timeout applicatif).
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 10),
+          accuracy: LocationAccuracy.bestForNavigation,
         ),
       );
 
@@ -195,19 +206,13 @@ class _ReportCameraPageState extends State<ReportCameraPage>
         if (place.locality != null && place.locality!.isNotEmpty) {
           parts.add(place.locality!);
         }
-        setState(() {
-          _address = parts.isNotEmpty
-              ? parts.join(', ')
-              : ReportDummyData.detectedAddress;
-          _isLoadingLocation = false;
-        });
+        setState(() => _address = parts.join(', '));
+      } else {
+        setState(() => _address = '');
       }
     } catch (e) {
       debugPrint('Erreur GPS: $e');
-      setState(() {
-        _address = ReportDummyData.detectedAddress;
-        _isLoadingLocation = false;
-      });
+      setState(() => _address = '');
     }
   }
 
@@ -246,12 +251,17 @@ class _ReportCameraPageState extends State<ReportCameraPage>
   }
 
   Future<void> _openGallery() async {
-    final XFile? image = await _imagePicker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 90,
-    );
-    if (image != null && mounted) {
-      _navigateToPreview(image.path);
+    _isPickingFromGallery = true;
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 90,
+      );
+      if (image != null && mounted) {
+        _navigateToPreview(image.path);
+      }
+    } finally {
+      _isPickingFromGallery = false;
     }
   }
 
@@ -280,82 +290,92 @@ class _ReportCameraPageState extends State<ReportCameraPage>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: SafeArea(
-        child: Column(
-          children: [
-            ReportCameraHeader(
-              onBackTap: () => Navigator.pop(context),
-              onHelpTap: _showHelpDialog,
-            ),
-            Expanded(
-              child: Stack(
+      body: Stack(
+        children: [
+          // Couche 0 — caméra plein écran, sous toute l'interface.
+          Positioned.fill(child: _buildCameraPreview()),
+
+          // Couche 1 — interface (header inclus), peinte APRÈS la caméra
+          // dans ce même Stack : elle reste donc toujours au-dessus,
+          // quelle que soit l'étape d'initialisation de la caméra.
+          Positioned.fill(
+            child: SafeArea(
+              child: Column(
                 children: [
-                  _buildCameraPreview(),
-                  Positioned(
-                    top: CliinAppConstants.spacingM,
-                    left: 0,
-                    right: 0,
-                    child: ReportCameraTipBanner(
-                      text: ReportDummyData.cameraTipText,
-                      highlightWord: ReportDummyData.cameraHighlightWord,
+                  ReportCameraHeader(
+                    onBackTap: () => Navigator.pop(context),
+                    onHelpTap: _showHelpDialog,
+                  ),
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        Positioned(
+                          top: CliinAppConstants.spacingM,
+                          left: 0,
+                          right: 0,
+                          child: ReportCameraTipBanner(
+                            text: ReportDummyData.cameraTipText,
+                            highlightWord: ReportDummyData.cameraHighlightWord,
+                          ),
+                        ),
+                        const Positioned.fill(
+                          child: ReportCameraViewfinderCorners(),
+                        ),
+                        // Contrôles latéraux masqués en mode fallback :
+                        // flash et changement de caméra sont gérés par
+                        // l'app caméra native du téléphone dans ce mode.
+                        if (!_useWebFallback)
+                          Positioned(
+                            right: CliinAppConstants.pagePadding,
+                            top: 0,
+                            bottom: 0,
+                            child: Center(
+                              child: ReportCameraSideControls(
+                                flashMode: _flashMode,
+                                onFlashTap: _toggleFlash,
+                                onFlipTap: _flipCamera,
+                                onGalleryTap: _openGallery,
+                              ),
+                            ),
+                          ),
+                        // En mode fallback, on garde quand même l'accès galerie
+                        if (_useWebFallback)
+                          Positioned(
+                            right: CliinAppConstants.pagePadding,
+                            top: 0,
+                            bottom: 0,
+                            child: Center(
+                              child: _FallbackGalleryButton(onTap: _openGallery),
+                            ),
+                          ),
+                        Positioned(
+                          bottom: CliinAppConstants.spacingL,
+                          left: 0,
+                          right: 0,
+                          child: Center(
+                            child: ReportCameraPositionChip(address: _address),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const Positioned.fill(child: ReportCameraViewfinderCorners()),
-                  // Contrôles latéraux masqués en mode fallback :
-                  // flash et changement de caméra sont gérés par
-                  // l'app caméra native du téléphone dans ce mode.
-                  if (!_useWebFallback)
-                    Positioned(
-                      right: CliinAppConstants.pagePadding,
-                      top: 0,
-                      bottom: 0,
-                      child: Center(
-                        child: ReportCameraSideControls(
-                          flashMode: _flashMode,
-                          onFlashTap: _toggleFlash,
-                          onFlipTap: _flipCamera,
-                          onGalleryTap: _openGallery,
-                        ),
-                      ),
+                  Container(
+                    color: Colors.black,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: CliinAppConstants.spacingXL,
                     ),
-                  // En mode fallback, on garde quand même l'accès galerie
-                  if (_useWebFallback)
-                    Positioned(
-                      right: CliinAppConstants.pagePadding,
-                      top: 0,
-                      bottom: 0,
-                      child: Center(
-                        child: _FallbackGalleryButton(onTap: _openGallery),
-                      ),
-                    ),
-                  Positioned(
-                    bottom: CliinAppConstants.spacingL,
-                    left: 0,
-                    right: 0,
-                    child: Center(
-                      child: ReportCameraPositionChip(
-                        address: _address,
-                        isLoading: _isLoadingLocation,
-                      ),
+                    child: ReportCameraBottomBar(
+                      onShutterTap: _useWebFallback
+                          ? _captureViaImagePicker
+                          : _takePhoto,
+                      isCapturing: _isCapturing,
                     ),
                   ),
                 ],
               ),
             ),
-            Container(
-              color: Colors.black,
-              padding: const EdgeInsets.symmetric(
-                vertical: CliinAppConstants.spacingXL,
-              ),
-              child: ReportCameraBottomBar(
-                onShutterTap: _useWebFallback
-                    ? _captureViaImagePicker
-                    : _takePhoto,
-                isCapturing: _isCapturing,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
