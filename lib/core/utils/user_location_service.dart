@@ -50,10 +50,12 @@ class UserLocationService extends ChangeNotifier {
         return _cachedPosition;
       }
 
+      // Pas de timeLimit : en zone rurale un premier fix GPS dépasse
+      // souvent 5s, ce qui faisait échouer la mesure et enregistrer une
+      // position null (donc plus aucun calcul de distance possible).
       final pos = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 5),
         ),
       );
       _cachedPosition = pos;

@@ -93,10 +93,13 @@ class _ReportFormPageState extends State<ReportFormPage> {
       _gpsFailed = false;
     });
     try {
+      // Pas de timeLimit : un timeout ici enregistrait latitude/longitude
+      // à null sur le signalement, rendant le calcul de distance
+      // impossible en permanence (le tiret de repli s'affiche pour
+      // toujours, même après un GPS qui finit par répondre ailleurs).
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 5),
         ),
       );
       final placemarks =
