@@ -1,10 +1,12 @@
 // lib/features/auth/pages/profile_setup_page.dart
 // Finalisation profil — image5_profile_setup.png
 
+import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/utils/user_location_service.dart';
@@ -23,6 +25,8 @@ class ProfileSetupPage extends StatefulWidget {
 class _ProfileSetupPageState extends State<ProfileSetupPage> {
   late final TextEditingController _usernameController;
   late final TextEditingController _zoneController;
+  final ImagePicker _imagePicker = ImagePicker();
+  String? _avatarPath;
   bool _isLoading = false;
   bool _isLocating = false;
   bool _locationError = false;
@@ -96,6 +100,28 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     return username.isNotEmpty && zone.isNotEmpty && !_isLoading;
   }
 
+  Future<void> _pickAvatarPhoto() async {
+    try {
+      final photo = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        preferredCameraDevice: CameraDevice.front,
+        imageQuality: 85,
+      );
+      if (photo != null && mounted) {
+        setState(() => _avatarPath = photo.path);
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Impossible d\'accéder à la caméra.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _complete() async {
     if (!_canSubmit) return;
     setState(() => _isLoading = true);
@@ -103,6 +129,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
       await AuthStore.instance.completeProfile(
         username: _usernameController.text.trim(),
         zone: _zoneController.text.trim(),
+        avatarPath: _avatarPath,
       );
       if (mounted) {
         widget.onAuthenticated(); // signale didAuth = true au parent
@@ -207,34 +234,45 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                     const SizedBox(height: 28),
 
                     // Photo facultative
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Container(
-                          width: 90,
-                          height: 90,
-                          decoration: BoxDecoration(
-                            color: CliinAppColors.divider,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.camera_alt_rounded,
-                              color: CliinAppColors.primary, size: 36),
-                        ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            width: 26,
-                            height: 26,
-                            decoration: const BoxDecoration(
-                              color: CliinAppColors.primary,
+                    GestureDetector(
+                      onTap: _pickAvatarPhoto,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            width: 90,
+                            height: 90,
+                            decoration: BoxDecoration(
+                              color: CliinAppColors.divider,
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.add_rounded,
-                                color: Colors.white, size: 18),
+                            clipBehavior: Clip.antiAlias,
+                            child: _avatarPath != null
+                                ? Image.file(File(_avatarPath!),
+                                    fit: BoxFit.cover, width: 90, height: 90)
+                                : const Icon(Icons.camera_alt_rounded,
+                                    color: CliinAppColors.primary, size: 36),
                           ),
-                        ),
-                      ],
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              width: 26,
+                              height: 26,
+                              decoration: const BoxDecoration(
+                                color: CliinAppColors.primary,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                  _avatarPath != null
+                                      ? Icons.edit_rounded
+                                      : Icons.add_rounded,
+                                  color: Colors.white,
+                                  size: 16),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text('Ajoutez une photo (facultatif)',

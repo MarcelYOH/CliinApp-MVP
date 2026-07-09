@@ -80,6 +80,26 @@ class MockAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<AuthUser> updateProfile({
+    String? username,
+    String? zone,
+    String? avatarPath,
+  }) async {
+    final current = _currentUser;
+    if (current == null) {
+      throw StateError('updateProfile appelé sans utilisateur connecté');
+    }
+    final updated = current.copyWith(
+      username: username,
+      zone: zone,
+      avatarPath: avatarPath,
+    );
+    _currentUser = updated;
+    await _persistSession(updated);
+    return updated;
+  }
+
+  @override
   Future<void> signInWithGoogle() async {
     // Pas de vraie intégration Google — bouton visible mais "Bientôt disponible"
     throw UnsupportedError('google_not_yet');

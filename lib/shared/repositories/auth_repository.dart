@@ -11,6 +11,11 @@ abstract class AuthRepository {
     required String zone,
     String? avatarPath,
   });
+  Future<AuthUser> updateProfile({
+    String? username,
+    String? zone,
+    String? avatarPath,
+  });
   Future<void> signInWithGoogle();
   Future<void> signOut();
   Future<AuthUser?> loadPersistedSession();

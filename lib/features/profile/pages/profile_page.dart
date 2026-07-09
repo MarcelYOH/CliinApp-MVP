@@ -2,6 +2,7 @@
 
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/store/auth_store.dart';
@@ -10,6 +11,7 @@ import '../../../shared/models/auth_user_model.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/navigation/tab_navigation.dart';
 import '../../reports/pages/report_camera_page.dart';
+import '../widgets/edit_profile_sheet.dart';
 import 'public_profile_page.dart';
 import 'mes_cas_signales_page.dart';
 import 'mes_prises_en_charge_page.dart';
@@ -22,6 +24,29 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  final ImagePicker _imagePicker = ImagePicker();
+
+  Future<void> _pickAvatarPhoto() async {
+    try {
+      final photo = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        preferredCameraDevice: CameraDevice.front,
+        imageQuality: 85,
+      );
+      if (photo == null) return;
+      await AuthStore.instance.updateProfile(avatarPath: photo.path);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Impossible d\'accéder à la caméra.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -124,7 +149,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       const SizedBox(height: 16),
                       _buildStatsCard(user?.id),
                       const SizedBox(height: 16),
-                      _buildMenuCard(context),
+                      _buildMenuCard(context, user),
                       const SizedBox(height: 16),
                       _buildImpactBanner(),
                       const SizedBox(height: 8),
@@ -210,13 +235,7 @@ class _ProfilePageState extends State<ProfilePage> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               GestureDetector(
-                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Modification de photo bientôt disponible'),
-                    behavior: SnackBarBehavior.floating,
-                    duration: Duration(seconds: 2),
-                  ),
-                ),
+                onTap: _pickAvatarPhoto,
                 child: Stack(
                   children: [
                     ClipOval(
@@ -390,7 +409,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildMenuCard(BuildContext context) {
+  Widget _buildMenuCard(BuildContext context, AuthUser? user) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -446,7 +465,9 @@ class _ProfilePageState extends State<ProfilePage> {
             iconColor: const Color(0xFF1E88E5),
             title: 'Paramètres du compte',
             subtitle: 'Informations personnelles et sécurité',
-            onTap: () => _showComingSoon(context),
+            onTap: user != null
+                ? () => showEditProfileSheet(context, user)
+                : () => _showComingSoon(context),
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),
           _buildMenuItem(

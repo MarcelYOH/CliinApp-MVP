@@ -143,7 +143,12 @@ class DynamicDistanceLabel extends StatefulWidget {
 }
 
 class _DynamicDistanceLabelState extends State<DynamicDistanceLabel> {
+  // Seuil de stabilisation — en dessous, une variation est considérée
+  // comme du bruit GPS normal et n'est pas répercutée à l'affichage.
+  static const double _stabilityThresholdMeters = 20;
+
   String? _label;
+  double? _lastMeters;
 
   @override
   void initState() {
@@ -165,9 +170,19 @@ class _DynamicDistanceLabelState extends State<DynamicDistanceLabel> {
     if (UserLocationService.instance.lastKnownPosition == null) {
       await UserLocationService.instance.getCurrentPosition();
     }
-    final label = UserLocationService.instance
-        .distanceLabelTo(widget.latitude, widget.longitude);
-    if (mounted && label != null && label != _label) {
+    final meters = UserLocationService.instance
+        .distanceMetersTo(widget.latitude, widget.longitude);
+    if (meters == null) return;
+    // Filtre de stabilisation : ignorer les micro-variations du bruit
+    // GPS pour éviter que la distance affichée ne clignote sans que
+    // l'utilisateur ne se soit réellement déplacé.
+    if (_lastMeters != null &&
+        (meters - _lastMeters!).abs() < _stabilityThresholdMeters) {
+      return;
+    }
+    _lastMeters = meters;
+    final label = UserLocationService.instance.formatMeters(meters);
+    if (mounted && label != _label) {
       setState(() => _label = label);
     }
   }

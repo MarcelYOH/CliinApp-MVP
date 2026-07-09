@@ -30,6 +30,7 @@ class ReportStore extends ChangeNotifier {
   // MVP : fixé à 2km. Extensible plus tard (UI pour élargir le rayon,
   // ou explorer d'autres villes) — non développé pour le moment.
   static const double _defaultRadiusMeters = 2000.0;
+  static const int _maxNearbyReports = 20;
 
   // ── Fenêtre de fraîcheur "Signalements récents" ───────────────
   // Indépendant du délai d'intervention (72h dans IntervenantDetailPage) :
@@ -55,7 +56,7 @@ class ReportStore extends ChangeNotifier {
     if (userPosition == null) {
       // Position utilisateur pas encore disponible → repli simple,
       // comme avant cette correction.
-      return candidates.take(2).toList();
+      return candidates.take(_maxNearbyReports).toList();
     }
 
     final withDistance = <MapEntry<HomeReportModel, double>>[];
@@ -71,7 +72,7 @@ class ReportStore extends ChangeNotifier {
 
     withDistance.sort((a, b) => a.value.compareTo(b.value));
 
-    return withDistance.map((e) => e.key).take(2).toList();
+    return withDistance.map((e) => e.key).take(_maxNearbyReports).toList();
   }
 
   List<HomeReportModel> get recentReports {

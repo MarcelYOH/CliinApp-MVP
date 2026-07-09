@@ -35,14 +35,17 @@ class UserLocationService extends ChangeNotifier {
   StreamSubscription<Position>? _positionSub;
 
   /// Recalcule automatiquement la distance quand l'utilisateur se déplace
-  /// d'au moins 10m, sans attendre qu'un écran redemande une mesure GPS.
+  /// d'au moins 30m, sans attendre qu'un écran redemande une mesure GPS.
   /// Démarré une seule fois, dès la première position obtenue avec succès.
+  /// 30m (et non 10m) — un seuil trop bas laisse passer le bruit GPS normal
+  /// (positions qui varient légèrement d'une lecture à l'autre sans que
+  /// l'utilisateur ne bouge), ce qui faisait clignoter la distance affichée.
   void _startWatching() {
     if (_positionSub != null) return;
     _positionSub = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
-        distanceFilter: 10,
+        distanceFilter: 30,
       ),
     ).listen((pos) {
       _cachedPosition = pos;
@@ -107,7 +110,7 @@ class UserLocationService extends ChangeNotifier {
     notifyListeners(); // ✅ prévient toutes les cartes affichées
   }
 
-  String _formatMeters(double meters) {
+  String formatMeters(double meters) {
     if (meters < 50) return 'Sur place';
     if (meters < 1000) return '${meters.round()} m';
     return '${(meters / 1000).toStringAsFixed(1)} km';
@@ -133,6 +136,6 @@ class UserLocationService extends ChangeNotifier {
   String? distanceLabelTo(double? targetLat, double? targetLng) {
     final meters = distanceMetersTo(targetLat, targetLng);
     if (meters == null) return null;
-    return _formatMeters(meters);
+    return formatMeters(meters);
   }
 }

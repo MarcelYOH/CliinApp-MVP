@@ -64,6 +64,21 @@ class AuthStore extends ChangeNotifier {
     return user;
   }
 
+  Future<AuthUser> updateProfile({
+    String? username,
+    String? zone,
+    String? avatarPath,
+  }) async {
+    final user = await _repository.updateProfile(
+      username: username,
+      zone: zone,
+      avatarPath: avatarPath,
+    );
+    _currentUser = user;
+    notifyListeners();
+    return user;
+  }
+
   Future<void> signInWithGoogle() async {
     await _repository.signInWithGoogle();
   }

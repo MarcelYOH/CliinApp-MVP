@@ -226,7 +226,6 @@ class _HomePageState extends State<HomePage> {
         onTakeCharge: _onTakeCharge,
         onContact: _onContact,
       ),
-      const SizedBox(height: 100),
     ];
 
     return Scaffold(
@@ -245,8 +244,11 @@ class _HomePageState extends State<HomePage> {
                 final greeting = isAuthed
                     ? 'Bonjour, ${authUser!.username.split(' ').first}'
                     : 'Bienvenue !';
+                final locationLabel = (isAuthed && authUser!.zone.isNotEmpty)
+                    ? authUser.zone
+                    : 'Votre position';
                 final contextLine =
-                    '${HomeDummyData.position.value} · ${nearbyReports.length} cas à proximité';
+                    '$locationLabel · ${nearbyReports.length} cas à proximité';
 
                 Widget avatarContent;
                 if (!isAuthed) {
@@ -295,16 +297,17 @@ class _HomePageState extends State<HomePage> {
             ),
             Expanded(
               child: ListView.separated(
-                padding: const EdgeInsets.only(top: CliinAppConstants.spacingM),
+                padding: EdgeInsets.fromLTRB(
+                  0,
+                  CliinAppConstants.spacingM,
+                  0,
+                  MediaQuery.of(context).padding.bottom + 24,
+                ),
                 itemCount: sections.length,
                 itemBuilder: (_, i) => sections[i],
-                separatorBuilder: (_, i) {
-                  if (i == 0) {
-                    return const SizedBox(height: CliinAppConstants.spacingM);
-                  }
-                  if (i == sections.length - 2) return const SizedBox.shrink();
-                  return const SizedBox(height: 32);
-                },
+                separatorBuilder: (_, i) => i == 0
+                    ? const SizedBox(height: CliinAppConstants.spacingM)
+                    : const SizedBox(height: 32),
               ),
             ),
           ],
