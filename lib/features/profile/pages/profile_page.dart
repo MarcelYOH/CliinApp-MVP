@@ -8,6 +8,7 @@ import '../../../shared/store/auth_store.dart';
 import '../../../shared/store/report_store.dart';
 import '../../../shared/models/auth_user_model.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
+import '../../../shared/navigation/tab_navigation.dart';
 import '../../reports/pages/report_camera_page.dart';
 import 'public_profile_page.dart';
 import 'mes_cas_signales_page.dart';
@@ -136,10 +137,9 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       ),
       bottomNavigationBar: AppBottomNav(
-        currentIndex: 4,
-        onTap: (index) {
-          if (index != 4) Navigator.pop(context);
-        },
+        currentIndex: -1,
+        onTap: (index) =>
+            navigateToTab(context, currentIndex: -1, targetIndex: index),
         onSignalerTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const ReportCameraPage()),

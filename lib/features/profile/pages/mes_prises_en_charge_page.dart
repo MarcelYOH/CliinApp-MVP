@@ -9,6 +9,7 @@ import '../../../shared/store/auth_store.dart';
 import '../../reports/pages/intervenant_detail_page.dart';
 import '../../reports/pages/report_camera_page.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
+import '../../../shared/navigation/tab_navigation.dart';
 import '../../../shared/widgets/report_card.dart' show buildReportImage;
 
 enum _TakeoverStatus { enCours, traite, abandonne, rejete }
@@ -167,12 +168,9 @@ class _MesPrisesEnChargePageState extends State<MesPrisesEnChargePage> {
             ),
           ),
           bottomNavigationBar: AppBottomNav(
-            currentIndex: 4,
-            onTap: (index) {
-              if (index != 4) {
-                Navigator.popUntil(context, (route) => route.isFirst);
-              }
-            },
+            currentIndex: -1,
+            onTap: (index) =>
+                navigateToTab(context, currentIndex: -1, targetIndex: index),
             onSignalerTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const ReportCameraPage()),

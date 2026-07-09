@@ -5,7 +5,9 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
+import '../../../shared/navigation/tab_navigation.dart';
 import '../../../shared/store/report_store.dart';
+import '../../../core/utils/user_location_service.dart';
 import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../features/reports/pages/report_camera_page.dart';
 import '../../../features/reports/pages/report_detail_page.dart';
@@ -78,7 +80,9 @@ class _MapPageState extends State<MapPage> {
             case MapPriorityFilter.urgents:
               return r.severity == ReportSeverity.critique;
             case MapPriorityFilter.proches:
-              return _toMeters(r.distance) <= 2000;
+              final meters = UserLocationService.instance
+                  .distanceMetersTo(r.latitude, r.longitude);
+              return meters != null && meters <= 2000;
             case MapPriorityFilter.recents:
               return _toMinutes(r.timeAgo) <= 4320;
           }
@@ -103,14 +107,6 @@ class _MapPageState extends State<MapPage> {
     return result;
   }
 
-  double _toMeters(String distance) {
-    final s = distance.toLowerCase().trim();
-    if (s.contains('km')) {
-      return (double.tryParse(s.replaceAll('km', '').trim()) ?? 9999) * 1000;
-    }
-    return double.tryParse(s.replaceAll('m', '').trim()) ?? 9999;
-  }
-
   double _toMinutes(String timeAgo) {
     final s = timeAgo.toLowerCase();
     final n = double.tryParse(RegExp(r'\d+').firstMatch(s)?.group(0) ?? '999') ?? 999;
@@ -128,10 +124,8 @@ class _MapPageState extends State<MapPage> {
     }
   }
 
-  void _onNavTap(int index) {
-    if (index == _navIndex) return;
-    if (index == 0) Navigator.pop(context);
-  }
+  void _onNavTap(int index) =>
+      navigateToTab(context, currentIndex: _navIndex, targetIndex: index);
 
   void _onMyLocationTap() {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(

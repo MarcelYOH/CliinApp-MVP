@@ -19,6 +19,8 @@
 // ('< 1 km') stockée dans HomeReportModel à la création — la distance
 // dépend de QUI regarde la carte, pas de la création du signalement.
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -29,6 +31,25 @@ class UserLocationService extends ChangeNotifier {
   Position? _cachedPosition;
   DateTime? _cachedAt;
   static const Duration _cacheDuration = Duration(seconds: 30);
+
+  StreamSubscription<Position>? _positionSub;
+
+  /// Recalcule automatiquement la distance quand l'utilisateur se déplace
+  /// d'au moins 10m, sans attendre qu'un écran redemande une mesure GPS.
+  /// Démarré une seule fois, dès la première position obtenue avec succès.
+  void _startWatching() {
+    if (_positionSub != null) return;
+    _positionSub = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 10,
+      ),
+    ).listen((pos) {
+      _cachedPosition = pos;
+      _cachedAt = DateTime.now();
+      notifyListeners();
+    }, onError: (_) {});
+  }
 
   /// Position actuelle, depuis le cache si encore fraîche, sinon nouvelle
   /// mesure GPS. Retourne null si la géolocalisation échoue et qu'aucune
@@ -60,6 +81,7 @@ class UserLocationService extends ChangeNotifier {
       );
       _cachedPosition = pos;
       _cachedAt = DateTime.now();
+      _startWatching();
       notifyListeners(); // ✅ prévient toutes les cartes affichées
       return pos;
     } catch (_) {
@@ -81,6 +103,7 @@ class UserLocationService extends ChangeNotifier {
   void setKnownPosition(Position position) {
     _cachedPosition = position;
     _cachedAt = DateTime.now();
+    _startWatching();
     notifyListeners(); // ✅ prévient toutes les cartes affichées
   }
 

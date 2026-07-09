@@ -7,6 +7,9 @@ import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/store/auth_store.dart';
 import '../../../shared/store/report_store.dart';
 import '../../../shared/models/auth_user_model.dart';
+import '../../../shared/widgets/app_bottom_nav.dart';
+import '../../../shared/navigation/tab_navigation.dart';
+import '../../reports/pages/report_camera_page.dart';
 
 class PublicProfilePage extends StatelessWidget {
   const PublicProfilePage({super.key});
@@ -135,7 +138,12 @@ class PublicProfilePage extends StatelessWidget {
             // Content
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  16,
+                  16,
+                  MediaQuery.of(context).padding.bottom + 80,
+                ),
                 children: [
                   Center(
                     child: ClipOval(
@@ -253,6 +261,15 @@ class PublicProfilePage extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+      bottomNavigationBar: AppBottomNav(
+        currentIndex: -1,
+        onTap: (index) =>
+            navigateToTab(context, currentIndex: -1, targetIndex: index),
+        onSignalerTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ReportCameraPage()),
         ),
       ),
     );

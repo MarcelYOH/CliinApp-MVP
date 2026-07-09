@@ -121,26 +121,28 @@ String reportTimeAgoLabel(DateTime? createdAt, String fallback) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Distance calculée dynamiquement
+// Distance calculée dynamiquement — SOURCE UNIQUE d'affichage de la
+// distance dans toute l'app (accueil, carte, détails public/privé).
+// N'affiche jamais de valeur inventée : "..." tant que le GPS n'a pas
+// résolu de position, jamais un tiret ni une chaîne mock figée.
 // ─────────────────────────────────────────────────────────────────
-class _DynamicDistanceLabel extends StatefulWidget {
+class DynamicDistanceLabel extends StatefulWidget {
   final double? latitude;
   final double? longitude;
-  final String fallback;
   final TextStyle? style;
 
-  const _DynamicDistanceLabel({
+  const DynamicDistanceLabel({
+    super.key,
     required this.latitude,
     required this.longitude,
-    required this.fallback,
     this.style,
   });
 
   @override
-  State<_DynamicDistanceLabel> createState() => _DynamicDistanceLabelState();
+  State<DynamicDistanceLabel> createState() => _DynamicDistanceLabelState();
 }
 
-class _DynamicDistanceLabelState extends State<_DynamicDistanceLabel> {
+class _DynamicDistanceLabelState extends State<DynamicDistanceLabel> {
   String? _label;
 
   @override
@@ -172,7 +174,7 @@ class _DynamicDistanceLabelState extends State<_DynamicDistanceLabel> {
 
   @override
   Widget build(BuildContext context) =>
-      Text(_label ?? widget.fallback, style: widget.style);
+      Text(_label ?? '...', style: widget.style);
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -469,10 +471,9 @@ class _DistanceTimeBadge extends StatelessWidget {
           const Icon(Icons.location_on_rounded,
               color: CliinAppColors.textWhite, size: 12),
           const SizedBox(width: 4),
-          _DynamicDistanceLabel(
+          DynamicDistanceLabel(
             latitude: data.latitude,
             longitude: data.longitude,
-            fallback: data.distance,
             style: CliinAppTextStyles.badge
                 .copyWith(color: CliinAppColors.textWhite),
           ),
@@ -549,10 +550,9 @@ class _CardHeaderSection extends StatelessWidget {
                 const Icon(Icons.location_on_rounded,
                     color: CliinAppColors.primary, size: 11),
                 const SizedBox(width: 3),
-                _DynamicDistanceLabel(
+                DynamicDistanceLabel(
                   latitude: data.latitude,
                   longitude: data.longitude,
-                  fallback: data.distance,
                   style: CliinAppTextStyles.badge
                       .copyWith(color: CliinAppColors.primary, fontSize: 10),
                 ),

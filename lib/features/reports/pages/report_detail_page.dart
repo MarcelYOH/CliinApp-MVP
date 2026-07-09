@@ -9,13 +9,16 @@ import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../features/home/models/home_report_model.dart';
 import '../../../features/profile/pages/public_profile_page.dart';
 import '../../../shared/widgets/report_card.dart'
-    show buildReportImage, reportTimeAgoLabel, copyReportCode;
+    show buildReportImage, reportTimeAgoLabel, copyReportCode, DynamicDistanceLabel;
 import '../../../shared/widgets/report_action_zone.dart';
 import '../../../shared/widgets/public_view_link_button.dart';
 import '../../../shared/store/report_store.dart';
 import '../../../shared/widgets/report_stats_comments.dart';
+import '../../../shared/widgets/app_bottom_nav.dart';
+import '../../../shared/navigation/tab_navigation.dart';
 import 'intervenant_detail_page.dart';
 import 'report_form_page.dart';
+import 'report_camera_page.dart';
 import 'package:cliinapp/features/auth/auth_guard.dart';
 import '../widgets/take_charge_flow.dart';
 
@@ -198,7 +201,28 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
           ],
         ),
       ),
-      bottomNavigationBar: const ReportCommentBar(),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ReportCommentBar n'est plus au bord de l'écran (AppBottomNav
+          // est en dessous) — on lui retire l'inset bas ambiant pour que
+          // sa propre SafeArea n'ajoute pas un espace vide en double.
+          MediaQuery.removePadding(
+            context: context,
+            removeBottom: true,
+            child: const ReportCommentBar(),
+          ),
+          AppBottomNav(
+            currentIndex: -1,
+            onTap: (index) =>
+                navigateToTab(context, currentIndex: -1, targetIndex: index),
+            onSignalerTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ReportCameraPage()),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -543,14 +567,28 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
                         ),
                         const SizedBox(width: 4),
                         Expanded(
-                          child: Text(
-                            '${_data.distance} de votre position',
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              color: CliinAppColors.textSecondary,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          child: Row(
+                            children: [
+                              DynamicDistanceLabel(
+                                latitude: _data.latitude,
+                                longitude: _data.longitude,
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  color: CliinAppColors.textSecondary,
+                                ),
+                              ),
+                              Flexible(
+                                child: Text(
+                                  ' de votre position',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: CliinAppColors.textSecondary,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -911,8 +949,9 @@ class _DistanceBadgeDetail extends StatelessWidget {
       children: [
         const Icon(Icons.location_on_rounded, color: Colors.white, size: 12),
         const SizedBox(width: 4),
-        Text(
-          data.distance,
+        DynamicDistanceLabel(
+          latitude: data.latitude,
+          longitude: data.longitude,
           style: CliinAppTextStyles.badge.copyWith(color: Colors.white),
         ),
         Container(

@@ -6,7 +6,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../shared/widgets/app_header.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
-import '../../../shared/widgets/more_menu_sheet.dart';
+import '../../../shared/navigation/tab_navigation.dart';
 import '../../../shared/models/user_model.dart';
 import '../../../shared/store/auth_store.dart';
 import '../../../shared/store/report_store.dart';
@@ -72,10 +72,10 @@ class _HomePageState extends State<HomePage> {
       _goToMap();
       return;
     }
-    // "Plus" n'ouvre plus le Profil — uniquement un menu des modules à
+    // "Plus" n'ouvre plus le Profil — uniquement le menu des modules à
     // venir. Le Profil reste accessible uniquement via l'avatar du header.
     if (index == 4) {
-      showMoreMenuSheet(context);
+      navigateToTab(context, currentIndex: 0, targetIndex: 4);
       return;
     }
     setState(() => _currentNavIndex = index);

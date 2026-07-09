@@ -72,10 +72,9 @@ class _ReportSuccessPageState extends State<ReportSuccessPage>
         category: r.category ?? ReportCategory.depotsSauvages,
         origin: r.origin,
         imageAsset: r.imagePath ?? 'assets/images/depot.jpg',
-        // ✅ CORRECTION — '< 1 km' laissait penser à une vraie mesure même
-        // quand le GPS échoue totalement. Repli neutre en attendant que
-        // UserLocationService calcule la vraie distance à l'affichage.
-        distance: '—',
+        // Champ non affiché — l'affichage utilise exclusivement
+        // DynamicDistanceLabel (GPS live via UserLocationService).
+        distance: '',
         latitude: r.latitude,
         longitude: r.longitude,
         timeAgo: 'À l\'instant',

@@ -10,9 +10,13 @@ import '../../../../shared/store/report_store.dart';
 import '../../../../shared/widgets/report_action_zone.dart';
 import '../../../../shared/widgets/report_stats_comments.dart';
 import '../../../../shared/widgets/public_view_link_button.dart';
-import '../../../../shared/widgets/report_card.dart' show buildReportImage;
+import '../../../../shared/widgets/report_card.dart'
+    show buildReportImage, DynamicDistanceLabel;
+import '../../../../shared/widgets/app_bottom_nav.dart';
+import '../../../../shared/navigation/tab_navigation.dart';
 import '../../../../features/home/models/home_report_model.dart';
 import 'proof_camera_page.dart';
+import 'report_camera_page.dart';
 import 'report_detail_page.dart';
 
 class IntervenantDetailPage extends StatefulWidget {
@@ -368,6 +372,7 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
     return Scaffold(
       backgroundColor: CliinAppColors.background,
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
             _buildHeader(context),
@@ -430,7 +435,28 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
           ],
         ),
       ),
-      bottomNavigationBar: const ReportCommentBar(),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ReportCommentBar n'est plus au bord de l'écran (AppBottomNav
+          // est en dessous) — on lui retire l'inset bas ambiant pour que
+          // sa propre SafeArea n'ajoute pas un espace vide en double.
+          MediaQuery.removePadding(
+            context: context,
+            removeBottom: true,
+            child: const ReportCommentBar(),
+          ),
+          AppBottomNav(
+            currentIndex: -1,
+            onTap: (index) =>
+                navigateToTab(context, currentIndex: -1, targetIndex: index),
+            onSignalerTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ReportCameraPage()),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -878,8 +904,16 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
                     ),
                     const SizedBox(width: 6),
                     _MiniChip(
-                      label: _report.distance,
                       icon: Icons.near_me_outlined,
+                      labelWidget: DynamicDistanceLabel(
+                        latitude: _report.latitude,
+                        longitude: _report.longitude,
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          color: CliinAppColors.textDark,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -1347,9 +1381,11 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
 // ─────────────────────────────────────────────────────────────────
 
 class _MiniChip extends StatelessWidget {
-  final String label;
+  final String? label;
+  final Widget? labelWidget;
   final IconData icon;
-  const _MiniChip({required this.label, required this.icon});
+  const _MiniChip({this.label, this.labelWidget, required this.icon})
+      : assert(label != null || labelWidget != null);
 
   @override
   Widget build(BuildContext context) => Container(
@@ -1363,14 +1399,15 @@ class _MiniChip extends StatelessWidget {
       children: [
         Icon(icon, size: 11, color: CliinAppColors.textSecondary),
         const SizedBox(width: 3),
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 10,
-            color: CliinAppColors.textDark,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
+        labelWidget ??
+            Text(
+              label!,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                color: CliinAppColors.textDark,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
       ],
     ),
   );
