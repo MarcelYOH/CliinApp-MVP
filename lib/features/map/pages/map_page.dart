@@ -67,27 +67,65 @@ class _MapPageState extends State<MapPage> {
     if (mounted) setState(() {});
   }
 
+  // ── Filtres "Urgent" / "Proche" / "Récent" ────────────────────────
+  // Règle fondamentale : ces 3 filtres ne travaillent JAMAIS qu'avec le
+  // statut Disponible — jamais En cours, jamais Traité, quoi que
+  // sélectionne par ailleurs le filtre "État du signalement". Quand
+  // plusieurs sont actifs simultanément, leurs critères se cumulent
+  // (ET, pas OU) — Urgent prime toujours, Proche/Récent le restreignent
+  // davantage.
+  static const Duration _recentWindow = Duration(hours: 72);
+  static const double _nearbyRadiusMeters = 2000;
+
   List<HomeReportModel> get _filteredReports {
     List<HomeReportModel> result = List.from(ReportStore.instance.mapReports);
 
+    final priorities = _filters.priorities;
+    if (priorities.isNotEmpty) {
+      result =
+          result.where((r) => r.status == ReportStatus.disponible).toList();
+
+      if (priorities.contains(MapPriorityFilter.urgents)) {
+        result =
+            result.where((r) => r.severity == ReportSeverity.critique).toList();
+      }
+      if (priorities.contains(MapPriorityFilter.proches)) {
+        result = result.where((r) {
+          final meters = UserLocationService.instance
+              .distanceMetersTo(r.latitude, r.longitude);
+          return meters != null && meters <= _nearbyRadiusMeters;
+        }).toList();
+      }
+      if (priorities.contains(MapPriorityFilter.recents)) {
+        result = result.where((r) {
+          return r.createdAt != null &&
+              DateTime.now().difference(r.createdAt!) <= _recentWindow;
+        }).toList();
+      }
+
+      // Tri : "Proche" impose le tri par distance croissante, sinon
+      // "Récent" impose le tri par date décroissante.
+      if (priorities.contains(MapPriorityFilter.proches)) {
+        result.sort((a, b) {
+          final da = UserLocationService.instance
+                  .distanceMetersTo(a.latitude, a.longitude) ??
+              double.infinity;
+          final db = UserLocationService.instance
+                  .distanceMetersTo(b.latitude, b.longitude) ??
+              double.infinity;
+          return da.compareTo(db);
+        });
+      } else if (priorities.contains(MapPriorityFilter.recents)) {
+        result.sort((a, b) {
+          final da = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+          final db = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+          return db.compareTo(da);
+        });
+      }
+    }
+
     if (_filters.statuses.isNotEmpty) {
       result = result.where((r) => _filters.statuses.contains(r.status)).toList();
-    }
-    if (_filters.priorities.isNotEmpty) {
-      result = result.where((r) {
-        return _filters.priorities.any((p) {
-          switch (p) {
-            case MapPriorityFilter.urgents:
-              return r.severity == ReportSeverity.critique;
-            case MapPriorityFilter.proches:
-              final meters = UserLocationService.instance
-                  .distanceMetersTo(r.latitude, r.longitude);
-              return meters != null && meters <= 2000;
-            case MapPriorityFilter.recents:
-              return _toMinutes(r.timeAgo) <= 4320;
-          }
-        });
-      }).toList();
     }
     if (_filters.categories.isNotEmpty) {
       result = result.where((r) => _filters.categories.contains(r.category)).toList();
@@ -105,15 +143,6 @@ class _MapPageState extends State<MapPage> {
       }).toList();
     }
     return result;
-  }
-
-  double _toMinutes(String timeAgo) {
-    final s = timeAgo.toLowerCase();
-    final n = double.tryParse(RegExp(r'\d+').firstMatch(s)?.group(0) ?? '999') ?? 999;
-    if (s.contains('min')) return n;
-    if (s.contains(' h')) return n * 60;
-    if (s.contains('j'))  return n * 1440;
-    return 999;
   }
 
   void _openCamera() async {

@@ -189,7 +189,10 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
                             shares: _data.shares,
                           ),
                           const SizedBox(height: 16),
-                          ReportCommentsSection(count: _data.comments),
+                          ReportCommentsSection(
+                            count: _data.comments,
+                            comments: _data.commentsList,
+                          ),
                           const SizedBox(height: 100),
                         ],
                       ),
@@ -210,7 +213,12 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
           MediaQuery.removePadding(
             context: context,
             removeBottom: true,
-            child: const ReportCommentBar(),
+            child: ReportCommentBar(
+              onSubmit: (text) => ReportStore.instance.addComment(
+                reportId: _data.id,
+                comment: buildCommentFromCurrentUser(text),
+              ),
+            ),
           ),
           AppBottomNav(
             currentIndex: -1,

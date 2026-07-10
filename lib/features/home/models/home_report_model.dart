@@ -8,6 +8,7 @@ export 'package:cliinapp/features/reports/models/report_model.dart'
 export 'package:cliinapp/shared/models/report_status.dart';
 export 'package:cliinapp/shared/models/report_history_entry.dart';
 export 'package:cliinapp/shared/models/intervenant_model.dart';
+export 'package:cliinapp/shared/models/report_comment_model.dart';
 
 import 'package:cliinapp/shared/models/report_category.dart';
 import 'package:cliinapp/shared/models/report_origin.dart';
@@ -16,6 +17,7 @@ import 'package:cliinapp/features/reports/models/report_model.dart'
 import 'package:cliinapp/shared/models/report_status.dart';
 import 'package:cliinapp/shared/models/report_history_entry.dart';
 import 'package:cliinapp/shared/models/intervenant_model.dart';
+import 'package:cliinapp/shared/models/report_comment_model.dart';
 
 /// Modèle d'AFFICHAGE d'un signalement sur l'accueil et la carte.
 ///
@@ -44,6 +46,7 @@ class HomeReportModel {
   final int views;
   final int comments;
   final int shares;
+  final List<ReportComment> commentsList;
   final List<ReportHistoryEntry> history;
   final String? signalePar;
   final String? signaleParId;
@@ -72,6 +75,7 @@ class HomeReportModel {
     required this.views,
     required this.comments,
     required this.shares,
+    this.commentsList = const [],
     this.history = const [],
     this.signalePar,
     this.signaleParId,
@@ -101,6 +105,7 @@ class HomeReportModel {
     int? views,
     int? comments,
     int? shares,
+    List<ReportComment>? commentsList,
     List<ReportHistoryEntry>? history,
     String? signalePar,
     String? signaleParId,
@@ -129,6 +134,7 @@ class HomeReportModel {
       views: views ?? this.views,
       comments: comments ?? this.comments,
       shares: shares ?? this.shares,
+      commentsList: commentsList ?? this.commentsList,
       history: history ?? this.history,
       signalePar: signalePar ?? this.signalePar,
       signaleParId: signaleParId ?? this.signaleParId,

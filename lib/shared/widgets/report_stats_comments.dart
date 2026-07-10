@@ -8,43 +8,31 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
+import '../models/report_comment_model.dart';
+import '../store/auth_store.dart';
 import 'package:cliinapp/features/auth/auth_guard.dart';
 
-// ─────────────────────────────────────────────────────────────────
-// Mock commentaires pour la démo
-// ─────────────────────────────────────────────────────────────────
-class ReportComment {
-  final String initials;
-  final String name;
-  final String time;
-  final String text;
-  const ReportComment(
-      {required this.initials,
-      required this.name,
-      required this.time,
-      required this.text});
-}
+export '../models/report_comment_model.dart';
 
-const List<ReportComment> kMockReportComments = [
-  ReportComment(
-      initials: 'AK',
-      name: 'Awa K.',
-      time: 'il y a 2h',
-      text: 'C\'est vraiment urgent, ça pue jusqu\'à chez moi. '
-          'Merci à celui qui prendra ça en charge !'),
-  ReportComment(
-      initials: 'BT',
-      name: 'Bakary T.',
-      time: 'il y a 5h',
-      text: 'Même problème dans ma rue, j\'espère qu\'on aura '
-          'une vraie solution durable.'),
-  ReportComment(
-      initials: 'MY',
-      name: 'Marcel Y.',
-      time: 'il y a 1j',
-      text: 'J\'ai signalé ça plusieurs fois. '
-          'Content que quelqu\'un prenne enfin ça en main.'),
-];
+// ─────────────────────────────────────────────────────────────────
+// Construit un commentaire à partir de l'utilisateur connecté —
+// utilisé par ReportDetailPage / IntervenantDetailPage au moment de
+// l'envoi (voir ReportCommentBar.onSubmit).
+// ─────────────────────────────────────────────────────────────────
+ReportComment buildCommentFromCurrentUser(String text) {
+  final name = AuthStore.instance.currentUser?.username ?? 'Utilisateur';
+  final parts = name.trim().split(' ');
+  final initials = parts.length >= 2
+      ? '${parts[0][0]}${parts[1][0]}'.toUpperCase()
+      : (name.isEmpty ? '?' : name[0].toUpperCase());
+  return ReportComment(
+    initials: initials,
+    name: name,
+    time: 'à l\'instant',
+    text: text,
+    createdAt: DateTime.now(),
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────
 // Ligne stats — Vues | Commentaires | Partages
@@ -141,7 +129,7 @@ class ReportCommentsSection extends StatelessWidget {
   const ReportCommentsSection({
     super.key,
     required this.count,
-    this.comments = kMockReportComments,
+    this.comments = const [],
   });
 
   @override
@@ -155,10 +143,17 @@ class ReportCommentsSection extends StatelessWidget {
                 fontWeight: FontWeight.w700,
                 color: CliinAppColors.textDark)),
         const SizedBox(height: 12),
-        for (final c in comments) ...[
-          _CommentItem(comment: c),
-          const SizedBox(height: 12),
-        ],
+        if (comments.isEmpty)
+          Text(
+            'Aucun commentaire pour le moment. Soyez le premier à réagir.',
+            style: GoogleFonts.inter(
+                color: CliinAppColors.textSecondary, fontSize: 12.5),
+          )
+        else
+          for (final c in comments) ...[
+            _CommentItem(comment: c),
+            const SizedBox(height: 12),
+          ],
       ],
     );
   }
@@ -220,8 +215,56 @@ class _CommentItem extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────
 // Barre de commentaire fixe en bas
 // ─────────────────────────────────────────────────────────────────
-class ReportCommentBar extends StatelessWidget {
-  const ReportCommentBar({super.key});
+class ReportCommentBar extends StatefulWidget {
+  // Appelé avec le texte saisi une fois l'envoi confirmé — au parent
+  // (ReportDetailPage / IntervenantDetailPage) de persister le
+  // commentaire via ReportStore.addComment().
+  final Future<void> Function(String text) onSubmit;
+  const ReportCommentBar({super.key, required this.onSubmit});
+
+  @override
+  State<ReportCommentBar> createState() => _ReportCommentBarState();
+}
+
+class _ReportCommentBarState extends State<ReportCommentBar> {
+  final TextEditingController _controller = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+  bool _composing = false;
+  bool _isSending = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  // Tout utilisateur connecté peut commenter (y compris l'auteur du cas
+  // sur son propre signalement) — seul un compte authentifié est requis.
+  Future<void> _startComposing() async {
+    if (!await requireAuth(context)) return;
+    if (!mounted) return;
+    setState(() => _composing = true);
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _focusNode.requestFocus());
+  }
+
+  Future<void> _send() async {
+    if (!_composing) {
+      await _startComposing();
+      return;
+    }
+    final text = _controller.text.trim();
+    if (text.isEmpty || _isSending) return;
+    setState(() => _isSending = true);
+    try {
+      await widget.onSubmit(text);
+      _controller.clear();
+      if (mounted) setState(() => _composing = false);
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -235,35 +278,64 @@ class ReportCommentBar extends StatelessWidget {
         ),
         child: Row(children: [
           Expanded(
-            child: GestureDetector(
-              onTap: () async {
-                await requireAuth(context);
-              },
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: CliinAppColors.background,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Text('Ajouter un commentaire...',
-                    style: GoogleFonts.inter(
-                        color: CliinAppColors.textSecondary, fontSize: 12)),
-              ),
-            ),
+            child: _composing
+                ? Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: CliinAppColors.background,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: TextField(
+                      controller: _controller,
+                      focusNode: _focusNode,
+                      onSubmitted: (_) => _send(),
+                      textInputAction: TextInputAction.send,
+                      style: GoogleFonts.inter(
+                          fontSize: 12, color: CliinAppColors.textDark),
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding:
+                            const EdgeInsets.symmetric(vertical: 10),
+                        hintText: 'Ajouter un commentaire...',
+                        hintStyle: GoogleFonts.inter(
+                            color: CliinAppColors.textSecondary,
+                            fontSize: 12),
+                      ),
+                    ),
+                  )
+                : GestureDetector(
+                    onTap: _startComposing,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: CliinAppColors.background,
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: Text('Ajouter un commentaire...',
+                          style: GoogleFonts.inter(
+                              color: CliinAppColors.textSecondary,
+                              fontSize: 12)),
+                    ),
+                  ),
           ),
           const SizedBox(width: 10),
           GestureDetector(
-            onTap: () async {
-              await requireAuth(context);
-            },
+            onTap: _send,
             child: Container(
               width: 40,
               height: 40,
               decoration: const BoxDecoration(
                   color: CliinAppColors.primary, shape: BoxShape.circle),
-              child: const Icon(Icons.send_rounded,
-                  color: CliinAppColors.textWhite, size: 16),
+              child: _isSending
+                  ? const Padding(
+                      padding: EdgeInsets.all(11),
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.send_rounded,
+                      color: CliinAppColors.textWhite, size: 16),
             ),
           ),
         ]),

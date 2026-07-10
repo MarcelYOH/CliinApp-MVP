@@ -72,16 +72,60 @@ class HomeNearbyReports extends StatelessWidget {
         const SizedBox(height: CliinAppConstants.spacingM),
 
         // ── Scroll horizontal avec hauteur uniforme ──
-        _UniformHeightCardRow(
-          reports: reports,
-          cardWidth: 300,
-          onCardTap: onCardTap,
-          onTakeCharge: onTakeCharge,
-          onContact: onContact,
-        ),
+        if (reports.isEmpty)
+          const _EmptyNearbyReports()
+        else
+          _UniformHeightCardRow(
+            reports: reports,
+            cardWidth: 300,
+            onCardTap: onCardTap,
+            onTakeCharge: onTakeCharge,
+            onContact: onContact,
+          ),
       ],
     );
   }
+}
+
+class _EmptyNearbyReports extends StatelessWidget {
+  const _EmptyNearbyReports();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: CliinAppConstants.pagePadding,
+          vertical: CliinAppConstants.spacingL,
+        ),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: CliinAppConstants.spacingXL),
+          decoration: BoxDecoration(
+            color: CliinAppColors.background,
+            borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
+          ),
+          child: Column(
+            children: [
+              Icon(Icons.location_on_outlined,
+                  size: 40,
+                  color: CliinAppColors.textSecondary.withValues(alpha: 0.5)),
+              const SizedBox(height: 10),
+              Text(
+                'Aucun cas signalé à proximité pour le moment',
+                textAlign: TextAlign.center,
+                style: CliinAppTextStyles.bodyMedium
+                    .copyWith(color: CliinAppColors.textSecondary),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Soyez le premier à agir dans votre quartier',
+                textAlign: TextAlign.center,
+                style: CliinAppTextStyles.bodySmall
+                    .copyWith(color: CliinAppColors.textSecondary),
+              ),
+            ],
+          ),
+        ),
+      );
 }
 
 /// Rend toutes les cartes à la même hauteur :

@@ -321,7 +321,7 @@ class _ReportsBottomSheetState extends State<ReportsBottomSheet>
                                     .withValues(alpha: 0.4)),
                             const SizedBox(height: 12),
                             Text(
-                              'Aucun signalement\npour ces filtres',
+                              'Aucun cas trouvé avec ces critères',
                               textAlign: TextAlign.center,
                               style: CliinAppTextStyles.bodyMedium.copyWith(
                                   color: CliinAppColors.textSecondary),

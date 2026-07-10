@@ -151,7 +151,9 @@ class _MesPrisesEnChargePageState extends State<MesPrisesEnChargePage> {
                   child: filtered.isEmpty
                       ? Center(
                           child: Text(
-                            'Aucune prise en charge dans cette catégorie.',
+                            myTakeovers.isEmpty
+                                ? 'Vous n\'avez pas encore de prises en charge'
+                                : 'Aucune prise en charge dans cette catégorie.',
                             style: CliinAppTextStyles.bodyMedium,
                           ),
                         )

@@ -182,15 +182,9 @@ class _HomePageState extends State<HomePage> {
     final store = ReportStore.instance;
 
     // Zéro donnée de repli : uniquement les vrais cas disponibles du
-    // ReportStore, dans le rayon de 2km, jamais de carte inventée.
+    // ReportStore, jamais de carte inventée.
     final nearbyReports = store.nearbyReports;
-
-    final recentReports = store.recentReports.isNotEmpty
-        ? store.recentReports
-        : HomeDummyData.recentReports
-              .where((r) => r.status == ReportStatus.disponible)
-              .take(1)
-              .toList();
+    final recentReports = store.recentReports;
 
     final sections = <Widget>[
       HomeQuickReport(data: HomeDummyData.quickReport, onTap: _openCamera),

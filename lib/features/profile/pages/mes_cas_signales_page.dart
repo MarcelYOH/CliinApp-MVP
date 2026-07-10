@@ -95,7 +95,9 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
                   child: filtered.isEmpty
                       ? Center(
                           child: Text(
-                            'Aucun cas dans cette catégorie.',
+                            myCas.isEmpty
+                                ? 'Vous n\'avez pas encore de cas signalés'
+                                : 'Aucun cas dans cette catégorie.',
                             style: CliinAppTextStyles.bodyMedium,
                           ),
                         )

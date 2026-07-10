@@ -40,7 +40,7 @@ class HomeRecentReports extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Derniers cas',
+                    'Cas récents',
                     style: CliinAppTextStyles.headingMedium
                         .copyWith(color: const Color(0xFF1A1A1A)),
                   ),
@@ -72,28 +72,65 @@ class HomeRecentReports extends StatelessWidget {
         const SizedBox(height: CliinAppConstants.spacingM),
 
         // ── Liste verticale ──
-        ListView.separated(
-          padding: const EdgeInsets.symmetric(
-              horizontal: CliinAppConstants.pagePadding),
-          physics: const NeverScrollableScrollPhysics(),
-          shrinkWrap: true,
-          itemCount: reports.length,
-          separatorBuilder: (_, _) =>
-              const SizedBox(height: CliinAppConstants.spacingM),
-          itemBuilder: (context, index) {
-            final report = reports[index];
-            return ReportCard(
-              data: report,
-              onTap: onCardTap != null ? () => onCardTap!.call(report) : null,
-              onTakeCharge: onTakeCharge != null
-                  ? () => onTakeCharge!.call(report)
-                  : null,
-              onContact:
-                  onContact != null ? () => onContact!.call(report) : null,
-            );
-          },
-        ),
+        if (reports.isEmpty)
+          const _EmptyRecentReports()
+        else
+          ListView.separated(
+            padding: const EdgeInsets.symmetric(
+                horizontal: CliinAppConstants.pagePadding),
+            physics: const NeverScrollableScrollPhysics(),
+            shrinkWrap: true,
+            itemCount: reports.length,
+            separatorBuilder: (_, _) =>
+                const SizedBox(height: CliinAppConstants.spacingM),
+            itemBuilder: (context, index) {
+              final report = reports[index];
+              return ReportCard(
+                data: report,
+                onTap: onCardTap != null ? () => onCardTap!.call(report) : null,
+                onTakeCharge: onTakeCharge != null
+                    ? () => onTakeCharge!.call(report)
+                    : null,
+                onContact:
+                    onContact != null ? () => onContact!.call(report) : null,
+              );
+            },
+          ),
       ],
     );
   }
+}
+
+class _EmptyRecentReports extends StatelessWidget {
+  const _EmptyRecentReports();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: CliinAppConstants.pagePadding,
+          vertical: CliinAppConstants.spacingL,
+        ),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: CliinAppConstants.spacingXL),
+          decoration: BoxDecoration(
+            color: CliinAppColors.background,
+            borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
+          ),
+          child: Column(
+            children: [
+              Icon(Icons.inbox_outlined,
+                  size: 40,
+                  color: CliinAppColors.textSecondary.withValues(alpha: 0.5)),
+              const SizedBox(height: 10),
+              Text(
+                'Aucun cas récent dans votre zone',
+                textAlign: TextAlign.center,
+                style: CliinAppTextStyles.bodyMedium
+                    .copyWith(color: CliinAppColors.textSecondary),
+              ),
+            ],
+          ),
+        ),
+      );
 }

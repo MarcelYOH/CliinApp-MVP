@@ -17,12 +17,16 @@ class ReportPreviewPage extends StatefulWidget {
   // Mode remplacement de photo : "Continuer" renvoie le chemin de la
   // photo à l'appelant au lieu d'enchaîner sur un nouveau signalement.
   final bool replaceMode;
+  // Photo de profil (pas un signalement) : masque la position GPS et
+  // les textes propres à un cas d'insalubrité.
+  final bool isAvatarMode;
 
   const ReportPreviewPage({
     super.key,
     required this.imagePath,
     required this.address,
     this.replaceMode = false,
+    this.isAvatarMode = false,
   });
 
   @override
@@ -189,13 +193,17 @@ class _ReportPreviewPageState extends State<ReportPreviewPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: CliinAppConstants.spacingM),
-                    const ReportStepper(currentStep: 2),
-                    const SizedBox(height: CliinAppConstants.spacingL),
+                    if (!widget.isAvatarMode) ...[
+                      const ReportStepper(currentStep: 2),
+                      const SizedBox(height: CliinAppConstants.spacingL),
+                    ],
                     _buildVerifyBanner(),
                     const SizedBox(height: CliinAppConstants.spacingL),
                     _buildPhotoPreview(),
-                    const SizedBox(height: CliinAppConstants.spacingL),
-                    _buildPositionRow(),
+                    if (!widget.isAvatarMode) ...[
+                      const SizedBox(height: CliinAppConstants.spacingL),
+                      _buildPositionRow(),
+                    ],
                   ],
                 ),
               ),
@@ -232,7 +240,7 @@ class _ReportPreviewPageState extends State<ReportPreviewPage> {
           ),
           Expanded(
             child: Text(
-              'Aperçu du signalement',
+              widget.isAvatarMode ? 'Aperçu de la photo' : 'Aperçu du signalement',
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
                 fontSize: 17,
@@ -282,7 +290,9 @@ class _ReportPreviewPageState extends State<ReportPreviewPage> {
                   ),
                 ),
                 Text(
-                  ReportDummyData.previewVerifySubtitle,
+                  widget.isAvatarMode
+                      ? 'Assurez-vous que votre visage est bien visible.'
+                      : ReportDummyData.previewVerifySubtitle,
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     color: CliinAppColors.textSecondary,
@@ -492,7 +502,9 @@ class _ReportPreviewPageState extends State<ReportPreviewPage> {
               const SizedBox(width: CliinAppConstants.spacingS),
               Flexible(
                 child: Text(
-                  ReportDummyData.previewBottomText,
+                  widget.isAvatarMode
+                      ? 'Votre photo de profil aide la communauté à vous reconnaître.'
+                      : ReportDummyData.previewBottomText,
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     color: CliinAppColors.textSecondary,

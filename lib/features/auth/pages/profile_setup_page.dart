@@ -6,11 +6,11 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:image_picker/image_picker.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/utils/user_location_service.dart';
 import '../../../../shared/store/auth_store.dart';
+import '../../reports/pages/report_camera_page.dart';
 import '../widgets/auth_stepper.dart';
 
 class ProfileSetupPage extends StatefulWidget {
@@ -25,7 +25,6 @@ class ProfileSetupPage extends StatefulWidget {
 class _ProfileSetupPageState extends State<ProfileSetupPage> {
   late final TextEditingController _usernameController;
   late final TextEditingController _zoneController;
-  final ImagePicker _imagePicker = ImagePicker();
   String? _avatarPath;
   bool _isLoading = false;
   bool _isLocating = false;
@@ -100,15 +99,23 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     return username.isNotEmpty && zone.isNotEmpty && !_isLoading;
   }
 
+  // Réutilise le même bouton de prise de photo que la création d'un
+  // signalement (report_camera_page.dart, replaceMode: true) — caméra
+  // plein écran + import galerie déjà implémentés, plutôt qu'un
+  // ImagePicker basique séparé.
   Future<void> _pickAvatarPhoto() async {
     try {
-      final photo = await _imagePicker.pickImage(
-        source: ImageSource.camera,
-        preferredCameraDevice: CameraDevice.front,
-        imageQuality: 85,
+      final path = await Navigator.push<String>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const ReportCameraPage(
+            replaceMode: true,
+            isAvatarMode: true,
+          ),
+        ),
       );
-      if (photo != null && mounted) {
-        setState(() => _avatarPath = photo.path);
+      if (path != null && mounted) {
+        setState(() => _avatarPath = path);
       }
     } catch (_) {
       if (mounted) {

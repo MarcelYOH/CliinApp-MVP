@@ -426,7 +426,10 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
                       shares: _report.shares,
                     ),
                     const SizedBox(height: CliinAppConstants.spacingL),
-                    ReportCommentsSection(count: _report.comments),
+                    ReportCommentsSection(
+                      count: _report.comments,
+                      comments: _report.commentsList,
+                    ),
                     const SizedBox(height: CliinAppConstants.spacingXL),
                   ],
                 ),
@@ -444,7 +447,12 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
           MediaQuery.removePadding(
             context: context,
             removeBottom: true,
-            child: const ReportCommentBar(),
+            child: ReportCommentBar(
+              onSubmit: (text) => ReportStore.instance.addComment(
+                reportId: _report.id,
+                comment: buildCommentFromCurrentUser(text),
+              ),
+            ),
           ),
           AppBottomNav(
             currentIndex: -1,

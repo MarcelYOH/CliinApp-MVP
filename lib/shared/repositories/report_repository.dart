@@ -42,6 +42,11 @@ abstract class ReportRepository {
   Future<HomeReportModel> updateReport(HomeReportModel report);
 
   Future<void> deleteReport(String reportId);
+
+  Future<HomeReportModel> addComment({
+    required String reportId,
+    required ReportComment comment,
+  });
 }
 
 class ProofVerificationResult {

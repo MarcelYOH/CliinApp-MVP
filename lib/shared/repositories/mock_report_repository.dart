@@ -2,19 +2,15 @@
 
 import 'dart:math';
 import '../../features/home/models/home_report_model.dart';
-import '../../features/home/data/home_dummy_data.dart';
-import '../../features/map/data/map_dummy_data.dart';
 import 'report_repository.dart';
 
 class MockReportRepository implements ReportRepository {
   MockReportRepository._();
   static final MockReportRepository instance = MockReportRepository._();
 
-  final List<HomeReportModel> _reports = List.of([
-    ...HomeDummyData.nearbyReports,
-    ...HomeDummyData.recentReports,
-    ...MapDummyData.reports,
-  ]);
+  // Aucune donnée de départ fictive — uniquement les signalements
+  // réellement publiés par les utilisateurs pendant la session.
+  final List<HomeReportModel> _reports = <HomeReportModel>[];
 
   List<HomeReportModel> get _uniqueReports {
     final seen = <String>{};
@@ -175,6 +171,23 @@ class MockReportRepository implements ReportRepository {
         whatsAppNumber: number,
         whatsAppVisible: visible,
       ),
+    );
+    _updateReport(updated);
+    return updated;
+  }
+
+  @override
+  Future<HomeReportModel> addComment({
+    required String reportId,
+    required ReportComment comment,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 150));
+    final report = await fetchReportById(reportId);
+    if (report == null) throw Exception('Signalement introuvable');
+
+    final updated = report.copyWith(
+      commentsList: [...report.commentsList, comment],
+      comments: report.comments + 1,
     );
     _updateReport(updated);
     return updated;

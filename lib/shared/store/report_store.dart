@@ -308,4 +308,24 @@ class ReportStore extends ChangeNotifier {
       rethrow;
     }
   }
+
+  // ── Ajouter un commentaire ────────────────────────────────────
+  Future<HomeReportModel> addComment({
+    required String reportId,
+    required ReportComment comment,
+  }) async {
+    try {
+      final updated = await _repository.addComment(
+        reportId: reportId,
+        comment: comment,
+      );
+      _replaceReport(updated);
+      _error = null;
+      notifyListeners();
+      return updated;
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
+    }
+  }
 }

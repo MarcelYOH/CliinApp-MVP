@@ -20,12 +20,20 @@ import 'report_preview_page.dart';
 // Page — ReportCameraPage
 // ─────────────────────────────────────────
 class ReportCameraPage extends StatefulWidget {
-  // Mode remplacement de photo (édition d'un cas existant) : au lieu
-  // d'enchaîner sur un nouveau signalement, la page renvoie le chemin
-  // de la photo prise à l'appelant via Navigator.pop.
+  // Mode remplacement de photo (édition d'un cas existant, ou photo de
+  // profil) : au lieu d'enchaîner sur un nouveau signalement, la page
+  // renvoie le chemin de la photo prise à l'appelant via Navigator.pop.
   final bool replaceMode;
+  // Photo de profil plutôt que photo de signalement — adapte les textes
+  // de l'aperçu (masque la position GPS, etc.). Sans effet si
+  // replaceMode est false.
+  final bool isAvatarMode;
 
-  const ReportCameraPage({super.key, this.replaceMode = false});
+  const ReportCameraPage({
+    super.key,
+    this.replaceMode = false,
+    this.isAvatarMode = false,
+  });
 
   @override
   State<ReportCameraPage> createState() => _ReportCameraPageState();
@@ -273,6 +281,7 @@ class _ReportCameraPageState extends State<ReportCameraPage>
           imagePath: imagePath,
           address: _address,
           replaceMode: widget.replaceMode,
+          isAvatarMode: widget.isAvatarMode,
         ),
       ),
     ).then((result) {
@@ -305,6 +314,9 @@ class _ReportCameraPageState extends State<ReportCameraPage>
                   ReportCameraHeader(
                     onBackTap: () => Navigator.pop(context),
                     onHelpTap: _showHelpDialog,
+                    title: widget.isAvatarMode
+                        ? 'Photo de profil'
+                        : 'Signaler un cas d\'insalubrité',
                   ),
                   Expanded(
                     child: Stack(
@@ -313,10 +325,17 @@ class _ReportCameraPageState extends State<ReportCameraPage>
                           top: CliinAppConstants.spacingM,
                           left: 0,
                           right: 0,
-                          child: ReportCameraTipBanner(
-                            text: ReportDummyData.cameraTipText,
-                            highlightWord: ReportDummyData.cameraHighlightWord,
-                          ),
+                          child: widget.isAvatarMode
+                              ? const ReportCameraTipBanner(
+                                  text: 'Prenez une photo claire de votre '
+                                      'visage pour votre photo de profil.',
+                                  highlightWord: 'photo claire',
+                                )
+                              : ReportCameraTipBanner(
+                                  text: ReportDummyData.cameraTipText,
+                                  highlightWord:
+                                      ReportDummyData.cameraHighlightWord,
+                                ),
                         ),
                         const Positioned.fill(
                           child: ReportCameraViewfinderCorners(),
@@ -348,14 +367,16 @@ class _ReportCameraPageState extends State<ReportCameraPage>
                               child: _FallbackGalleryButton(onTap: _openGallery),
                             ),
                           ),
-                        Positioned(
-                          bottom: CliinAppConstants.spacingL,
-                          left: 0,
-                          right: 0,
-                          child: Center(
-                            child: ReportCameraPositionChip(address: _address),
+                        if (!widget.isAvatarMode)
+                          Positioned(
+                            bottom: CliinAppConstants.spacingL,
+                            left: 0,
+                            right: 0,
+                            child: Center(
+                              child:
+                                  ReportCameraPositionChip(address: _address),
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),
@@ -443,11 +464,16 @@ class _ReportCameraPageState extends State<ReportCameraPage>
           borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
         ),
         title: const Text('Aide — Photo'),
-        content: const Text(
-          'Prenez une photo claire et nette du problème d\'insalubrité.\n\n'
-          '• Cadrez bien le problème\n'
-          '• Assurez-vous d\'un bon éclairage\n'
-          '• Évitez les photos floues',
+        content: Text(
+          widget.isAvatarMode
+              ? 'Prenez une photo claire et nette de votre visage.\n\n'
+                  '• Centrez votre visage\n'
+                  '• Assurez-vous d\'un bon éclairage\n'
+                  '• Évitez les photos floues'
+              : 'Prenez une photo claire et nette du problème d\'insalubrité.\n\n'
+                  '• Cadrez bien le problème\n'
+                  '• Assurez-vous d\'un bon éclairage\n'
+                  '• Évitez les photos floues',
         ),
         actions: [
           TextButton(

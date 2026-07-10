@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import '../models/position_model.dart';
 import '../models/quick_report_model.dart';
 import '../models/alert_banner_model.dart';
-import '../models/home_report_model.dart';
 import '../models/action_banner_model.dart';
 import '../models/group_model.dart';
 import '../models/category_model.dart';
@@ -32,75 +31,6 @@ class HomeDummyData {
     textLine2Highlight: 'intervention urgente.',
     buttonLabel: 'Voir',
   );
-
-  static final List<HomeReportModel> nearbyReports = [
-    // ── État 1 : Disponible ──
-    const HomeReportModel(
-      id: 'CLN-2481',
-      reference: '#CLN-2481',
-      title: 'Dépôts sauvages',
-      location: 'Riviera Palmeraie, Cocody',
-      description: 'Accumulation importante d\'ordures ménagères depuis 3 jours.',
-      severity: ReportSeverity.critique,
-      category: ReportCategory.depotsSauvages,
-      distance: '250 m',
-      timeAgo: 'Il y a 3j',
-      imageAsset: 'assets/images/depot.jpg',
-      status: ReportStatus.disponible,
-      views: 23,
-      comments: 5,
-      shares: 12,
-    ),
-
-    // ── État 2 : En cours ──
-    HomeReportModel(
-      id: 'CLN-2810',
-      reference: '#CLN-2810',
-      title: 'Caniveaux bouchés',
-      location: 'Cocody, Angré 8e tranche',
-      description: 'Eaux stagnantes, odeurs nauséabondes et risque sanitaire élevé.',
-      severity: ReportSeverity.eleve,
-      category: ReportCategory.caniveauxBouches,
-      distance: '400 m',
-      timeAgo: 'Il y a 1j',
-      imageAsset: 'assets/images/caniveau.jpg',
-      status: ReportStatus.enCours,
-      intervenant: IntervenantModel(
-        id: 'eco-jeune',
-        name: 'Eco Jeune',
-        takenAgo: 'Il y a 2h',
-        takenAt: DateTime(2025, 5, 15, 10, 30),
-      ),
-      views: 18,
-      comments: 3,
-      shares: 7,
-    ),
-
-    // ── État 3 : Traité ──
-    HomeReportModel(
-      id: 'CLN-3102',
-      reference: '#CLN-3102',
-      title: 'Eaux usées',
-      location: 'Abobo, PK18',
-      description: 'Risque sanitaire élevé pour les habitants du quartier.',
-      severity: ReportSeverity.eleve,
-      category: ReportCategory.eauxUsees,
-      distance: '650 m',
-      timeAgo: 'Il y a 2j',
-      imageAsset: 'assets/images/depot.jpg',
-      imageAfterAsset: 'assets/images/caniveau.jpg',
-      status: ReportStatus.traite,
-      intervenant: IntervenantModel(
-        id: 'clean-riviera',
-        name: 'Clean Riviera',
-        takenAt: DateTime(2025, 5, 15, 10, 30),
-        treatedAt: DateTime(2025, 5, 15, 14, 45), // ✅ date renseignée
-      ),
-      views: 15,
-      comments: 2,
-      shares: 6,
-    ),
-  ];
 
   static const ActionBannerModel actionBanner = ActionBannerModel(
     badgeLabel: 'Agissons ensemble',
@@ -160,46 +90,5 @@ class HomeDummyData {
         label: 'Déchets industriels', count: 18, color: Color(0xFF546E7A)),
     CategoryModel(icon: Icons.medical_services_outlined,
         label: 'Déchets médicaux', count: 12, color: Color(0xFF9C27B0)),
-  ];
-
-  static final List<HomeReportModel> recentReports = [
-    const HomeReportModel(
-      id: 'CLN-9021',
-      reference: '#CLN-9021',
-      title: 'Dépôts sauvages',
-      location: 'Yopougon, Sicogi',
-      description: 'Accumulation importante d\'ordures ménagères non collectées.',
-      severity: ReportSeverity.critique,
-      category: ReportCategory.depotsSauvages,
-      distance: '250 m',
-      timeAgo: 'Il y a 45 min',
-      imageAsset: 'assets/images/depot.jpg',
-      status: ReportStatus.disponible,
-      views: 7,
-      comments: 1,
-      shares: 2,
-    ),
-    HomeReportModel(
-      id: 'CLN-3657',
-      reference: '#CLN-3657',
-      title: 'Eaux usées',
-      location: 'Cocody, Riviera Faya',
-      description: 'Eaux usées, odeurs nauséabondes et moustiques.',
-      severity: ReportSeverity.eleve,
-      category: ReportCategory.eauxUsees,
-      distance: '400 m',
-      timeAgo: 'Il y a 1h',
-      imageAsset: 'assets/images/caniveau.jpg',
-      status: ReportStatus.enCours,
-      intervenant: IntervenantModel(
-        id: 'green-city',
-        name: 'Green City',
-        takenAgo: 'Il y a 30 min',
-        takenAt: DateTime(2025, 5, 15, 13, 00),
-      ),
-      views: 5,
-      comments: 0,
-      shares: 1,
-    ),
   ];
 }
