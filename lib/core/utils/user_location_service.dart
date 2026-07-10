@@ -6,18 +6,20 @@
 // plusieurs cartes de signalement s'affichent en même temps), et calculer
 // la distance réelle vers un signalement donné.
 //
-// ✅ ChangeNotifier — dès qu'une position arrive (au démarrage de l'app,
-// pendant la création d'un signalement, ou via une carte qui réussit son
-// propre appel GPS), TOUTES les cartes déjà affichées à l'écran sont
-// notifiées et recalculent leur distance. Avant, une carte qui échouait
-// son premier essai GPS restait figée sur le repli pour toujours, même
-// après qu'une position soit obtenue ailleurs dans l'app — la page
-// d'accueil reste "vivante" en mémoire entre les onglets et ne
-// réessayait jamais spontanément.
+// Stratégie de stabilité en 3 étapes (contre le bruit GPS et les valeurs
+// aberrantes) :
+//   1. Position initiale instantanée — Geolocator.getLastKnownPosition()
+//      (pas d'attente), repli sur getCurrentPosition(LocationAccuracy.low)
+//      si aucune position récente n'est connue du système.
+//   2. Mise à jour contrôlée — getPositionStream() avec distanceFilter: 50
+//      et accuracy: low : une nouvelle mesure n'arrive que si l'utilisateur
+//      s'est réellement déplacé d'au moins 50m.
+//   3. Filtre anti-aberration — si une nouvelle position s'écarte de plus
+//      de 500m de la précédente en moins de 10 secondes, elle est ignorée
+//      (typiquement un rebond GPS/réseau, pas un vrai déplacement).
 //
-// Remplace l'ancienne approche où 'distance' était une chaîne figée
-// ('< 1 km') stockée dans HomeReportModel à la création — la distance
-// dépend de QUI regarde la carte, pas de la création du signalement.
+// ✅ ChangeNotifier — dès qu'une position est acceptée, TOUTES les cartes
+// affichées à l'écran sont notifiées et recalculent leur distance.
 
 import 'dart:async';
 
@@ -34,29 +36,73 @@ class UserLocationService extends ChangeNotifier {
 
   StreamSubscription<Position>? _positionSub;
 
-  /// Recalcule automatiquement la distance quand l'utilisateur se déplace
-  /// d'au moins 30m, sans attendre qu'un écran redemande une mesure GPS.
-  /// Démarré une seule fois, dès la première position obtenue avec succès.
-  /// 30m (et non 10m) — un seuil trop bas laisse passer le bruit GPS normal
-  /// (positions qui varient légèrement d'une lecture à l'autre sans que
-  /// l'utilisateur ne bouge), ce qui faisait clignoter la distance affichée.
+  // ── Étape 3 — filtre anti-aberration ──────────────────────────
+  static const double _aberrationThresholdMeters = 500;
+  static const Duration _aberrationWindow = Duration(seconds: 10);
+
+  /// Point d'entrée unique pour toute nouvelle mesure GPS (fix initial,
+  /// flux continu, ou position partagée par un autre écran). Rejette les
+  /// sauts aberrants avant de mettre à jour le cache.
+  void _acceptPosition(Position pos) {
+    final previous = _cachedPosition;
+    final previousAt = _cachedAt;
+    if (previous != null && previousAt != null) {
+      final elapsed = DateTime.now().difference(previousAt);
+      if (elapsed < _aberrationWindow) {
+        final jump = Geolocator.distanceBetween(
+          previous.latitude,
+          previous.longitude,
+          pos.latitude,
+          pos.longitude,
+        );
+        if (jump > _aberrationThresholdMeters) {
+          // Saut invraisemblable en si peu de temps → probable rebond
+          // GPS/réseau. On garde l'ancienne position.
+          return;
+        }
+      }
+    }
+    _cachedPosition = pos;
+    _cachedAt = DateTime.now();
+    notifyListeners();
+  }
+
+  /// Étape 2 — flux de mise à jour contrôlé : seulement si déplacement
+  /// réel d'au moins 50m, en précision basse (suffisant pour une distance
+  /// affichée à l'utilisateur, et moins sensible au bruit qu'un fix haute
+  /// précision).
   void _startWatching() {
     if (_positionSub != null) return;
     _positionSub = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 30,
+        accuracy: LocationAccuracy.low,
+        distanceFilter: 50,
       ),
-    ).listen((pos) {
-      _cachedPosition = pos;
-      _cachedAt = DateTime.now();
-      notifyListeners();
-    }, onError: (_) {});
+    ).listen(_acceptPosition, onError: (_) {});
+  }
+
+  /// Étape 1 — position initiale instantanée, sans attendre un fix GPS.
+  Future<Position?> _resolveInitialPosition() async {
+    try {
+      final last = await Geolocator.getLastKnownPosition();
+      if (last != null) return last;
+    } catch (_) {
+      // ignoré — on retombe sur getCurrentPosition ci-dessous
+    }
+    try {
+      return await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.low,
+        ),
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Position actuelle, depuis le cache si encore fraîche, sinon nouvelle
-  /// mesure GPS. Retourne null si la géolocalisation échoue et qu'aucune
-  /// position n'a jamais été récupérée.
+  /// résolution (étape 1). Retourne null si la géolocalisation échoue et
+  /// qu'aucune position n'a jamais été récupérée.
   Future<Position?> getCurrentPosition({bool forceRefresh = false}) async {
     final isFresh = _cachedAt != null &&
         DateTime.now().difference(_cachedAt!) < _cacheDuration;
@@ -74,22 +120,15 @@ class UserLocationService extends ChangeNotifier {
         return _cachedPosition;
       }
 
-      // Pas de timeLimit : en zone rurale un premier fix GPS dépasse
-      // souvent 5s, ce qui faisait échouer la mesure et enregistrer une
-      // position null (donc plus aucun calcul de distance possible).
-      final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-        ),
-      );
-      _cachedPosition = pos;
-      _cachedAt = DateTime.now();
-      _startWatching();
-      notifyListeners(); // ✅ prévient toutes les cartes affichées
-      return pos;
+      final pos = await _resolveInitialPosition();
+      if (pos != null) {
+        _acceptPosition(pos);
+        _startWatching();
+      }
+      return _cachedPosition;
     } catch (_) {
-      // GPS indisponible / refusé / timeout → on retombe sur le dernier
-      // cache connu (peut être null si jamais récupéré avec succès).
+      // GPS indisponible / refusé → on retombe sur le dernier cache connu
+      // (peut être null si jamais récupéré avec succès).
       return _cachedPosition;
     }
   }
@@ -97,21 +136,24 @@ class UserLocationService extends ChangeNotifier {
   /// Position en cache, sans déclencher de nouvelle mesure GPS.
   Position? get lastKnownPosition => _cachedPosition;
 
-  /// ✅ NOUVEAU — permet à un autre écran (ex: report_form_page.dart, qui
-  /// fait son propre appel Geolocator pour combiner position + adresse
-  /// via geocoding) de partager une position déjà obtenue avec succès,
-  /// plutôt que de laisser deux caches de géolocalisation déconnectés
-  /// dans l'app. Sans ça, un succès GPS sur un écran ne profitait jamais
-  /// au calcul de distance affiché sur les cartes ailleurs dans l'app.
+  /// Permet à un autre écran (ex: report_form_page.dart, qui fait son
+  /// propre appel Geolocator pour combiner position + adresse via
+  /// geocoding) de partager une position déjà obtenue avec succès —
+  /// passe par le même filtre anti-aberration que les autres sources.
   void setKnownPosition(Position position) {
-    _cachedPosition = position;
-    _cachedAt = DateTime.now();
+    _acceptPosition(position);
     _startWatching();
-    notifyListeners(); // ✅ prévient toutes les cartes affichées
   }
 
+  // ── Format d'affichage — règle stricte et définitive ──────────────
+  // < 20m           → "Sur place"
+  // 20m à 999m      → "X m"
+  // ≥ 1000m         → "X.X km"
+  // Jamais un tiret, jamais une valeur inventée — l'appelant affiche
+  // "..." tant qu'aucune position n'est disponible (distanceLabelTo
+  // retourne null dans ce cas).
   String formatMeters(double meters) {
-    if (meters < 50) return 'Sur place';
+    if (meters < 20) return 'Sur place';
     if (meters < 1000) return '${meters.round()} m';
     return '${(meters / 1000).toStringAsFixed(1)} km';
   }
@@ -132,7 +174,7 @@ class UserLocationService extends ChangeNotifier {
 
   /// Distance formatée entre la position en cache et le point donné.
   /// Retourne null si la position actuelle ou le point cible est inconnu
-  /// (l'appelant doit alors afficher une valeur de repli).
+  /// (l'appelant doit alors afficher "...").
   String? distanceLabelTo(double? targetLat, double? targetLng) {
     final meters = distanceMetersTo(targetLat, targetLng);
     if (meters == null) return null;

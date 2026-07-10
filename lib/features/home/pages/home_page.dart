@@ -181,9 +181,9 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final store = ReportStore.instance;
 
-    final nearbyReports = store.nearbyReports.isNotEmpty
-        ? store.nearbyReports
-        : HomeDummyData.nearbyReports;
+    // Zéro donnée de repli : uniquement les vrais cas disponibles du
+    // ReportStore, dans le rayon de 2km, jamais de carte inventée.
+    final nearbyReports = store.nearbyReports;
 
     final recentReports = store.recentReports.isNotEmpty
         ? store.recentReports
@@ -247,8 +247,10 @@ class _HomePageState extends State<HomePage> {
                 final locationLabel = (isAuthed && authUser!.zone.isNotEmpty)
                     ? authUser.zone
                     : 'Votre position';
+                // Compteur indépendant des 2 cartes affichées — tous
+                // statuts confondus dans le rayon de 2km.
                 final contextLine =
-                    '$locationLabel · ${nearbyReports.length} cas à proximité';
+                    '$locationLabel · ${store.nearbyAllStatusesCount} cas à proximité';
 
                 Widget avatarContent;
                 if (!isAuthed) {

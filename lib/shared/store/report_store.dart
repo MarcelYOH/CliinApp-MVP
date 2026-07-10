@@ -30,7 +30,7 @@ class ReportStore extends ChangeNotifier {
   // MVP : fixé à 2km. Extensible plus tard (UI pour élargir le rayon,
   // ou explorer d'autres villes) — non développé pour le moment.
   static const double _defaultRadiusMeters = 2000.0;
-  static const int _maxNearbyReports = 20;
+  static const int _maxNearbyReports = 2;
 
   // ── Fenêtre de fraîcheur "Signalements récents" ───────────────
   // Indépendant du délai d'intervention (72h dans IntervenantDetailPage) :
@@ -47,32 +47,44 @@ class ReportStore extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  // ── "À proximité" — status disponible, rayon 2km, trié par distance croissante ──
+  // ── "À proximité" — statut disponible UNIQUEMENT, rayon 2km, triés
+  // par date de création décroissante (le plus récent en premier),
+  // plafonné à 2 cartes en aperçu. Aucune donnée de repli : sans
+  // position GPS connue, on ne peut affirmer qu'un cas est "à
+  // proximité" — la liste reste vide plutôt que d'inventer un résultat.
   List<HomeReportModel> get nearbyReports {
-    final candidates =
-        _reports.where((r) => r.status == ReportStatus.disponible).toList();
+    if (UserLocationService.instance.lastKnownPosition == null) return const [];
 
-    final userPosition = UserLocationService.instance.lastKnownPosition;
-    if (userPosition == null) {
-      // Position utilisateur pas encore disponible → repli simple,
-      // comme avant cette correction.
-      return candidates.take(_maxNearbyReports).toList();
-    }
+    final candidates = _reports
+        .where((r) => r.status == ReportStatus.disponible)
+        .where((r) {
+          final meters = UserLocationService.instance
+              .distanceMetersTo(r.latitude, r.longitude);
+          return meters != null && meters <= _defaultRadiusMeters;
+        })
+        .toList()
+      ..sort((a, b) {
+        final aDate = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final bDate = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        return bDate.compareTo(aDate);
+      });
 
-    final withDistance = <MapEntry<HomeReportModel, double>>[];
+    return candidates.take(_maxNearbyReports).toList();
+  }
 
-    for (final r in candidates) {
-      final meters =
-          UserLocationService.instance.distanceMetersTo(r.latitude, r.longitude);
-      if (meters != null && meters <= _defaultRadiusMeters) {
-        withDistance.add(MapEntry(r, meters));
-      }
-      // Sans coordonnées ou hors rayon : exclu de "À proximité".
-    }
+  // ── Compteur "À proximité" pour le message de bienvenue ──────────
+  // INDÉPENDANT de [nearbyReports] : tous statuts confondus (Disponible +
+  // En cours + Traité), dans le rayon de 2km, sans plafond d'affichage.
+  // Reflète l'activité réelle de la zone, pas seulement les 2 cartes
+  // visibles en aperçu.
+  int get nearbyAllStatusesCount {
+    if (UserLocationService.instance.lastKnownPosition == null) return 0;
 
-    withDistance.sort((a, b) => a.value.compareTo(b.value));
-
-    return withDistance.map((e) => e.key).take(_maxNearbyReports).toList();
+    return _reports.where((r) {
+      final meters = UserLocationService.instance
+          .distanceMetersTo(r.latitude, r.longitude);
+      return meters != null && meters <= _defaultRadiusMeters;
+    }).length;
   }
 
   List<HomeReportModel> get recentReports {
