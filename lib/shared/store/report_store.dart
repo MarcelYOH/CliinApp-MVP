@@ -48,28 +48,25 @@ class ReportStore extends ChangeNotifier {
   String? get error => _error;
 
   // ── "À proximité" — statut disponible UNIQUEMENT, rayon 2km, triés
-  // par date de création décroissante (le plus récent en premier),
-  // plafonné à 2 cartes en aperçu. Aucune donnée de repli : sans
-  // position GPS connue, on ne peut affirmer qu'un cas est "à
+  // par distance croissante (le plus proche en premier, comme Uber /
+  // Google Maps), plafonné à 2 cartes en aperçu. Aucune donnée de repli :
+  // sans position GPS connue, on ne peut affirmer qu'un cas est "à
   // proximité" — la liste reste vide plutôt que d'inventer un résultat.
   List<HomeReportModel> get nearbyReports {
     if (UserLocationService.instance.lastKnownPosition == null) return const [];
 
     final candidates = _reports
         .where((r) => r.status == ReportStatus.disponible)
-        .where((r) {
-          final meters = UserLocationService.instance
-              .distanceMetersTo(r.latitude, r.longitude);
-          return meters != null && meters <= _defaultRadiusMeters;
-        })
+        .map((r) => (
+              report: r,
+              meters: UserLocationService.instance
+                  .distanceMetersTo(r.latitude, r.longitude),
+            ))
+        .where((e) => e.meters != null && e.meters! <= _defaultRadiusMeters)
         .toList()
-      ..sort((a, b) {
-        final aDate = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-        final bDate = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-        return bDate.compareTo(aDate);
-      });
+      ..sort((a, b) => a.meters!.compareTo(b.meters!));
 
-    return candidates.take(_maxNearbyReports).toList();
+    return candidates.map((e) => e.report).take(_maxNearbyReports).toList();
   }
 
   // ── Compteur "À proximité" pour le message de bienvenue ──────────

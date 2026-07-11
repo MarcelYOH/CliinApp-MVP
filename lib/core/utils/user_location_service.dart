@@ -6,17 +6,24 @@
 // plusieurs cartes de signalement s'affichent en même temps), et calculer
 // la distance réelle vers un signalement donné.
 //
-// Stratégie de stabilité en 3 étapes (contre le bruit GPS et les valeurs
+// Stratégie de stabilité en 4 étapes (contre le bruit GPS et les valeurs
 // aberrantes) :
 //   1. Position initiale instantanée — Geolocator.getLastKnownPosition()
-//      (pas d'attente), repli sur getCurrentPosition(LocationAccuracy.low)
+//      (pas d'attente), repli sur getCurrentPosition(LocationAccuracy.high)
 //      si aucune position récente n'est connue du système.
-//   2. Mise à jour contrôlée — getPositionStream() avec distanceFilter: 50
-//      et accuracy: low : une nouvelle mesure n'arrive que si l'utilisateur
-//      s'est réellement déplacé d'au moins 50m.
+//   2. Mise à jour contrôlée — getPositionStream() avec distanceFilter: 8
+//      et accuracy: high (fix satellite GPS, pas une position réseau/
+//      cellulaire à ±300m qui fait "sauter" la distance affichée).
 //   3. Filtre anti-aberration — si une nouvelle position s'écarte de plus
 //      de 500m de la précédente en moins de 10 secondes, elle est ignorée
 //      (typiquement un rebond GPS/réseau, pas un vrai déplacement).
+//   4. Lissage (filtre de Kalman) — même un fix GPS haute précision
+//      "gigote" de quelques mètres d'une mesure à l'autre. Chaque nouvelle
+//      mesure est fusionnée avec l'estimation précédente, pondérée par sa
+//      précision annoncée (Position.accuracy) : une mesure imprécise ne
+//      fait quasiment pas bouger l'estimation, une mesure précise la
+//      recale rapidement. C'est le même principe que le "point bleu"
+//      stable de Google Maps / Uber.
 //
 // ✅ ChangeNotifier — dès qu'une position est acceptée, TOUTES les cartes
 // affichées à l'écran sont notifiées et recalculent leur distance.
@@ -25,6 +32,59 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
+
+/// Filtre de Kalman 1D appliqué indépendamment à la latitude et à la
+/// longitude. But : produire une position stable pour l'affichage de
+/// distance à partir d'une suite de mesures GPS bruitées, sans lag
+/// perceptible sur un vrai déplacement.
+class _LocationKalmanFilter {
+  double? _lat;
+  double? _lng;
+  double _variance = -1;
+  DateTime? _lastTimestamp;
+
+  // Bruit de processus : vitesse de déplacement plausible (m/s), au carré.
+  // ~5 m/s couvre la marche rapide et le vélo urbain sans réintroduire le
+  // bruit GPS qu'on cherche justement à lisser.
+  static const double _processNoiseMetersPerSecond = 5.0;
+
+  ({double lat, double lng}) filter({
+    required double lat,
+    required double lng,
+    required double accuracyMeters,
+    required DateTime timestamp,
+  }) {
+    // Précision annoncée absente ou nulle (arrive sur certains devices) →
+    // valeur prudente par défaut pour ne pas sur-pondérer la mesure.
+    final safeAccuracy = accuracyMeters <= 0 ? 30.0 : accuracyMeters;
+
+    if (_lat == null || _lng == null || _variance < 0) {
+      _lat = lat;
+      _lng = lng;
+      _variance = safeAccuracy * safeAccuracy;
+      _lastTimestamp = timestamp;
+      return (lat: _lat!, lng: _lng!);
+    }
+
+    final elapsedSeconds =
+        timestamp.difference(_lastTimestamp!).inMilliseconds / 1000;
+    if (elapsedSeconds > 0) {
+      _variance += elapsedSeconds *
+          _processNoiseMetersPerSecond *
+          _processNoiseMetersPerSecond;
+    }
+    _lastTimestamp = timestamp;
+
+    // Gain de Kalman : proportion de confiance accordée à la nouvelle
+    // mesure par rapport à l'estimation courante.
+    final k = _variance / (_variance + safeAccuracy * safeAccuracy);
+    _lat = _lat! + k * (lat - _lat!);
+    _lng = _lng! + k * (lng - _lng!);
+    _variance = (1 - k) * _variance;
+
+    return (lat: _lat!, lng: _lng!);
+  }
+}
 
 class UserLocationService extends ChangeNotifier {
   UserLocationService._();
@@ -36,13 +96,19 @@ class UserLocationService extends ChangeNotifier {
 
   StreamSubscription<Position>? _positionSub;
 
+  // ── Étape 4 — position lissée, utilisée pour tout calcul de distance ──
+  final _LocationKalmanFilter _kalman = _LocationKalmanFilter();
+  double? _smoothedLat;
+  double? _smoothedLng;
+
   // ── Étape 3 — filtre anti-aberration ──────────────────────────
   static const double _aberrationThresholdMeters = 500;
   static const Duration _aberrationWindow = Duration(seconds: 10);
 
   /// Point d'entrée unique pour toute nouvelle mesure GPS (fix initial,
   /// flux continu, ou position partagée par un autre écran). Rejette les
-  /// sauts aberrants avant de mettre à jour le cache.
+  /// sauts aberrants, puis fusionne la mesure acceptée dans le filtre de
+  /// lissage avant de mettre à jour le cache.
   void _acceptPosition(Position pos) {
     final previous = _cachedPosition;
     final previousAt = _cachedAt;
@@ -62,21 +128,29 @@ class UserLocationService extends ChangeNotifier {
         }
       }
     }
+    final smoothed = _kalman.filter(
+      lat: pos.latitude,
+      lng: pos.longitude,
+      accuracyMeters: pos.accuracy,
+      timestamp: DateTime.now(),
+    );
+    _smoothedLat = smoothed.lat;
+    _smoothedLng = smoothed.lng;
     _cachedPosition = pos;
     _cachedAt = DateTime.now();
     notifyListeners();
   }
 
-  /// Étape 2 — flux de mise à jour contrôlé : seulement si déplacement
-  /// réel d'au moins 50m, en précision basse (suffisant pour une distance
-  /// affichée à l'utilisateur, et moins sensible au bruit qu'un fix haute
-  /// précision).
+  /// Étape 2 — flux de mise à jour contrôlé : précision GPS haute (fix
+  /// satellite, pas une position réseau/cellulaire imprécise), seulement
+  /// si déplacement réel d'au moins 8m — le lissage (étape 4) absorbe le
+  /// bruit résiduel d'une mesure à l'autre.
   void _startWatching() {
     if (_positionSub != null) return;
     _positionSub = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.low,
-        distanceFilter: 50,
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 8,
       ),
     ).listen(_acceptPosition, onError: (_) {});
   }
@@ -92,7 +166,7 @@ class UserLocationService extends ChangeNotifier {
     try {
       return await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.low,
+          accuracy: LocationAccuracy.high,
         ),
       );
     } catch (_) {
@@ -158,15 +232,19 @@ class UserLocationService extends ChangeNotifier {
     return '${(meters / 1000).toStringAsFixed(1)} km';
   }
 
-  /// Distance brute en mètres entre la position en cache et le point donné.
-  /// Utilisée pour le filtrage par rayon (ex: 2km autour de l'utilisateur).
+  /// Distance brute en mètres entre la position lissée (étape 4) et le
+  /// point donné. Utilisée pour le filtrage par rayon (ex: 2km autour de
+  /// l'utilisateur) et pour l'affichage — c'est la position lissée, pas
+  /// le fix GPS brut, qui évite les sauts de quelques dizaines/centaines
+  /// de mètres d'un rafraîchissement à l'autre alors que l'utilisateur
+  /// est immobile.
   /// Retourne null si la position actuelle ou le point cible est inconnu.
   double? distanceMetersTo(double? targetLat, double? targetLng) {
     if (targetLat == null || targetLng == null) return null;
-    if (_cachedPosition == null) return null;
+    if (_smoothedLat == null || _smoothedLng == null) return null;
     return Geolocator.distanceBetween(
-      _cachedPosition!.latitude,
-      _cachedPosition!.longitude,
+      _smoothedLat!,
+      _smoothedLng!,
       targetLat,
       targetLng,
     );
