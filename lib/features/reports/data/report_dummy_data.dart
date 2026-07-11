@@ -30,8 +30,6 @@ class ReportDummyData {
   );
 
   static const String detectedAddress   = 'Cocody, Angré 8e tranche';
-  static const double detectedLatitude  = 5.4010;
-  static const double detectedLongitude = -3.9570;
 
   static final List<ReportUploadStepModel> uploadSteps = [
     const ReportUploadStepModel(

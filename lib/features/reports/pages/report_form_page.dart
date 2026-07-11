@@ -70,8 +70,13 @@ class _ReportFormPageState extends State<ReportFormPage> {
         TextEditingController(text: existing?.description ?? '');
     _addressController =
         TextEditingController(text: existing?.location ?? widget.address!);
-    _latitude = existing?.latitude ?? ReportDummyData.detectedLatitude;
-    _longitude = existing?.longitude ?? ReportDummyData.detectedLongitude;
+    // Pas de coordonnées inventées ici : tant que le GPS n'a pas répondu
+    // (_refreshLocation ci-dessous), _latitude/_longitude restent null.
+    // Publier avec une position fictive donnerait une distance affichée
+    // totalement fausse (ex: 410 km) — cf. _publish() qui bloque tant
+    // que la position réelle n'est pas connue.
+    _latitude = existing?.latitude;
+    _longitude = existing?.longitude;
     if (!_isEditing) {
       // addPostFrameCallback : évite "setState() called during build" car _refreshLocation appelle setState avant son premier await.
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -162,6 +167,22 @@ class _ReportFormPageState extends State<ReportFormPage> {
 
     if (_isEditing) {
       _saveEdit();
+      return;
+    }
+
+    // Bloque la publication tant que la vraie position GPS n'est pas
+    // connue et que l'échec GPS n'a pas été constaté (auquel cas
+    // l'utilisateur corrige l'adresse manuellement et publie sans
+    // coordonnées). Sans ce garde-fou, un appui rapide sur "Publier"
+    // pouvait enregistrer le cas avant la résolution du GPS.
+    if (_latitude == null && !_gpsFailed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Détection de la position en cours, veuillez patienter…',
+              style: GoogleFonts.inter()),
+          backgroundColor: CliinAppColors.alertOrange,
+        ),
+      );
       return;
     }
 
@@ -765,23 +786,39 @@ class _ReportFormPageState extends State<ReportFormPage> {
 
   // ── Bouton publier ─────────────────────────────────────────────
   Widget _buildPublishButton() {
+    final waitingForGps = !_isEditing && _latitude == null && !_gpsFailed;
     return GestureDetector(
-      onTap: _publish,
+      onTap: waitingForGps ? null : _publish,
       child: Container(
         width: double.infinity,
         height: 52,
         decoration: BoxDecoration(
-          color: CliinAppColors.primary,
+          color: waitingForGps
+              ? CliinAppColors.primary.withOpacity(0.5)
+              : CliinAppColors.primary,
           borderRadius:
               BorderRadius.circular(CliinAppConstants.radiusMedium),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(_isEditing ? Icons.check_rounded : Icons.send,
-                color: CliinAppColors.textWhite, size: 18),
+            if (waitingForGps)
+              const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: CliinAppColors.textWhite),
+              )
+            else
+              Icon(_isEditing ? Icons.check_rounded : Icons.send,
+                  color: CliinAppColors.textWhite, size: 18),
             const SizedBox(width: CliinAppConstants.spacingM),
-            Text(_isEditing ? 'Enregistrer les modifications' : 'Publier le cas',
+            Text(
+                waitingForGps
+                    ? 'Localisation en cours…'
+                    : (_isEditing
+                        ? 'Enregistrer les modifications'
+                        : 'Publier le cas'),
                 style: GoogleFonts.poppins(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
