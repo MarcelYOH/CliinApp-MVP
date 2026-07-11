@@ -17,72 +17,114 @@
 //   3. Filtre anti-aberration — si une nouvelle position s'écarte de plus
 //      de 500m de la précédente en moins de 10 secondes, elle est ignorée
 //      (typiquement un rebond GPS/réseau, pas un vrai déplacement).
-//   4. Lissage (filtre de Kalman) — même un fix GPS haute précision
-//      "gigote" de quelques mètres d'une mesure à l'autre. Chaque nouvelle
-//      mesure est fusionnée avec l'estimation précédente, pondérée par sa
-//      précision annoncée (Position.accuracy) : une mesure imprécise ne
-//      fait quasiment pas bouger l'estimation, une mesure précise la
-//      recale rapidement. C'est le même principe que le "point bleu"
-//      stable de Google Maps / Uber.
+//   4. Verrouillage de position ("ancre") — un filtre de lissage classique
+//      (Kalman) continue de suivre chaque nouvelle mesure, même bruitée,
+//      dès lors que le téléphone annonce une précision qu'on ne peut pas
+//      toujours prendre pour argent comptant (appareils d'entrée de
+//      gamme, ou A-GPS lent à converger en zone de réseau faible où le
+//      téléchargement des éphémérides satellites est lent). On verrouille
+//      donc une position "ancre" : tant que les nouvelles mesures restent
+//      dans un rayon de bruit plausible autour de l'ancre, elles sont
+//      ignorées et la distance affichée ne bouge pas. Un déplacement
+//      n'est confirmé (et l'ancre déplacée) qu'après 2 mesures
+//      consécutives cohérentes au-delà de ce rayon.
 //
-// ✅ ChangeNotifier — dès qu'une position est acceptée, TOUTES les cartes
-// affichées à l'écran sont notifiées et recalculent leur distance.
+// ✅ ChangeNotifier — dès que l'ancre bouge, TOUTES les cartes affichées
+// à l'écran sont notifiées et recalculent leur distance.
 
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 
-/// Filtre de Kalman 1D appliqué indépendamment à la latitude et à la
-/// longitude. But : produire une position stable pour l'affichage de
-/// distance à partir d'une suite de mesures GPS bruitées, sans lag
-/// perceptible sur un vrai déplacement.
-class _LocationKalmanFilter {
-  double? _lat;
-  double? _lng;
-  double _variance = -1;
-  DateTime? _lastTimestamp;
+/// Verrouillage de position — élimine le bruit GPS quand l'utilisateur est
+/// immobile, au lieu de le lisser mathématiquement.
+///
+/// Démarrage : les 3 premiers fix sont collectés, le plus précis (accuracy
+/// la plus faible) devient l'ancre initiale — évite de partir sur le tout
+/// premier fix, souvent le moins bon (démarrage à froid de l'A-GPS).
+///
+/// Verrouillage : tant qu'un nouveau fix reste à moins de
+/// [lockRadiusMeters] de l'ancre, il est ignoré — c'est du bruit, pas un
+/// déplacement.
+///
+/// Déverrouillage : un déplacement n'est confirmé (et l'ancre déplacée)
+/// qu'après 2 fix consécutifs cohérents au-delà du rayon de verrouillage —
+/// une seule mesure aberrante ne suffit pas à faire "sauter" l'ancre.
+class _PositionAnchor {
+  static const double lockRadiusMeters = 30;
+  static const int _startupSampleTarget = 3;
 
-  // Bruit de processus : vitesse de déplacement plausible (m/s), au carré.
-  // ~5 m/s couvre la marche rapide et le vélo urbain sans réintroduire le
-  // bruit GPS qu'on cherche justement à lisser.
-  static const double _processNoiseMetersPerSecond = 5.0;
+  double? lat;
+  double? lng;
 
-  ({double lat, double lng}) filter({
-    required double lat,
-    required double lng,
-    required double accuracyMeters,
-    required DateTime timestamp,
-  }) {
-    // Précision annoncée absente ou nulle (arrive sur certains devices) →
-    // valeur prudente par défaut pour ne pas sur-pondérer la mesure.
-    final safeAccuracy = accuracyMeters <= 0 ? 30.0 : accuracyMeters;
+  final List<({double lat, double lng, double accuracy})> _startupFixes = [];
+  ({double lat, double lng})? _pending;
+  int _pendingConfirmations = 0;
 
-    if (_lat == null || _lng == null || _variance < 0) {
-      _lat = lat;
-      _lng = lng;
-      _variance = safeAccuracy * safeAccuracy;
-      _lastTimestamp = timestamp;
-      return (lat: _lat!, lng: _lng!);
+  bool get isLocked => lat != null;
+
+  /// Traite un nouveau fix accepté. Retourne true si l'ancre vient d'être
+  /// (re)positionnée — démarrage terminé ou déplacement confirmé — auquel
+  /// cas la distance affichée doit être recalculée.
+  bool accept(double fixLat, double fixLng, double accuracyMeters) {
+    final safeAccuracy = accuracyMeters <= 0 ? 9999.0 : accuracyMeters;
+
+    if (lat == null) {
+      _startupFixes.add((lat: fixLat, lng: fixLng, accuracy: safeAccuracy));
+      if (_startupFixes.length < _startupSampleTarget) return false;
+      _finalizeStartup();
+      return true;
     }
 
-    final elapsedSeconds =
-        timestamp.difference(_lastTimestamp!).inMilliseconds / 1000;
-    if (elapsedSeconds > 0) {
-      _variance += elapsedSeconds *
-          _processNoiseMetersPerSecond *
-          _processNoiseMetersPerSecond;
+    final drift = Geolocator.distanceBetween(lat!, lng!, fixLat, fixLng);
+    if (drift <= lockRadiusMeters) {
+      // Bruit — l'ancre ne bouge pas.
+      _pendingConfirmations = 0;
+      _pending = null;
+      return false;
     }
-    _lastTimestamp = timestamp;
 
-    // Gain de Kalman : proportion de confiance accordée à la nouvelle
-    // mesure par rapport à l'estimation courante.
-    final k = _variance / (_variance + safeAccuracy * safeAccuracy);
-    _lat = _lat! + k * (lat - _lat!);
-    _lng = _lng! + k * (lng - _lng!);
-    _variance = (1 - k) * _variance;
+    // Déplacement potentiel : n'est confirmé qu'après 2 fix cohérents
+    // entre eux (pas juste 2 fix qui s'écartent chacun dans une direction
+    // différente, ce qui resterait du bruit).
+    final pending = _pending;
+    if (pending != null &&
+        Geolocator.distanceBetween(pending.lat, pending.lng, fixLat, fixLng) <=
+            lockRadiusMeters) {
+      _pendingConfirmations++;
+    } else {
+      _pendingConfirmations = 1;
+    }
+    _pending = (lat: fixLat, lng: fixLng);
 
-    return (lat: _lat!, lng: _lng!);
+    if (_pendingConfirmations >= 2) {
+      lat = fixLat;
+      lng = fixLng;
+      _pendingConfirmations = 0;
+      _pending = null;
+      return true;
+    }
+    return false;
+  }
+
+  /// Filet de sécurité : si le flux GPS ne délivre pas assez de mesures
+  /// pour compléter l'échantillon de démarrage (utilisateur parfaitement
+  /// immobile — certains téléphones cessent d'émettre des mises à jour
+  /// une fois le filtre de déplacement du flux satisfait), on verrouille
+  /// avec ce qu'on a plutôt que d'afficher "..." indéfiniment.
+  bool finalizeStartupIfPending() {
+    if (lat != null || _startupFixes.isEmpty) return false;
+    _finalizeStartup();
+    return true;
+  }
+
+  void _finalizeStartup() {
+    final best =
+        _startupFixes.reduce((a, b) => a.accuracy <= b.accuracy ? a : b);
+    lat = best.lat;
+    lng = best.lng;
+    _startupFixes.clear();
   }
 }
 
@@ -96,10 +138,10 @@ class UserLocationService extends ChangeNotifier {
 
   StreamSubscription<Position>? _positionSub;
 
-  // ── Étape 4 — position lissée, utilisée pour tout calcul de distance ──
-  final _LocationKalmanFilter _kalman = _LocationKalmanFilter();
-  double? _smoothedLat;
-  double? _smoothedLng;
+  // ── Étape 4 — ancre de position, utilisée pour tout calcul de distance ──
+  final _PositionAnchor _anchor = _PositionAnchor();
+  Timer? _anchorTimeoutTimer;
+  static const Duration _anchorStartupTimeout = Duration(seconds: 6);
 
   // ── Étape 3 — filtre anti-aberration ──────────────────────────
   static const double _aberrationThresholdMeters = 500;
@@ -107,8 +149,8 @@ class UserLocationService extends ChangeNotifier {
 
   /// Point d'entrée unique pour toute nouvelle mesure GPS (fix initial,
   /// flux continu, ou position partagée par un autre écran). Rejette les
-  /// sauts aberrants, puis fusionne la mesure acceptée dans le filtre de
-  /// lissage avant de mettre à jour le cache.
+  /// sauts aberrants, puis transmet la mesure acceptée à l'ancre de
+  /// position avant de mettre à jour le cache.
   void _acceptPosition(Position pos) {
     final previous = _cachedPosition;
     final previousAt = _cachedAt;
@@ -128,23 +170,33 @@ class UserLocationService extends ChangeNotifier {
         }
       }
     }
-    final smoothed = _kalman.filter(
-      lat: pos.latitude,
-      lng: pos.longitude,
-      accuracyMeters: pos.accuracy,
-      timestamp: DateTime.now(),
-    );
-    _smoothedLat = smoothed.lat;
-    _smoothedLng = smoothed.lng;
+
+    final hadNoPositionBefore = _cachedPosition == null;
+    final anchorMoved = _anchor.accept(pos.latitude, pos.longitude, pos.accuracy);
+
+    if (!_anchor.isLocked) {
+      // Toujours en phase de démarrage — programme le filet de sécurité
+      // une seule fois (annulé dès que l'ancre se verrouille).
+      _anchorTimeoutTimer ??= Timer(_anchorStartupTimeout, () {
+        if (_anchor.finalizeStartupIfPending()) notifyListeners();
+      });
+    } else {
+      _anchorTimeoutTimer?.cancel();
+      _anchorTimeoutTimer = null;
+    }
+
     _cachedPosition = pos;
     _cachedAt = DateTime.now();
-    notifyListeners();
+
+    if (hadNoPositionBefore || anchorMoved) {
+      notifyListeners();
+    }
   }
 
   /// Étape 2 — flux de mise à jour contrôlé : précision GPS haute (fix
   /// satellite, pas une position réseau/cellulaire imprécise), seulement
-  /// si déplacement réel d'au moins 8m — le lissage (étape 4) absorbe le
-  /// bruit résiduel d'une mesure à l'autre.
+  /// si déplacement réel d'au moins 8m — le verrouillage (étape 4) absorbe
+  /// le bruit résiduel d'une mesure à l'autre.
   void _startWatching() {
     if (_positionSub != null) return;
     _positionSub = Geolocator.getPositionStream(
@@ -232,27 +284,28 @@ class UserLocationService extends ChangeNotifier {
     return '${(meters / 1000).toStringAsFixed(1)} km';
   }
 
-  /// Distance brute en mètres entre la position lissée (étape 4) et le
+  /// Distance brute en mètres entre l'ancre de position (étape 4) et le
   /// point donné. Utilisée pour le filtrage par rayon (ex: 2km autour de
-  /// l'utilisateur) et pour l'affichage — c'est la position lissée, pas
+  /// l'utilisateur) et pour l'affichage — c'est la position ancrée, pas
   /// le fix GPS brut, qui évite les sauts de quelques dizaines/centaines
   /// de mètres d'un rafraîchissement à l'autre alors que l'utilisateur
   /// est immobile.
-  /// Retourne null si la position actuelle ou le point cible est inconnu.
+  /// Retourne null si l'ancre n'est pas encore verrouillée ou si le point
+  /// cible est inconnu.
   double? distanceMetersTo(double? targetLat, double? targetLng) {
     if (targetLat == null || targetLng == null) return null;
-    if (_smoothedLat == null || _smoothedLng == null) return null;
+    if (_anchor.lat == null || _anchor.lng == null) return null;
     return Geolocator.distanceBetween(
-      _smoothedLat!,
-      _smoothedLng!,
+      _anchor.lat!,
+      _anchor.lng!,
       targetLat,
       targetLng,
     );
   }
 
-  /// Distance formatée entre la position en cache et le point donné.
-  /// Retourne null si la position actuelle ou le point cible est inconnu
-  /// (l'appelant doit alors afficher "...").
+  /// Distance formatée entre l'ancre de position et le point donné.
+  /// Retourne null si l'ancre n'est pas encore verrouillée ou si le point
+  /// cible est inconnu (l'appelant doit alors afficher "...").
   String? distanceLabelTo(double? targetLat, double? targetLng) {
     final meters = distanceMetersTo(targetLat, targetLng);
     if (meters == null) return null;
