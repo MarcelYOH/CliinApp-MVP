@@ -17,17 +17,15 @@
 //   3. Filtre anti-aberration — si une nouvelle position s'écarte de plus
 //      de 500m de la précédente en moins de 10 secondes, elle est ignorée
 //      (typiquement un rebond GPS/réseau, pas un vrai déplacement).
-//   4. Verrouillage de position ("ancre") — un filtre de lissage classique
-//      (Kalman) continue de suivre chaque nouvelle mesure, même bruitée,
-//      dès lors que le téléphone annonce une précision qu'on ne peut pas
-//      toujours prendre pour argent comptant (appareils d'entrée de
-//      gamme, ou A-GPS lent à converger en zone de réseau faible où le
-//      téléchargement des éphémérides satellites est lent). On verrouille
-//      donc une position "ancre" : tant que les nouvelles mesures restent
-//      dans un rayon de bruit plausible autour de l'ancre, elles sont
-//      ignorées et la distance affichée ne bouge pas. Un déplacement
-//      n'est confirmé (et l'ancre déplacée) qu'après 2 mesures
-//      consécutives cohérentes au-delà de ce rayon.
+//   4. Verrouillage de position ("ancre") — les mesures dont la précision
+//      annoncée par l'OS dépasse 50m sont ignorées d'emblée (typiquement
+//      un repli réseau/cellulaire du fournisseur fusionné, substitué au
+//      GPS quand le signal satellite est faible, même si l'app demande
+//      une précision "high"). Parmi les mesures restantes, tant qu'elles
+//      restent dans un rayon de bruit plausible autour de l'ancre, elles
+//      sont ignorées et la distance affichée ne bouge pas. Un déplacement
+//      n'est confirmé (et l'ancre déplacée, à la moyenne des 2 mesures)
+//      qu'après 2 mesures consécutives cohérentes au-delà de ce rayon.
 //
 // ✅ ChangeNotifier — dès que l'ancre bouge, TOUTES les cartes affichées
 // à l'écran sont notifiées et recalculent leur distance.
@@ -51,8 +49,20 @@ import 'package:geolocator/geolocator.dart';
 /// Déverrouillage : un déplacement n'est confirmé (et l'ancre déplacée)
 /// qu'après 2 fix consécutifs cohérents au-delà du rayon de verrouillage —
 /// une seule mesure aberrante ne suffit pas à faire "sauter" l'ancre.
+///
+/// Filtre de précision : un fix dont la précision annoncée par l'OS
+/// dépasse [maxAcceptableAccuracy] est ignoré pour toute décision de
+/// déplacement. Sans ce filtre, un repli réseau/cellulaire du fournisseur
+/// fusionné (précision ±100-800m, silencieusement substitué au GPS quand
+/// le signal satellite est faible même si l'app demande une précision
+/// "high") passe le test "2 fix cohérents entre eux à 30m près" aussi
+/// facilement qu'un vrai déplacement — deux mesures bruitées corrélées
+/// par la même condition de signal faible tombent souvent proches l'une
+/// de l'autre tout en étant à 100-300m de la position réelle, ce qui
+/// faisait "sauter" l'ancre en boucle chez un utilisateur pourtant immobile.
 class _PositionAnchor {
   static const double lockRadiusMeters = 30;
+  static const double maxAcceptableAccuracy = 50;
   static const int _startupSampleTarget = 3;
 
   double? lat;
@@ -77,6 +87,10 @@ class _PositionAnchor {
       return true;
     }
 
+    // Fix trop imprécis pour trancher entre bruit et déplacement réel —
+    // ignoré sans toucher à une confirmation de déplacement déjà en cours.
+    if (safeAccuracy > maxAcceptableAccuracy) return false;
+
     final drift = Geolocator.distanceBetween(lat!, lng!, fixLat, fixLng);
     if (drift <= lockRadiusMeters) {
       // Bruit — l'ancre ne bouge pas.
@@ -93,14 +107,17 @@ class _PositionAnchor {
         Geolocator.distanceBetween(pending.lat, pending.lng, fixLat, fixLng) <=
             lockRadiusMeters) {
       _pendingConfirmations++;
+      // Moyenne des deux mesures cohérentes plutôt que la dernière brute
+      // seule — réduit l'impact résiduel du bruit sur la position finale.
+      _pending = (lat: (pending.lat + fixLat) / 2, lng: (pending.lng + fixLng) / 2);
     } else {
       _pendingConfirmations = 1;
+      _pending = (lat: fixLat, lng: fixLng);
     }
-    _pending = (lat: fixLat, lng: fixLng);
 
     if (_pendingConfirmations >= 2) {
-      lat = fixLat;
-      lng = fixLng;
+      lat = _pending!.lat;
+      lng = _pending!.lng;
       _pendingConfirmations = 0;
       _pending = null;
       return true;
