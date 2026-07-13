@@ -11,6 +11,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/utils/user_location_service.dart';
 import '../../../../shared/store/auth_store.dart';
 import '../../reports/pages/report_camera_page.dart';
+import '../../../../shared/navigation/fast_page_route.dart';
 import '../widgets/auth_stepper.dart';
 
 class ProfileSetupPage extends StatefulWidget {
@@ -107,8 +108,8 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     try {
       final path = await Navigator.push<String>(
         context,
-        MaterialPageRoute(
-          builder: (_) => const ReportCameraPage(
+        fastFadeRoute<String>(
+          const ReportCameraPage(
             replaceMode: true,
             isAvatarMode: true,
           ),

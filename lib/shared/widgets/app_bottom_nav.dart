@@ -4,8 +4,9 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
+import 'more_menu_sheet.dart';
 
-class AppBottomNav extends StatelessWidget {
+class AppBottomNav extends StatefulWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
   final VoidCallback? onSignalerTap;
@@ -17,8 +18,30 @@ class AppBottomNav extends StatelessWidget {
     this.onSignalerTap,
   });
 
+  @override
+  State<AppBottomNav> createState() => _AppBottomNavState();
+}
+
+class _AppBottomNavState extends State<AppBottomNav> {
   static const Color _kGreen = CliinAppColors.primary;
   static const Color _kGrey  = Color(0xFF6B7280);
+
+  // "Plus" ouvre un bottom sheet plutôt que de naviguer vers une page —
+  // aucune page parente ne peut donc refléter "onglet actif = Plus" via
+  // son propre currentIndex. Gérée ici, localement, pour que l'icône
+  // passe en vert pendant que LE sheet de CETTE bottom bar est ouvert,
+  // peu importe la page qui l'héberge.
+  bool _isMoreMenuOpen = false;
+
+  Future<void> _handleTap(int index) async {
+    if (index == 4) {
+      setState(() => _isMoreMenuOpen = true);
+      await showMoreMenuSheet(context);
+      if (mounted) setState(() => _isMoreMenuOpen = false);
+      return;
+    }
+    widget.onTap(index);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -82,9 +105,10 @@ class AppBottomNav extends StatelessWidget {
     required IconData activeIcon,
     required String label,
   }) {
-    final bool isActive = currentIndex == index;
+    final bool isActive =
+        index == 4 ? _isMoreMenuOpen : widget.currentIndex == index;
     return GestureDetector(
-      onTap: () => onTap(index),
+      onTap: () => _handleTap(index),
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
         width: 64,
@@ -113,7 +137,7 @@ class AppBottomNav extends StatelessWidget {
 
   Widget _buildSignalerButton() {
     return GestureDetector(
-      onTap: onSignalerTap,
+      onTap: widget.onSignalerTap,
       child: SizedBox(
         width: 72,
         height: 80,

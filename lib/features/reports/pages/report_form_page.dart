@@ -16,6 +16,7 @@ import '../../../../features/home/models/home_report_model.dart';
 import '../data/report_dummy_data.dart';
 import '../widgets/report_stepper.dart';
 import 'report_camera_page.dart';
+import '../../../../shared/navigation/fast_page_route.dart';
 import 'report_upload_page.dart';
 
 String _generateReportCode() {
@@ -144,9 +145,7 @@ class _ReportFormPageState extends State<ReportFormPage> {
   Future<void> _changePhoto() async {
     final newPath = await Navigator.push<String>(
       context,
-      MaterialPageRoute(
-        builder: (_) => const ReportCameraPage(replaceMode: true),
-      ),
+      fastFadeRoute<String>(const ReportCameraPage(replaceMode: true)),
     );
     if (newPath != null && mounted) {
       setState(() => _newImagePath = newPath);
@@ -794,7 +793,7 @@ class _ReportFormPageState extends State<ReportFormPage> {
         height: 52,
         decoration: BoxDecoration(
           color: waitingForGps
-              ? CliinAppColors.primary.withOpacity(0.5)
+              ? CliinAppColors.primary.withValues(alpha: 0.5)
               : CliinAppColors.primary,
           borderRadius:
               BorderRadius.circular(CliinAppConstants.radiusMedium),

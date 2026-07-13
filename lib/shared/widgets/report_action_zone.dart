@@ -634,6 +634,7 @@ class _ReportActionZoneState extends State<ReportActionZone> {
             ),
         ],
         // Lien "persiste" ou message contesté
+        if (widget.showResolutionConfirm) ...[
         if (_isContested) ...[
           const SizedBox(height: 6),
           Container(
@@ -689,6 +690,7 @@ class _ReportActionZoneState extends State<ReportActionZone> {
               ),
             ),
           ),
+        ],
         ],
       ],
     );

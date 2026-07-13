@@ -310,83 +310,100 @@ class _ProofCameraPageState extends State<ProofCameraPage>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: SafeArea(
-        child: Column(
-          children: [
-            ReportCameraHeader(
-              onBackTap: () => Navigator.pop(context),
-              onHelpTap: _showHelpDialog,
-              title: 'Preuve d\'intervention',
-              subtitle: 'Photo APRÈS — ${widget.report.reference}',
-            ),
+      body: Stack(
+        children: [
+          // Couche 0 — caméra plein écran, sous toute l'interface. En
+          // dehors du SafeArea : sinon, le retrait/réapplication du mode
+          // immersif par Android au moment des dialogues de permission
+          // (voir didChangeAppLifecycleState) fait varier le padding du
+          // SafeArea et redimensionne visiblement l'aperçu caméra à
+          // chaque bascule (voir ReportCameraPage, même correction).
+          Positioned.fill(child: _buildCameraPreview()),
 
-            // ── Preview + overlays ───────────────────────────────
-            Expanded(
-              child: Stack(
+          // Couche 1 — interface (header inclus), peinte APRÈS la caméra
+          // dans ce même Stack : elle reste donc toujours au-dessus, quelle
+          // que soit l'étape d'initialisation de la caméra.
+          Positioned.fill(
+            child: SafeArea(
+              child: Column(
                 children: [
-                  _buildCameraPreview(),
+                  ReportCameraHeader(
+                    onBackTap: () => Navigator.pop(context),
+                    onHelpTap: _showHelpDialog,
+                    title: 'Preuve d\'intervention',
+                    subtitle: 'Photo APRÈS — ${widget.report.reference}',
+                  ),
 
-                  // Bannière info APRÈS
-                  Positioned(
-                    top: CliinAppConstants.spacingM,
-                    left: 0,
-                    right: 0,
-                    child: const ReportCameraTipBanner(
-                      text:
-                          'Prenez une photo APRÈS intervention pour prouver le traitement.',
-                      highlightWord: 'photo APRÈS',
+                  // ── Overlays ───────────────────────────────
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        // Bannière info APRÈS
+                        Positioned(
+                          top: CliinAppConstants.spacingM,
+                          left: 0,
+                          right: 0,
+                          child: const ReportCameraTipBanner(
+                            text:
+                                'Prenez une photo APRÈS intervention pour prouver le traitement.',
+                            highlightWord: 'photo APRÈS',
+                          ),
+                        ),
+
+                        // Coins viewfinder
+                        const Positioned.fill(
+                          child: ReportCameraViewfinderCorners(),
+                        ),
+
+                        // Contrôles latéraux (flash + flip) — sans galerie
+                        if (!_useWebFallback)
+                          Positioned(
+                            right: CliinAppConstants.pagePadding,
+                            top: 0,
+                            bottom: 0,
+                            child: Center(
+                              child: ReportCameraSideControls(
+                                flashMode: _flashMode,
+                                onFlashTap: _toggleFlash,
+                                onFlipTap: _flipCamera,
+                              ),
+                            ),
+                          ),
+
+                        // Chip position GPS
+                        Positioned(
+                          bottom: CliinAppConstants.spacingL,
+                          left: 0,
+                          right: 0,
+                          child: Center(
+                            child: ReportCameraPositionChip(
+                              address: _address,
+                              isLoading: _isLoadingLocation,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
 
-                  // Coins viewfinder
-                  const Positioned.fill(child: ReportCameraViewfinderCorners()),
-
-                  // Contrôles latéraux (flash + flip) — sans galerie
-                  if (!_useWebFallback)
-                    Positioned(
-                      right: CliinAppConstants.pagePadding,
-                      top: 0,
-                      bottom: 0,
-                      child: Center(
-                        child: ReportCameraSideControls(
-                          flashMode: _flashMode,
-                          onFlashTap: _toggleFlash,
-                          onFlipTap: _flipCamera,
-                        ),
-                      ),
+                  // ── Barre de capture ─────────────────────────────────
+                  Container(
+                    color: Colors.black,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: CliinAppConstants.spacingXL,
                     ),
-
-                  // Chip position GPS
-                  Positioned(
-                    bottom: CliinAppConstants.spacingL,
-                    left: 0,
-                    right: 0,
-                    child: Center(
-                      child: ReportCameraPositionChip(
-                        address: _address,
-                        isLoading: _isLoadingLocation,
-                      ),
+                    child: ReportCameraBottomBar(
+                      onShutterTap: _useWebFallback
+                          ? _captureViaImagePicker
+                          : _takePhoto,
+                      isCapturing: _isCapturing,
                     ),
                   ),
                 ],
               ),
             ),
-
-            // ── Barre de capture ─────────────────────────────────
-            Container(
-              color: Colors.black,
-              padding: const EdgeInsets.symmetric(
-                vertical: CliinAppConstants.spacingXL,
-              ),
-              child: ReportCameraBottomBar(
-                onShutterTap: _useWebFallback
-                    ? _captureViaImagePicker
-                    : _takePhoto,
-                isCapturing: _isCapturing,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

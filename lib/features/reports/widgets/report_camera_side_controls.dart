@@ -13,6 +13,9 @@ class ReportCameraSideControls extends StatelessWidget {
   final VoidCallback onFlashTap;
   final VoidCallback onFlipTap;
   final VoidCallback? onGalleryTap;
+  // Masqué en mode photo de profil : seul le flash a du sens dans ce
+  // contexte (voir ReportCameraPage.isAvatarMode).
+  final bool showFlip;
 
   const ReportCameraSideControls({
     super.key,
@@ -20,6 +23,7 @@ class ReportCameraSideControls extends StatelessWidget {
     required this.onFlashTap,
     required this.onFlipTap,
     this.onGalleryTap,
+    this.showFlip = true,
   });
 
   @override
@@ -33,12 +37,14 @@ class ReportCameraSideControls extends StatelessWidget {
           onTap: onFlashTap,
           isActive: flashMode == FlashMode.torch || flashMode == FlashMode.always,
         ),
-        const SizedBox(height: CliinAppConstants.spacingL),
-        _SideControlButton(
-          icon: Icons.cameraswitch_outlined,
-          label: 'Changer\ncaméra',
-          onTap: onFlipTap,
-        ),
+        if (showFlip) ...[
+          const SizedBox(height: CliinAppConstants.spacingL),
+          _SideControlButton(
+            icon: Icons.cameraswitch_outlined,
+            label: 'Changer\ncaméra',
+            onTap: onFlipTap,
+          ),
+        ],
         if (onGalleryTap != null) ...[
           const SizedBox(height: CliinAppConstants.spacingL),
           _SideControlButton(

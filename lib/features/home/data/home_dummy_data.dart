@@ -71,24 +71,29 @@ class HomeDummyData {
     ),
   ];
 
+  // Métadonnées d'affichage UNIQUEMENT (icône, libellé, couleur) — le
+  // compteur réel de chaque catégorie est calculé dynamiquement depuis
+  // ReportStore.categoryCount() dans home_page.dart, jamais lu d'ici.
+  // `count: 0` ci-dessous n'est qu'un placeholder de construction du
+  // CategoryModel, toujours écrasé avant affichage.
   static const List<CategoryModel> categories = [
     CategoryModel(icon: Icons.delete_outline_rounded,
-        label: 'Bac/Poubelle saturée', count: 48, color: Color(0xFF4CAF50)),
+        label: 'Bac/Poubelle saturée', count: 0, color: Color(0xFF4CAF50)),
     CategoryModel(icon: Icons.delete_sweep_outlined,
-        label: 'Dépôts sauvages', count: 96, color: Color(0xFFFF9800)),
+        label: 'Dépôts sauvages', count: 0, color: Color(0xFFFF9800)),
     CategoryModel(icon: Icons.water_damage_outlined,
-        label: 'Caniveaux bouchés', count: 74, color: Color(0xFF1E88E5)),
+        label: 'Caniveaux bouchés', count: 0, color: Color(0xFF1E88E5)),
     CategoryModel(icon: Icons.water_outlined,
-        label: 'Eaux usées', count: 62, color: Color(0xFF00ACC1)),
+        label: 'Eaux usées', count: 0, color: Color(0xFF00ACC1)),
     CategoryModel(icon: Icons.inventory_2_outlined,
-        label: 'Conteneur saturé', count: 35, color: Color(0xFF8D6E63)),
+        label: 'Conteneur saturé', count: 0, color: Color(0xFF8D6E63)),
     CategoryModel(icon: Icons.warning_amber_outlined,
-        label: 'Zone insalubre', count: 41, color: Color(0xFFE53935)),
+        label: 'Zone insalubre', count: 0, color: Color(0xFFE53935)),
     CategoryModel(icon: Icons.local_fire_department_outlined,
-        label: 'Brûlage des déchets', count: 22, color: Color(0xFFFF5722)),
+        label: 'Brûlage des déchets', count: 0, color: Color(0xFFFF5722)),
     CategoryModel(icon: Icons.factory_outlined,
-        label: 'Déchets industriels', count: 18, color: Color(0xFF546E7A)),
+        label: 'Déchets industriels', count: 0, color: Color(0xFF546E7A)),
     CategoryModel(icon: Icons.medical_services_outlined,
-        label: 'Déchets médicaux', count: 12, color: Color(0xFF9C27B0)),
+        label: 'Déchets médicaux', count: 0, color: Color(0xFF9C27B0)),
   ];
 }

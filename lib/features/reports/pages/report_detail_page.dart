@@ -16,6 +16,7 @@ import '../../../shared/store/report_store.dart';
 import '../../../shared/widgets/report_stats_comments.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/navigation/tab_navigation.dart';
+import '../../../shared/navigation/fast_page_route.dart';
 import 'intervenant_detail_page.dart';
 import 'report_form_page.dart';
 import 'report_camera_page.dart';
@@ -57,9 +58,7 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
           if (mounted) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(
-                builder: (_) => IntervenantDetailPage(report: updated),
-              ),
+              fastFadeRoute<void>(IntervenantDetailPage(report: updated)),
             );
           }
         },
@@ -74,9 +73,7 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
   void _onIntervenantTap() {
     Navigator.push(
       context,
-      MaterialPageRoute<void>(
-        builder: (_) => IntervenantDetailPage(report: _data),
-      ),
+      fastFadeRoute<void>(IntervenantDetailPage(report: _data)),
     );
   }
 
@@ -101,9 +98,7 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
   void _onViewPublic() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => ReportDetailPage(data: _data, isAuthor: false),
-      ),
+      fastFadeRoute<void>(ReportDetailPage(data: _data, isAuthor: false)),
     );
   }
 
@@ -119,7 +114,7 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
     }
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const PublicProfilePage()),
+      fastFadeRoute<void>(const PublicProfilePage()),
     );
   }
 
@@ -136,65 +131,121 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
   Widget _buildScaffold(BuildContext context) {
     return Scaffold(
       backgroundColor: CliinAppColors.background,
+      // La barre de commentaire + la nav du bas sont gérées manuellement
+      // en overlay (voir Stack ci-dessous) plutôt que via
+      // bottomNavigationBar, pour garantir qu'elles remontent bien
+      // au-dessus du clavier — resizeToAvoidBottomInset ne s'applique
+      // qu'au body, on pousse nous-mêmes l'overlay via viewInsets.bottom.
+      resizeToAvoidBottomInset: false,
       body: SafeArea(
         bottom: false,
-        child: Column(
+        child: Stack(
           children: [
-            _buildHeader(context),
-            Expanded(
-              child: SingleChildScrollView(
+            Column(
+              children: [
+                _buildHeader(context),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _DetailPhotoSection(data: _data),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            CliinAppConstants.pagePadding,
+                            CliinAppConstants.pagePadding,
+                            CliinAppConstants.pagePadding,
+                            0,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildTitleRow(),
+                              const SizedBox(height: 4),
+                              _buildLocationRow(),
+                              const SizedBox(height: 16),
+                              _buildDescriptionCard(),
+                              const SizedBox(height: 16),
+                              _buildInformationsSection(),
+                              const SizedBox(height: 16),
+                              _buildLocationSection(),
+                              const SizedBox(height: 16),
+                              ReportActionZone(
+                                key: ValueKey(_data.id),
+                                data: _data,
+                                compact: false,
+                                isAuthor: widget.isAuthor,
+                                onTakeCharge: _onTakeCharge,
+                                onContact: _onContact,
+                                onIntervenantTap: _onIntervenantTap,
+                                onEdit: _onEdit,
+                                onDelete: _onDelete,
+                              ),
+                              if (widget.isAuthor) ...[
+                                const SizedBox(height: 12),
+                                PublicViewLinkButton(onTap: _onViewPublic),
+                              ],
+                              const SizedBox(height: 24),
+                              ReportStatsRow(
+                                views: _data.views,
+                                comments: _data.comments,
+                                shares: _data.shares,
+                              ),
+                              const SizedBox(height: 16),
+                              ReportCommentsSection(
+                                count: _data.comments,
+                                comments: _data.commentsList,
+                              ),
+                              // Réserve la place occupée par la barre de
+                              // commentaire + la nav du bas, désormais en
+                              // overlay (Positioned) plutôt qu'intégrée au
+                              // flux via bottomNavigationBar.
+                              const SizedBox(height: 180),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: AnimatedPadding(
+                duration: const Duration(milliseconds: 100),
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    _DetailPhotoSection(data: _data),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        CliinAppConstants.pagePadding,
-                        CliinAppConstants.pagePadding,
-                        CliinAppConstants.pagePadding,
-                        0,
+                    // ReportCommentBar n'est plus au bord de l'écran
+                    // (AppBottomNav est en dessous) — on lui retire l'inset
+                    // bas ambiant pour que sa propre SafeArea n'ajoute pas
+                    // un espace vide en double.
+                    MediaQuery.removePadding(
+                      context: context,
+                      removeBottom: true,
+                      child: ReportCommentBar(
+                        onSubmit: (text) => ReportStore.instance.addComment(
+                          reportId: _data.id,
+                          comment: buildCommentFromCurrentUser(text),
+                        ),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildTitleRow(),
-                          const SizedBox(height: 4),
-                          _buildLocationRow(),
-                          const SizedBox(height: 16),
-                          _buildDescriptionCard(),
-                          const SizedBox(height: 16),
-                          _buildInformationsSection(),
-                          const SizedBox(height: 16),
-                          _buildLocationSection(),
-                          const SizedBox(height: 16),
-                          ReportActionZone(
-                            key: ValueKey(_data.id),
-                            data: _data,
-                            compact: false,
-                            isAuthor: widget.isAuthor,
-                            onTakeCharge: _onTakeCharge,
-                            onContact: _onContact,
-                            onIntervenantTap: _onIntervenantTap,
-                            onEdit: _onEdit,
-                            onDelete: _onDelete,
-                          ),
-                          if (widget.isAuthor) ...[
-                            const SizedBox(height: 12),
-                            PublicViewLinkButton(onTap: _onViewPublic),
-                          ],
-                          const SizedBox(height: 24),
-                          ReportStatsRow(
-                            views: _data.views,
-                            comments: _data.comments,
-                            shares: _data.shares,
-                          ),
-                          const SizedBox(height: 16),
-                          ReportCommentsSection(
-                            count: _data.comments,
-                            comments: _data.commentsList,
-                          ),
-                          const SizedBox(height: 100),
-                        ],
+                    ),
+                    AppBottomNav(
+                      currentIndex: -1,
+                      onTap: (index) => navigateToTab(
+                        context,
+                        currentIndex: -1,
+                        targetIndex: index,
+                      ),
+                      onSignalerTap: () => Navigator.push(
+                        context,
+                        fastFadeRoute<void>(const ReportCameraPage()),
                       ),
                     ),
                   ],
@@ -203,33 +254,6 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
             ),
           ],
         ),
-      ),
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // ReportCommentBar n'est plus au bord de l'écran (AppBottomNav
-          // est en dessous) — on lui retire l'inset bas ambiant pour que
-          // sa propre SafeArea n'ajoute pas un espace vide en double.
-          MediaQuery.removePadding(
-            context: context,
-            removeBottom: true,
-            child: ReportCommentBar(
-              onSubmit: (text) => ReportStore.instance.addComment(
-                reportId: _data.id,
-                comment: buildCommentFromCurrentUser(text),
-              ),
-            ),
-          ),
-          AppBottomNav(
-            currentIndex: -1,
-            onTap: (index) =>
-                navigateToTab(context, currentIndex: -1, targetIndex: index),
-            onSignalerTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ReportCameraPage()),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -491,6 +515,7 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
                   iconBg: CliinAppColors.primaryLight,
                   label: 'Référence',
                   value: _data.reference,
+                  onTap: () => copyReportCode(context, _data.reference),
                 ),
               ),
               const SizedBox(width: 10),

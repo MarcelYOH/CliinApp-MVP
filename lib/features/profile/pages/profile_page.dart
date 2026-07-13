@@ -9,6 +9,7 @@ import '../../../shared/store/report_store.dart';
 import '../../../shared/models/auth_user_model.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/navigation/tab_navigation.dart';
+import '../../../shared/navigation/fast_page_route.dart';
 import '../../reports/pages/report_camera_page.dart';
 import '../widgets/edit_profile_sheet.dart';
 import 'public_profile_page.dart';
@@ -31,8 +32,8 @@ class _ProfilePageState extends State<ProfilePage> {
     try {
       final path = await Navigator.push<String>(
         context,
-        MaterialPageRoute(
-          builder: (_) => const ReportCameraPage(
+        fastFadeRoute<String>(
+          const ReportCameraPage(
             replaceMode: true,
             isAvatarMode: true,
           ),
@@ -172,7 +173,7 @@ class _ProfilePageState extends State<ProfilePage> {
             navigateToTab(context, currentIndex: -1, targetIndex: index),
         onSignalerTap: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const ReportCameraPage()),
+          fastFadeRoute<void>(const ReportCameraPage()),
         ),
       ),
     );
@@ -328,7 +329,7 @@ class _ProfilePageState extends State<ProfilePage> {
           GestureDetector(
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const PublicProfilePage()),
+              fastFadeRoute<void>(const PublicProfilePage()),
             ),
             child: Container(
               width: double.infinity,

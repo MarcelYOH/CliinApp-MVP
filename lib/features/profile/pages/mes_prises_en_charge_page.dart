@@ -10,6 +10,7 @@ import '../../reports/pages/intervenant_detail_page.dart';
 import '../../reports/pages/report_camera_page.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/navigation/tab_navigation.dart';
+import '../../../shared/navigation/fast_page_route.dart';
 import '../../../shared/widgets/report_card.dart' show buildReportImage;
 
 enum _TakeoverStatus { enCours, traite, abandonne, rejete }
@@ -65,6 +66,10 @@ class MesPrisesEnChargePage extends StatefulWidget {
 }
 
 class _MesPrisesEnChargePageState extends State<MesPrisesEnChargePage> {
+  // Hauteur fixe de carte — indépendante des dimensions de la photo ou de
+  // la longueur du texte (titre/description tronqués via maxLines/ellipsis).
+  static const double _kCardHeight = 152.0;
+
   _TakeoverStatus? _selectedFilter;
 
   List<HomeReportModel> get _myTakeovers {
@@ -175,7 +180,7 @@ class _MesPrisesEnChargePageState extends State<MesPrisesEnChargePage> {
                 navigateToTab(context, currentIndex: -1, targetIndex: index),
             onSignalerTap: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const ReportCameraPage()),
+              fastFadeRoute<void>(const ReportCameraPage()),
             ),
           ),
         );
@@ -254,22 +259,23 @@ class _MesPrisesEnChargePageState extends State<MesPrisesEnChargePage> {
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => IntervenantDetailPage(report: report)),
+        fastFadeRoute<void>(IntervenantDetailPage(report: report)),
       ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: IntrinsicHeight(
+      child: SizedBox(
+        height: _kCardHeight,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

@@ -9,6 +9,7 @@ import '../../../../features/home/models/home_report_model.dart';
 import '../../../../shared/repositories/report_repository.dart';
 import 'intervenant_detail_page.dart';
 import 'report_detail_page.dart';
+import '../../../../shared/navigation/fast_page_route.dart';
 
 class ProofResultPage extends StatelessWidget {
   final HomeReportModel report;
@@ -77,17 +78,15 @@ class _ValidatedViewState extends State<_ValidatedView>
   void _viewIntervention(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-          builder: (_) => IntervenantDetailPage(report: _updatedReport)),
+      fastFadeRoute<void>(IntervenantDetailPage(report: _updatedReport)),
     );
   }
 
   void _viewPublic(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-          builder: (_) =>
-              ReportDetailPage(data: _updatedReport, isAuthor: false)),
+      fastFadeRoute<void>(
+          ReportDetailPage(data: _updatedReport, isAuthor: false)),
     );
   }
 
@@ -270,8 +269,7 @@ class _RejectedView extends StatelessWidget {
   void _viewIntervention(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-          builder: (_) => IntervenantDetailPage(report: _updatedReport)),
+      fastFadeRoute<void>(IntervenantDetailPage(report: _updatedReport)),
     );
   }
 

@@ -5,6 +5,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/widgets/report_card.dart';
+import '../../../shared/widgets/ghost_report_card.dart';
 import '../models/home_report_model.dart';
 
 class HomeNearbyReports extends StatelessWidget {
@@ -96,34 +97,54 @@ class _EmptyNearbyReports extends StatelessWidget {
           horizontal: CliinAppConstants.pagePadding,
           vertical: CliinAppConstants.spacingL,
         ),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: CliinAppConstants.spacingXL),
-          decoration: BoxDecoration(
-            color: CliinAppColors.background,
-            borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
-          ),
-          child: Column(
-            children: [
-              Icon(Icons.location_on_outlined,
-                  size: 40,
-                  color: CliinAppColors.textSecondary.withValues(alpha: 0.5)),
-              const SizedBox(height: 10),
-              Text(
-                'Aucun cas signalé à proximité pour le moment',
-                textAlign: TextAlign.center,
-                style: CliinAppTextStyles.bodyMedium
-                    .copyWith(color: CliinAppColors.textSecondary),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            const Row(
+              children: [
+                Expanded(child: GhostReportCard()),
+                SizedBox(width: CliinAppConstants.spacingM),
+                Expanded(child: GhostReportCard()),
+              ],
+            ),
+            Container(
+              margin:
+                  const EdgeInsets.symmetric(horizontal: CliinAppConstants.spacingL),
+              padding: const EdgeInsets.symmetric(
+                horizontal: CliinAppConstants.spacingL,
+                vertical: CliinAppConstants.spacingM,
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Soyez le premier à agir dans votre quartier',
-                textAlign: TextAlign.center,
-                style: CliinAppTextStyles.bodySmall
-                    .copyWith(color: CliinAppColors.textSecondary),
+              decoration: BoxDecoration(
+                color: CliinAppColors.cardWhite,
+                borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
+                border: Border.all(color: CliinAppColors.divider),
               ),
-            ],
-          ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.location_on_outlined,
+                      size: 32,
+                      color: CliinAppColors.textSecondary.withValues(alpha: 0.6)),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Aucun cas signalé à proximité pour le moment',
+                    textAlign: TextAlign.center,
+                    style: CliinAppTextStyles.bodyMedium.copyWith(
+                      color: CliinAppColors.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Soyez le premier à agir dans votre quartier',
+                    textAlign: TextAlign.center,
+                    style: CliinAppTextStyles.bodySmall
+                        .copyWith(color: CliinAppColors.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       );
 }

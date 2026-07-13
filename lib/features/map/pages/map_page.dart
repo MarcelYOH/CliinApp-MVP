@@ -6,6 +6,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/navigation/tab_navigation.dart';
+import '../../../shared/navigation/fast_page_route.dart';
 import '../../../shared/store/report_store.dart';
 import '../../../core/utils/user_location_service.dart';
 import '../../../core/utils/whatsapp_launcher.dart';
@@ -148,8 +149,7 @@ class _MapPageState extends State<MapPage> {
   void _openCamera() async {
     if (await requireAuth(context)) {
       if (!mounted) return;
-      Navigator.push(context,
-          MaterialPageRoute(builder: (_) => const ReportCameraPage()));
+      Navigator.push(context, fastFadeRoute<void>(const ReportCameraPage()));
     }
   }
 
@@ -175,8 +175,7 @@ class _MapPageState extends State<MapPage> {
   void _onCardTap(HomeReportModel report) {
     Navigator.push(
       context,
-      MaterialPageRoute<void>(
-          builder: (_) => ReportDetailPage(data: report)),
+      fastFadeRoute<void>(ReportDetailPage(data: report)),
     );
   }
 
@@ -190,9 +189,7 @@ class _MapPageState extends State<MapPage> {
           if (mounted) {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (_) => IntervenantDetailPage(report: updated),
-              ),
+              fastFadeRoute<void>(IntervenantDetailPage(report: updated)),
             );
           }
         },

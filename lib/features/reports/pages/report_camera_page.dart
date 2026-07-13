@@ -116,6 +116,16 @@ class _ReportCameraPageState extends State<ReportCameraPage>
         return;
       }
 
+      // Photo de profil : démarre directement sur la caméra frontale
+      // (selfie) plutôt que l'arrière — sans bouton "Changer caméra" pour
+      // rester sur une interface minimale (voir isAvatarMode plus bas).
+      if (widget.isAvatarMode) {
+        final frontIndex = _cameras.indexWhere(
+          (c) => c.lensDirection == CameraLensDirection.front,
+        );
+        if (frontIndex != -1) _currentCameraIndex = frontIndex;
+      }
+
       await _controller?.dispose();
 
       final controller = CameraController(
@@ -321,28 +331,29 @@ class _ReportCameraPageState extends State<ReportCameraPage>
                   Expanded(
                     child: Stack(
                       children: [
-                        Positioned(
-                          top: CliinAppConstants.spacingM,
-                          left: 0,
-                          right: 0,
-                          child: widget.isAvatarMode
-                              ? const ReportCameraTipBanner(
-                                  text: 'Prenez une photo claire de votre '
-                                      'visage pour votre photo de profil.',
-                                  highlightWord: 'photo claire',
-                                )
-                              : ReportCameraTipBanner(
-                                  text: ReportDummyData.cameraTipText,
-                                  highlightWord:
-                                      ReportDummyData.cameraHighlightWord,
-                                ),
-                        ),
-                        const Positioned.fill(
-                          child: ReportCameraViewfinderCorners(),
-                        ),
+                        // Bandeau d'aide — absent en mode photo de profil,
+                        // qui n'a pas de conseil de cadrage spécifique à
+                        // afficher (voir correction interface minimale).
+                        if (!widget.isAvatarMode)
+                          Positioned(
+                            top: CliinAppConstants.spacingM,
+                            left: 0,
+                            right: 0,
+                            child: ReportCameraTipBanner(
+                              text: ReportDummyData.cameraTipText,
+                              highlightWord:
+                                  ReportDummyData.cameraHighlightWord,
+                            ),
+                          ),
+                        if (!widget.isAvatarMode)
+                          const Positioned.fill(
+                            child: ReportCameraViewfinderCorners(),
+                          ),
                         // Contrôles latéraux masqués en mode fallback :
                         // flash et changement de caméra sont gérés par
                         // l'app caméra native du téléphone dans ce mode.
+                        // En mode photo de profil : uniquement le flash,
+                        // pas de changement de caméra ni de galerie.
                         if (!_useWebFallback)
                           Positioned(
                             right: CliinAppConstants.pagePadding,
@@ -353,12 +364,15 @@ class _ReportCameraPageState extends State<ReportCameraPage>
                                 flashMode: _flashMode,
                                 onFlashTap: _toggleFlash,
                                 onFlipTap: _flipCamera,
-                                onGalleryTap: _openGallery,
+                                onGalleryTap:
+                                    widget.isAvatarMode ? null : _openGallery,
+                                showFlip: !widget.isAvatarMode,
                               ),
                             ),
                           ),
                         // En mode fallback, on garde quand même l'accès galerie
-                        if (_useWebFallback)
+                        // (hors mode photo de profil — interface minimale)
+                        if (_useWebFallback && !widget.isAvatarMode)
                           Positioned(
                             right: CliinAppConstants.pagePadding,
                             top: 0,

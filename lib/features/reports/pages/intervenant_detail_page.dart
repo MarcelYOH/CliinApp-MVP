@@ -11,9 +11,10 @@ import '../../../../shared/widgets/report_action_zone.dart';
 import '../../../../shared/widgets/report_stats_comments.dart';
 import '../../../../shared/widgets/public_view_link_button.dart';
 import '../../../../shared/widgets/report_card.dart'
-    show buildReportImage, DynamicDistanceLabel;
+    show buildReportImage, DynamicDistanceLabel, copyReportCode;
 import '../../../../shared/widgets/app_bottom_nav.dart';
 import '../../../../shared/navigation/tab_navigation.dart';
+import '../../../../shared/navigation/fast_page_route.dart';
 import '../../../../features/home/models/home_report_model.dart';
 import 'proof_camera_page.dart';
 import 'report_camera_page.dart';
@@ -331,16 +332,14 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
   void _onViewPublic() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => ReportDetailPage(data: _report, isAuthor: false),
-      ),
+      fastFadeRoute<void>(ReportDetailPage(data: _report, isAuthor: false)),
     );
   }
 
   void _openProofCamera() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => ProofCameraPage(report: _report)),
+      fastFadeRoute(ProofCameraPage(report: _report)),
     ).then((updatedReport) {
       if (updatedReport is HomeReportModel && mounted) {
         setState(() => _report = updatedReport);
@@ -371,99 +370,128 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: CliinAppColors.background,
+      // La barre de commentaire + la nav du bas sont gérées manuellement
+      // en overlay (voir Stack ci-dessous) plutôt que via
+      // bottomNavigationBar, pour garantir qu'elles remontent bien
+      // au-dessus du clavier — resizeToAvoidBottomInset ne s'applique
+      // qu'au body, on pousse nous-mêmes l'overlay via viewInsets.bottom.
+      resizeToAvoidBottomInset: false,
       body: SafeArea(
         bottom: false,
-        child: Column(
+        child: Stack(
           children: [
-            _buildHeader(context),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(
-                  CliinAppConstants.pagePadding,
-                  CliinAppConstants.spacingM,
-                  CliinAppConstants.pagePadding,
-                  0,
+            Column(
+              children: [
+                _buildHeader(context),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(
+                      CliinAppConstants.pagePadding,
+                      CliinAppConstants.spacingM,
+                      CliinAppConstants.pagePadding,
+                      0,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildStatusBar(),
+                        const SizedBox(height: CliinAppConstants.spacingM),
+                        _buildReportSummary(),
+                        if (_report.status == ReportStatus.enCours) ...[
+                          const SizedBox(height: CliinAppConstants.spacingM),
+                          _buildIntervenantWhatsAppBlock(),
+                        ],
+                        if (_report.status == ReportStatus.traite) ...[
+                          const SizedBox(height: CliinAppConstants.spacingM),
+                          ReportActionZone(
+                            data: _report,
+                            compact: false,
+                            showResolutionConfirm: false,
+                          ),
+                        ] else if (_report.intervenant?.outcome ==
+                            InterventionOutcome.abandoned) ...[
+                          const SizedBox(height: CliinAppConstants.spacingM),
+                          _buildAbandonedCard(),
+                        ] else if (_report.intervenant?.outcome ==
+                            InterventionOutcome.rejected) ...[
+                          const SizedBox(height: CliinAppConstants.spacingM),
+                          _buildRejectedCard(),
+                        ] else ...[
+                          const SizedBox(height: CliinAppConstants.spacingM),
+                          _buildProofBlock(),
+                        ],
+                        if (_showPublicViewLink) ...[
+                          const SizedBox(height: CliinAppConstants.spacingM),
+                          PublicViewLinkButton(onTap: _onViewPublic),
+                        ],
+                        const SizedBox(height: CliinAppConstants.spacingM),
+                        _buildInfoAndHistory(),
+                        const SizedBox(height: CliinAppConstants.spacingXL),
+                        ReportStatsRow(
+                          views: _report.views,
+                          comments: _report.comments,
+                          shares: _report.shares,
+                        ),
+                        const SizedBox(height: CliinAppConstants.spacingL),
+                        ReportCommentsSection(
+                          count: _report.comments,
+                          comments: _report.commentsList,
+                        ),
+                        // Réserve la place occupée par la barre de
+                        // commentaire + la nav du bas, désormais en
+                        // overlay (Positioned) plutôt qu'intégrée au flux
+                        // via bottomNavigationBar.
+                        const SizedBox(height: 180),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: AnimatedPadding(
+                duration: const Duration(milliseconds: 100),
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
                 ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    _buildStatusBar(),
-                    const SizedBox(height: CliinAppConstants.spacingM),
-                    _buildReportSummary(),
-                    if (_report.status == ReportStatus.enCours) ...[
-                      const SizedBox(height: CliinAppConstants.spacingM),
-                      _buildIntervenantWhatsAppBlock(),
-                    ],
-                    if (_report.status == ReportStatus.traite) ...[
-                      const SizedBox(height: CliinAppConstants.spacingM),
-                      ReportActionZone(
-                        data: _report,
-                        compact: false,
-                        showResolutionConfirm: false,
+                    // ReportCommentBar n'est plus au bord de l'écran
+                    // (AppBottomNav est en dessous) — on lui retire l'inset
+                    // bas ambiant pour que sa propre SafeArea n'ajoute pas
+                    // un espace vide en double.
+                    MediaQuery.removePadding(
+                      context: context,
+                      removeBottom: true,
+                      child: ReportCommentBar(
+                        onSubmit: (text) => ReportStore.instance.addComment(
+                          reportId: _report.id,
+                          comment: buildCommentFromCurrentUser(text),
+                        ),
                       ),
-                    ] else if (_report.intervenant?.outcome ==
-                        InterventionOutcome.abandoned) ...[
-                      const SizedBox(height: CliinAppConstants.spacingM),
-                      _buildAbandonedCard(),
-                    ] else if (_report.intervenant?.outcome ==
-                        InterventionOutcome.rejected) ...[
-                      const SizedBox(height: CliinAppConstants.spacingM),
-                      _buildRejectedCard(),
-                    ] else ...[
-                      const SizedBox(height: CliinAppConstants.spacingM),
-                      _buildProofBlock(),
-                    ],
-                    if (_showPublicViewLink) ...[
-                      const SizedBox(height: CliinAppConstants.spacingM),
-                      PublicViewLinkButton(onTap: _onViewPublic),
-                    ],
-                    const SizedBox(height: CliinAppConstants.spacingM),
-                    _buildInfoAndHistory(),
-                    const SizedBox(height: CliinAppConstants.spacingXL),
-                    ReportStatsRow(
-                      views: _report.views,
-                      comments: _report.comments,
-                      shares: _report.shares,
                     ),
-                    const SizedBox(height: CliinAppConstants.spacingL),
-                    ReportCommentsSection(
-                      count: _report.comments,
-                      comments: _report.commentsList,
+                    AppBottomNav(
+                      currentIndex: -1,
+                      onTap: (index) => navigateToTab(
+                        context,
+                        currentIndex: -1,
+                        targetIndex: index,
+                      ),
+                      onSignalerTap: () => Navigator.push(
+                        context,
+                        fastFadeRoute<void>(const ReportCameraPage()),
+                      ),
                     ),
-                    const SizedBox(height: CliinAppConstants.spacingXL),
                   ],
                 ),
               ),
             ),
           ],
         ),
-      ),
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // ReportCommentBar n'est plus au bord de l'écran (AppBottomNav
-          // est en dessous) — on lui retire l'inset bas ambiant pour que
-          // sa propre SafeArea n'ajoute pas un espace vide en double.
-          MediaQuery.removePadding(
-            context: context,
-            removeBottom: true,
-            child: ReportCommentBar(
-              onSubmit: (text) => ReportStore.instance.addComment(
-                reportId: _report.id,
-                comment: buildCommentFromCurrentUser(text),
-              ),
-            ),
-          ),
-          AppBottomNav(
-            currentIndex: -1,
-            onTap: (index) =>
-                navigateToTab(context, currentIndex: -1, targetIndex: index),
-            onSignalerTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ReportCameraPage()),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -1322,6 +1350,7 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
                     icon: Icons.tag_rounded,
                     label: 'Référence',
                     value: _report.reference,
+                    onTap: () => copyReportCode(context, _report.reference),
                   )
                 else
                   Row(
@@ -1331,6 +1360,8 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
                           icon: Icons.tag_rounded,
                           label: 'Référence',
                           value: _report.reference,
+                          onTap: () =>
+                              copyReportCode(context, _report.reference),
                         ),
                       ),
                       const SizedBox(width: CliinAppConstants.spacingM),
@@ -1426,43 +1457,67 @@ class _InfoTile extends StatelessWidget {
   final String label;
   final String value;
   final Color? valueColor;
+  final VoidCallback? onTap;
   const _InfoTile({
     required this.icon,
     required this.label,
     required this.value,
     this.valueColor,
+    this.onTap,
   });
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Row(
-        children: [
-          Icon(icon, size: 12, color: CliinAppColors.textSecondary),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 10,
-              color: CliinAppColors.textSecondary,
+  Widget build(BuildContext context) {
+    final tappable = onTap != null;
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 12, color: CliinAppColors.textSecondary),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                color: CliinAppColors.textSecondary,
+              ),
             ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 2),
-      Text(
-        value,
-        style: GoogleFonts.inter(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: valueColor ?? CliinAppColors.textDark,
+          ],
         ),
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-      ),
-    ],
-  );
+        const SizedBox(height: 2),
+        Row(
+          children: [
+            Flexible(
+              child: Text(
+                value,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: tappable
+                      ? CliinAppColors.primary
+                      : (valueColor ?? CliinAppColors.textDark),
+                  decoration: tappable ? TextDecoration.underline : null,
+                  decorationColor: CliinAppColors.primary,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (tappable) ...[
+              const SizedBox(width: 4),
+              const Icon(
+                Icons.copy_rounded,
+                size: 12,
+                color: CliinAppColors.primary,
+              ),
+            ],
+          ],
+        ),
+      ],
+    );
+    return tappable ? GestureDetector(onTap: onTap, child: content) : content;
+  }
 }
 
 class _HistoryTile extends StatelessWidget {

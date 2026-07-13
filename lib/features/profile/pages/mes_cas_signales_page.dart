@@ -10,6 +10,7 @@ import '../../reports/pages/report_detail_page.dart';
 import '../../reports/pages/report_camera_page.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/navigation/tab_navigation.dart';
+import '../../../shared/navigation/fast_page_route.dart';
 import '../../../shared/widgets/report_card.dart' show buildReportImage;
 
 class MesCasSignalesPage extends StatefulWidget {
@@ -26,6 +27,10 @@ class _FilterOption {
 }
 
 class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
+  // Hauteur fixe de carte — indépendante des dimensions de la photo ou de
+  // la longueur du texte (titre/description tronqués via maxLines/ellipsis).
+  static const double _kCardHeight = 152.0;
+
   ReportStatus? _selectedFilter;
 
   List<HomeReportModel> get _myCas {
@@ -119,7 +124,7 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
                 navigateToTab(context, currentIndex: -1, targetIndex: index),
             onSignalerTap: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const ReportCameraPage()),
+              fastFadeRoute<void>(const ReportCameraPage()),
             ),
           ),
         );
@@ -190,23 +195,23 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(
-            builder: (_) => ReportDetailPage(data: report, isAuthor: true)),
+        fastFadeRoute<void>(ReportDetailPage(data: report, isAuthor: true)),
       ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: IntrinsicHeight(
+      child: SizedBox(
+        height: _kCardHeight,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

@@ -10,6 +10,7 @@ import '../../../shared/models/auth_user_model.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/navigation/tab_navigation.dart';
 import '../../reports/pages/report_camera_page.dart';
+import '../../../shared/navigation/fast_page_route.dart';
 
 class PublicProfilePage extends StatelessWidget {
   const PublicProfilePage({super.key});
@@ -269,7 +270,7 @@ class PublicProfilePage extends StatelessWidget {
             navigateToTab(context, currentIndex: -1, targetIndex: index),
         onSignalerTap: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const ReportCameraPage()),
+          fastFadeRoute<void>(const ReportCameraPage()),
         ),
       ),
     );

@@ -11,6 +11,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../features/home/models/home_report_model.dart';
 import 'proof_camera_page.dart';
 import 'proof_upload_page.dart';
+import '../../../../shared/navigation/fast_page_route.dart';
 
 class ProofPreviewPage extends StatelessWidget {
   final HomeReportModel report;
@@ -32,7 +33,7 @@ class ProofPreviewPage extends StatelessWidget {
     // Retour à la caméra — remplace la page actuelle
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => ProofCameraPage(report: report)),
+      fastFadeRoute<void>(ProofCameraPage(report: report)),
     );
   }
 

@@ -12,6 +12,7 @@ import '../data/report_dummy_data.dart';
 import '../widgets/report_stepper.dart';
 import 'report_camera_page.dart';
 import 'report_detail_page.dart';
+import '../../../../shared/navigation/fast_page_route.dart';
 import '../../../../shared/store/report_store.dart';
 import '../../../../features/home/models/home_report_model.dart' as home;
 
@@ -118,8 +119,7 @@ class _ReportSuccessPageState extends State<ReportSuccessPage>
 
   void _continueReporting(BuildContext context) {
     Navigator.of(context).popUntil((route) => route.isFirst);
-    Navigator.push(context,
-        MaterialPageRoute(builder: (_) => const ReportCameraPage()));
+    Navigator.push(context, fastFadeRoute<void>(const ReportCameraPage()));
   }
 
   void _viewReport(BuildContext context) {
@@ -127,8 +127,7 @@ class _ReportSuccessPageState extends State<ReportSuccessPage>
     if (report == null) return;
     Navigator.push(
       context,
-      MaterialPageRoute(
-          builder: (_) => ReportDetailPage(data: report, isAuthor: true)),
+      fastFadeRoute<void>(ReportDetailPage(data: report, isAuthor: true)),
     );
   }
 

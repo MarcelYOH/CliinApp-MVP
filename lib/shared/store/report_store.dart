@@ -121,6 +121,12 @@ class ReportStore extends ChangeNotifier {
       .where((r) => r.intervenant?.id == userId && r.status == ReportStatus.traite)
       .length;
 
+  // ── Compteur par catégorie — section "Catégories" (accueil) ──────
+  // Tous statuts confondus, zéro donnée de repli : si aucun cas n'existe
+  // encore pour cette catégorie, retourne 0 (jamais une valeur inventée).
+  int categoryCount(ReportCategory category) =>
+      _reports.where((r) => r.category == category).length;
+
   // ── Initialisation ────────────────────────────────────────────
   Future<void> init() async {
     _setLoading(true);

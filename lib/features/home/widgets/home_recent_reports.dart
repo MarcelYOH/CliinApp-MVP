@@ -5,6 +5,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/widgets/report_card.dart';
+import '../../../shared/widgets/ghost_report_card.dart';
 import '../models/home_report_model.dart';
 
 class HomeRecentReports extends StatelessWidget {
@@ -110,27 +111,41 @@ class _EmptyRecentReports extends StatelessWidget {
           horizontal: CliinAppConstants.pagePadding,
           vertical: CliinAppConstants.spacingL,
         ),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: CliinAppConstants.spacingXL),
-          decoration: BoxDecoration(
-            color: CliinAppColors.background,
-            borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
-          ),
-          child: Column(
-            children: [
-              Icon(Icons.inbox_outlined,
-                  size: 40,
-                  color: CliinAppColors.textSecondary.withValues(alpha: 0.5)),
-              const SizedBox(height: 10),
-              Text(
-                'Aucun cas récent dans votre zone',
-                textAlign: TextAlign.center,
-                style: CliinAppTextStyles.bodyMedium
-                    .copyWith(color: CliinAppColors.textSecondary),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            const GhostReportCard(),
+            Container(
+              margin:
+                  const EdgeInsets.symmetric(horizontal: CliinAppConstants.spacingL),
+              padding: const EdgeInsets.symmetric(
+                horizontal: CliinAppConstants.spacingL,
+                vertical: CliinAppConstants.spacingM,
               ),
-            ],
-          ),
+              decoration: BoxDecoration(
+                color: CliinAppColors.cardWhite,
+                borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
+                border: Border.all(color: CliinAppColors.divider),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.inbox_outlined,
+                      size: 32,
+                      color: CliinAppColors.textSecondary.withValues(alpha: 0.6)),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Aucun cas récent dans votre zone',
+                    textAlign: TextAlign.center,
+                    style: CliinAppTextStyles.bodyMedium.copyWith(
+                      color: CliinAppColors.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       );
 }

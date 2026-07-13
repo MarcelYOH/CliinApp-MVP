@@ -7,6 +7,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../shared/widgets/app_header.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/navigation/tab_navigation.dart';
+import '../../../shared/navigation/fast_page_route.dart';
 import '../../../shared/models/user_model.dart';
 import '../../../shared/store/auth_store.dart';
 import '../../../shared/store/report_store.dart';
@@ -19,6 +20,7 @@ import '../widgets/home_action_banner.dart';
 import '../widgets/home_groups.dart';
 import '../widgets/home_categories.dart';
 import '../widgets/home_recent_reports.dart';
+import '../models/category_model.dart';
 import '../data/home_dummy_data.dart';
 import '../models/home_report_model.dart';
 import '../../reports/pages/report_camera_page.dart';
@@ -44,12 +46,14 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     ReportStore.instance.addListener(_onStoreUpdate);
+    pendingHomeTabIndex.addListener(_onPendingTabIndex);
     // init() est déjà appelé dans main() avant runApp() — ne pas rappeler ici
   }
 
   @override
   void dispose() {
     ReportStore.instance.removeListener(_onStoreUpdate);
+    pendingHomeTabIndex.removeListener(_onPendingTabIndex);
     super.dispose();
   }
 
@@ -57,12 +61,24 @@ class _HomePageState extends State<HomePage> {
     if (mounted) setState(() {});
   }
 
+  // HomePage n'est jamais reconstruite lors d'un popUntil (voir
+  // tab_navigation.dart) — son State persiste depuis le tout premier
+  // affichage, donc _currentNavIndex ne peut refléter un onglet choisi
+  // depuis une page enfant (Profil, détail d'un cas, ...) qu'en écoutant
+  // ce canal explicite.
+  void _onPendingTabIndex() {
+    final target = pendingHomeTabIndex.value;
+    if (target == null || !mounted) return;
+    setState(() => _currentNavIndex = target);
+    pendingHomeTabIndex.value = null;
+  }
+
   void _openCamera() async {
     if (await requireAuth(context)) {
       if (!mounted) return;
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const ReportCameraPage()),
+        fastFadeRoute<void>(const ReportCameraPage()),
       );
     }
   }
@@ -126,7 +142,7 @@ class _HomePageState extends State<HomePage> {
   void _onCardTap(HomeReportModel report) {
     Navigator.push(
       context,
-      MaterialPageRoute<void>(builder: (_) => ReportDetailPage(data: report)),
+      fastFadeRoute<void>(ReportDetailPage(data: report)),
     );
   }
 
@@ -140,9 +156,7 @@ class _HomePageState extends State<HomePage> {
           if (mounted) {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (_) => IntervenantDetailPage(report: updated),
-              ),
+              fastFadeRoute<void>(IntervenantDetailPage(report: updated)),
             );
           }
         },
@@ -186,6 +200,19 @@ class _HomePageState extends State<HomePage> {
     final nearbyReports = store.nearbyReports;
     final recentReports = store.recentReports;
 
+    // Compteurs par catégorie — calculés dynamiquement depuis ReportStore
+    // (tous statuts confondus), jamais lus depuis HomeDummyData qui ne
+    // fournit plus que l'icône/libellé/couleur de chaque catégorie.
+    final categoriesWithCounts = HomeDummyData.categories.map((c) {
+      final rc = _labelToCategory(c.label);
+      return CategoryModel(
+        icon: c.icon,
+        label: c.label,
+        count: rc != null ? store.categoryCount(rc) : 0,
+        color: c.color,
+      );
+    }).toList();
+
     final sections = <Widget>[
       HomeQuickReport(data: HomeDummyData.quickReport, onTap: _openCamera),
       HomeAlertBanner(
@@ -206,7 +233,7 @@ class _HomePageState extends State<HomePage> {
         onCardTap: (_) {},
       ),
       HomeCategories(
-        categories: HomeDummyData.categories,
+        categories: categoriesWithCounts,
         onVoirTout: _goToMapCategories,
         onCardTap: (cat) {
           final rc = _labelToCategory(cat.label);
