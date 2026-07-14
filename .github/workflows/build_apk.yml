@@ -76,7 +76,7 @@ jobs:
         with:
           name: CliinApp-debug-${{ github.run_number }}
           path: build/app/outputs/flutter-apk/app-debug.apk
-          retention-days: 3
+          retention-days: 1
 
       - name: Upload APK Release
         if: ${{ github.event_name == 'push' || inputs.build_type == 'release' || inputs.build_type == 'both' }}
@@ -84,4 +84,4 @@ jobs:
         with:
           name: CliinApp-release-${{ github.run_number }}
           path: build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 3
+          retention-days: 1
