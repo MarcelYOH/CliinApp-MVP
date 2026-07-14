@@ -1,11 +1,10 @@
 // lib/shared/widgets/more_menu_sheet.dart
 // Bottom sheet "Plus" — continuité visuelle de la bottom bar — CliinApp
 //
-// Grille de tuiles dans le même langage visuel que AppBottomNav (icône
-// dans un cercle + libellé dessous) : le sheet prolonge la barre de
-// navigation plutôt que d'ouvrir un menu au style générique différent.
-// Ajouter un futur module se fait en ajoutant une ligne à _entries, sans
-// réécrire la structure du sheet.
+// Liste de barres horizontales (icône + libellé sur une ligne) : ce sheet
+// regroupe les fonctionnalités à venir, une par ligne. Ajouter un futur
+// module se fait en ajoutant une ligne à _entries, sans réécrire la
+// structure du sheet.
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -51,7 +50,7 @@ class _MoreMenuSheet extends StatelessWidget {
   static const List<_MoreMenuEntry> _entries = [
     _MoreMenuEntry(
       icon: Icons.bolt_rounded,
-      label: 'Action\nTerrain',
+      label: 'Les Actions terrains',
       onTap: _openActionTerrain,
     ),
   ];
@@ -96,12 +95,10 @@ class _MoreMenuSheet extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 20),
-              Wrap(
-                spacing: 24,
-                runSpacing: 20,
+              Column(
                 children: [
                   for (final entry in _entries)
-                    _MoreMenuTile(
+                    _MoreMenuBar(
                       icon: entry.icon,
                       label: entry.label,
                       onTap: () => entry.onTap(context),
@@ -118,15 +115,15 @@ class _MoreMenuSheet extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────
-// Tuile — même langage visuel que les items de AppBottomNav (icône dans
-// un cercle plein + libellé dessous), pour prolonger la bottom bar.
+// Barre horizontale — une fonctionnalité à venir par ligne : icône dans
+// un cercle plein + libellé, sur toute la largeur du sheet.
 // ─────────────────────────────────────────
-class _MoreMenuTile extends StatelessWidget {
+class _MoreMenuBar extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
 
-  const _MoreMenuTile({
+  const _MoreMenuBar({
     required this.icon,
     required this.label,
     required this.onTap,
@@ -137,29 +134,38 @@ class _MoreMenuTile extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: 72,
-        child: Column(
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: CliinAppColors.primaryLight,
+          borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
+        ),
+        child: Row(
           children: [
             Container(
-              width: 56,
-              height: 56,
+              width: 40,
+              height: 40,
               decoration: const BoxDecoration(
-                color: CliinAppColors.primaryLight,
+                color: Colors.white,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: CliinAppColors.primary, size: 26),
+              child: Icon(icon, color: CliinAppColors.primary, size: 20),
             ),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: CliinAppColors.textDark,
-                height: 1.2,
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: CliinAppColors.textDark,
+                ),
               ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: CliinAppColors.primary,
             ),
           ],
         ),

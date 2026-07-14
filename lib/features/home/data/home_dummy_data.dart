@@ -19,7 +19,7 @@ class HomeDummyData {
   );
 
   static const QuickReportModel quickReport = QuickReportModel(
-    title: 'Un problème de salubrité\nprès de vous ?',
+    title: 'Un problème de salubrité ?\nprès de vous',
     description: 'Signalez-le rapidement\net améliorez votre communauté.',
     buttonLabel: 'Signaler',
   );
