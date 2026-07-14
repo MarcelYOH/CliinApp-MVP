@@ -2,6 +2,7 @@
 // Bannière Alerte — CliinApp
 
 import 'package:flutter/material.dart';
+import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../models/alert_banner_model.dart';
@@ -17,7 +18,6 @@ class HomeAlertBanner extends StatelessWidget {
   });
 
   static const Color _kAlertRed      = Color(0xFFE8412A);
-  static const Color _kAlertRedLight = Color(0xFFFFECEB);
   static const Color _kAlertRedPill  = Color(0xFFFFDAD6);
 
   @override
@@ -29,7 +29,9 @@ class HomeAlertBanner extends StatelessWidget {
       // ── Hauteur réduite, le contenu dicte la taille ──
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(CliinAppConstants.radiusLarge),
-        color: _kAlertRedLight,
+        // Fond blanc plein (au lieu d'un rose pâle proche du blanc) pour un
+        // contraste maximal avec le texte foncé, lisible en plein soleil.
+        color: CliinAppColors.cardWhite,
         boxShadow: [
           BoxShadow(
             color: _kAlertRed.withValues(alpha: 0.12),
@@ -164,7 +166,7 @@ class HomeAlertBanner extends StatelessWidget {
                 style: CliinAppTextStyles.bodyMedium.copyWith(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF1A1A1A),
+                  color: CliinAppColors.textDark,
                   height: 1.35,
                 ),
               ),
@@ -173,7 +175,7 @@ class HomeAlertBanner extends StatelessWidget {
                 style: CliinAppTextStyles.bodyMedium.copyWith(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF1A1A1A),
+                  color: CliinAppColors.textDark,
                   height: 1.35,
                 ),
               ),

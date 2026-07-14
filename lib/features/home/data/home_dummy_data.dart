@@ -36,7 +36,7 @@ class HomeDummyData {
     badgeLabel: 'Agissons ensemble',
     title: 'Rejoignez une\naction citoyenne',
     description:
-        'Participez aux campagnes de nettoyage et aux actions communautaires près de chez vous.',
+        'Participer aux campagnes de nettoyage, de sensibilisation et autres actions citoyennes durables.',
     buttonLabel: 'Voir les actions',
     imageAsset: 'assets/images/action.jpg',
   );

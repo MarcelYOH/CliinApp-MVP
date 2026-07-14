@@ -350,10 +350,8 @@ class _ReportCameraPageState extends State<ReportCameraPage>
                             child: ReportCameraViewfinderCorners(),
                           ),
                         // Contrôles latéraux masqués en mode fallback :
-                        // flash et changement de caméra sont gérés par
-                        // l'app caméra native du téléphone dans ce mode.
-                        // En mode photo de profil : uniquement le flash,
-                        // pas de changement de caméra ni de galerie.
+                        // flash, changement de caméra et galerie sont gérés
+                        // par l'app caméra native du téléphone dans ce mode.
                         if (!_useWebFallback)
                           Positioned(
                             right: CliinAppConstants.pagePadding,
@@ -364,15 +362,13 @@ class _ReportCameraPageState extends State<ReportCameraPage>
                                 flashMode: _flashMode,
                                 onFlashTap: _toggleFlash,
                                 onFlipTap: _flipCamera,
-                                onGalleryTap:
-                                    widget.isAvatarMode ? null : _openGallery,
-                                showFlip: !widget.isAvatarMode,
+                                onGalleryTap: _openGallery,
+                                showFlip: true,
                               ),
                             ),
                           ),
                         // En mode fallback, on garde quand même l'accès galerie
-                        // (hors mode photo de profil — interface minimale)
-                        if (_useWebFallback && !widget.isAvatarMode)
+                        if (_useWebFallback)
                           Positioned(
                             right: CliinAppConstants.pagePadding,
                             top: 0,
@@ -404,6 +400,7 @@ class _ReportCameraPageState extends State<ReportCameraPage>
                           ? _captureViaImagePicker
                           : _takePhoto,
                       isCapturing: _isCapturing,
+                      isAvatarMode: widget.isAvatarMode,
                     ),
                   ),
                 ],

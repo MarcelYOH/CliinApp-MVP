@@ -288,8 +288,11 @@ class _ReportCommentBarState extends State<ReportCommentBar> {
                     child: TextField(
                       controller: _controller,
                       focusNode: _focusNode,
-                      onSubmitted: (_) => _send(),
-                      textInputAction: TextInputAction.send,
+                      keyboardType: TextInputType.multiline,
+                      textInputAction: TextInputAction.newline,
+                      textCapitalization: TextCapitalization.sentences,
+                      minLines: 1,
+                      maxLines: null,
                       style: GoogleFonts.inter(
                           fontSize: 12, color: CliinAppColors.textDark),
                       decoration: InputDecoration(

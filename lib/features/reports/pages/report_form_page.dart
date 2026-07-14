@@ -391,6 +391,7 @@ class _ReportFormPageState extends State<ReportFormPage> {
                               ? TextField(
                                   controller: _addressController,
                                   autofocus: true,
+                                  textCapitalization: TextCapitalization.sentences,
                                   style: GoogleFonts.poppins(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,

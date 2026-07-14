@@ -103,6 +103,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                 ),
                 TextField(
                   controller: controller,
+                  textCapitalization: TextCapitalization.sentences,
                   onChanged: (_) => setState(() {}),
                   style: GoogleFonts.inter(
                       fontSize: 15,

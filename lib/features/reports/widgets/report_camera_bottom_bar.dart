@@ -10,11 +10,15 @@ import '../../../../core/constants/app_constants.dart';
 class ReportCameraBottomBar extends StatelessWidget {
   final VoidCallback onShutterTap;
   final bool isCapturing;
+  // Photo de profil : ni position automatique (aucun sens pour un avatar)
+  // ni texte de conseil signalement en dessous du shutter.
+  final bool isAvatarMode;
 
   const ReportCameraBottomBar({
     super.key,
     required this.onShutterTap,
     this.isCapturing = false,
+    this.isAvatarMode = false,
   });
 
   @override
@@ -31,8 +35,8 @@ class ReportCameraBottomBar extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // ── Position automatique ──
-              _PositionAutoButton(),
+              // ── Position automatique (absente en mode photo de profil) ──
+              isAvatarMode ? const SizedBox(width: 72) : _PositionAutoButton(),
 
               // ── Bouton Shutter central ──
               _ShutterButton(
@@ -46,49 +50,50 @@ class ReportCameraBottomBar extends StatelessWidget {
           ),
         ),
 
-        const SizedBox(height: CliinAppConstants.spacingL),
-
-        // ── Texte conseil bas ──
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: CliinAppConstants.pagePadding,
-          ),
-          child: Column(
-            children: [
-              Text(
-                'Assurez-vous que le problème est bien visible.',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w400,
-                  color: CliinAppColors.textWhite,
-                ),
-              ),
-              const SizedBox(height: 2),
-              RichText(
-                textAlign: TextAlign.center,
-                text: TextSpan(
+        // ── Texte conseil bas (absent en mode photo de profil) ──
+        if (!isAvatarMode) ...[
+          const SizedBox(height: CliinAppConstants.spacingL),
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: CliinAppConstants.pagePadding,
+            ),
+            child: Column(
+              children: [
+                Text(
+                  'Assurez-vous que le problème est bien visible.',
+                  textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w400,
                     color: CliinAppColors.textWhite,
                   ),
-                  children: [
-                    const TextSpan(text: 'Une bonne photo aide '),
-                    TextSpan(
-                      text: 'la communauté à agir.',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: CliinAppColors.primary,
-                      ),
-                    ),
-                  ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 2),
+                RichText(
+                  textAlign: TextAlign.center,
+                  text: TextSpan(
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w400,
+                      color: CliinAppColors.textWhite,
+                    ),
+                    children: [
+                      const TextSpan(text: 'Une bonne photo aide '),
+                      TextSpan(
+                        text: 'la communauté à agir.',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: CliinAppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       ],
     );
   }

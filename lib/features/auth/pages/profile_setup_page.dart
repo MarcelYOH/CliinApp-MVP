@@ -323,6 +323,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                               ),
                               TextField(
                                 controller: _usernameController,
+                                textCapitalization: TextCapitalization.sentences,
                                 onChanged: (v) => setState(() {
                                   _usernameValid = v.trim().isNotEmpty;
                                 }),
@@ -389,6 +390,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                               ),
                               TextField(
                                 controller: _zoneController,
+                                textCapitalization: TextCapitalization.sentences,
                                 onChanged: (_) => setState(() {}),
                                 style: GoogleFonts.inter(
                                     fontSize: 15,

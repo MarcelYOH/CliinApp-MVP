@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
+import '../navigation/more_menu_state.dart';
 import 'more_menu_sheet.dart';
 
 class AppBottomNav extends StatefulWidget {
@@ -28,16 +29,15 @@ class _AppBottomNavState extends State<AppBottomNav> {
 
   // "Plus" ouvre un bottom sheet plutôt que de naviguer vers une page —
   // aucune page parente ne peut donc refléter "onglet actif = Plus" via
-  // son propre currentIndex. Gérée ici, localement, pour que l'icône
-  // passe en vert pendant que LE sheet de CETTE bottom bar est ouvert,
-  // peu importe la page qui l'héberge.
-  bool _isMoreMenuOpen = false;
-
+  // son propre currentIndex. isMoreMenuOpen (notifier global, voir
+  // more_menu_state.dart) sert de source de vérité unique : l'icône reste
+  // verte tant que LE sheet est affiché, peu importe l'instance
+  // d'AppBottomNav qui l'a ouvert ou si elle est reconstruite entre-temps.
   Future<void> _handleTap(int index) async {
     if (index == 4) {
-      setState(() => _isMoreMenuOpen = true);
+      isMoreMenuOpen.value = true;
       await showMoreMenuSheet(context);
-      if (mounted) setState(() => _isMoreMenuOpen = false);
+      isMoreMenuOpen.value = false;
       return;
     }
     widget.onTap(index);
@@ -64,35 +64,42 @@ class _AppBottomNavState extends State<AppBottomNav> {
         top: false,
         child: SizedBox(
           height: 80,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(
-                index: 0,
-                icon: Icons.home_outlined,
-                activeIcon: Icons.home_rounded,
-                label: 'Accueil',
-              ),
-              _buildNavItem(
-                index: 1,
-                icon: Icons.location_on_outlined,
-                activeIcon: Icons.location_on_rounded,
-                label: 'Carte',
-              ),
-              _buildSignalerButton(),
-              _buildNavItem(
-                index: 3,
-                icon: Icons.group_outlined,
-                activeIcon: Icons.group_rounded,
-                label: 'Groupes',
-              ),
-              _buildNavItem(
-                index: 4,
-                icon: Icons.more_horiz_rounded,
-                activeIcon: Icons.more_horiz_rounded,
-                label: 'Plus',
-              ),
-            ],
+          child: ValueListenableBuilder<bool>(
+            valueListenable: isMoreMenuOpen,
+            builder: (context, moreMenuOpen, _) => Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNavItem(
+                  index: 0,
+                  icon: Icons.home_outlined,
+                  activeIcon: Icons.home_rounded,
+                  label: 'Accueil',
+                  moreMenuOpen: moreMenuOpen,
+                ),
+                _buildNavItem(
+                  index: 1,
+                  icon: Icons.location_on_outlined,
+                  activeIcon: Icons.location_on_rounded,
+                  label: 'Carte',
+                  moreMenuOpen: moreMenuOpen,
+                ),
+                _buildSignalerButton(),
+                _buildNavItem(
+                  index: 3,
+                  icon: Icons.group_outlined,
+                  activeIcon: Icons.group_rounded,
+                  label: 'Groupes',
+                  moreMenuOpen: moreMenuOpen,
+                ),
+                _buildNavItem(
+                  index: 4,
+                  icon: Icons.more_horiz_rounded,
+                  activeIcon: Icons.more_horiz_rounded,
+                  label: 'Plus',
+                  moreMenuOpen: moreMenuOpen,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -104,9 +111,10 @@ class _AppBottomNavState extends State<AppBottomNav> {
     required IconData icon,
     required IconData activeIcon,
     required String label,
+    required bool moreMenuOpen,
   }) {
     final bool isActive =
-        index == 4 ? _isMoreMenuOpen : widget.currentIndex == index;
+        moreMenuOpen ? index == 4 : widget.currentIndex == index;
     return GestureDetector(
       onTap: () => _handleTap(index),
       behavior: HitTestBehavior.opaque,

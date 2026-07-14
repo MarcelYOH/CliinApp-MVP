@@ -1,9 +1,11 @@
 // lib/shared/widgets/more_menu_sheet.dart
-// Bottom sheet "Plus" — modules à venir de CliinApp
+// Bottom sheet "Plus" — continuité visuelle de la bottom bar — CliinApp
 //
-// Liste d'entrées déclarative (_entries) : ajouter un futur module
-// (Marketplace, E-learning, ...) se fait en ajoutant une ligne à la
-// liste, sans réécrire la structure du sheet.
+// Grille de tuiles dans le même langage visuel que AppBottomNav (icône
+// dans un cercle + libellé dessous) : le sheet prolonge la barre de
+// navigation plutôt que d'ouvrir un menu au style générique différent.
+// Ajouter un futur module se fait en ajoutant une ligne à _entries, sans
+// réécrire la structure du sheet.
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -19,28 +21,40 @@ Future<void> showMoreMenuSheet(BuildContext context) {
   );
 }
 
+void _openActionTerrain(BuildContext context) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text('Action Terrain — module en cours de déploiement.'),
+      behavior: SnackBarBehavior.floating,
+      duration: Duration(seconds: 2),
+    ),
+  );
+}
+
 class _MoreMenuEntry {
   final IconData icon;
   final String label;
-  const _MoreMenuEntry({required this.icon, required this.label});
+  final void Function(BuildContext context) onTap;
+  const _MoreMenuEntry({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 }
 
 class _MoreMenuSheet extends StatelessWidget {
   const _MoreMenuSheet();
 
+  // Seul module réellement en cours d'implémentation — pas de placeholder
+  // pour des fonctionnalités hypothétiques (ex: tableau de bord public,
+  // déjà écarté du MVP).
   static const List<_MoreMenuEntry> _entries = [
-    _MoreMenuEntry(icon: Icons.bolt_rounded, label: 'Actions Terrains'),
+    _MoreMenuEntry(
+      icon: Icons.bolt_rounded,
+      label: 'Action\nTerrain',
+      onTap: _openActionTerrain,
+    ),
   ];
-
-  void _showComingSoon(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Bientôt disponible'),
-        behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 2),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +74,7 @@ class _MoreMenuSheet extends StatelessWidget {
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Center(
                 child: Container(
@@ -73,31 +88,27 @@ class _MoreMenuSheet extends StatelessWidget {
                 ),
               ),
               Text(
-                'Plus de modules',
+                'Plus',
                 style: GoogleFonts.poppins(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: CliinAppColors.textDark,
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Ces fonctionnalités arrivent bientôt.',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  color: CliinAppColors.textSecondary,
-                ),
-              ),
               const SizedBox(height: 20),
-              for (final entry in _entries) ...[
-                _MoreMenuItem(
-                  icon: entry.icon,
-                  label: entry.label,
-                  onTap: () => _showComingSoon(context),
-                ),
-                const SizedBox(height: 12),
-              ],
-              const SizedBox(height: 8),
+              Wrap(
+                spacing: 24,
+                runSpacing: 20,
+                children: [
+                  for (final entry in _entries)
+                    _MoreMenuTile(
+                      icon: entry.icon,
+                      label: entry.label,
+                      onTap: () => entry.onTap(context),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
             ],
           ),
         ),
@@ -106,12 +117,16 @@ class _MoreMenuSheet extends StatelessWidget {
   }
 }
 
-class _MoreMenuItem extends StatelessWidget {
+// ─────────────────────────────────────────
+// Tuile — même langage visuel que les items de AppBottomNav (icône dans
+// un cercle plein + libellé dessous), pour prolonger la bottom bar.
+// ─────────────────────────────────────────
+class _MoreMenuTile extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
 
-  const _MoreMenuItem({
+  const _MoreMenuTile({
     required this.icon,
     required this.label,
     required this.onTap,
@@ -121,50 +136,29 @@ class _MoreMenuItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: CliinAppColors.background,
-          borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
-          border: Border.all(color: CliinAppColors.divider),
-        ),
-        child: Row(
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: 72,
+        child: Column(
           children: [
             Container(
-              width: 36,
-              height: 36,
+              width: 56,
+              height: 56,
               decoration: const BoxDecoration(
                 color: CliinAppColors.primaryLight,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: CliinAppColors.primary, size: 18),
+              child: Icon(icon, color: CliinAppColors.primary, size: 26),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: CliinAppColors.textDark,
-                ),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: CliinAppColors.background,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: CliinAppColors.divider),
-              ),
-              child: Text(
-                'Bientôt',
-                style: GoogleFonts.inter(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: CliinAppColors.textSecondary,
-                ),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: CliinAppColors.textDark,
+                height: 1.2,
               ),
             ),
           ],
