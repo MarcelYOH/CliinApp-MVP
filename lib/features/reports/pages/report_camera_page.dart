@@ -209,6 +209,11 @@ class _ReportCameraPageState extends State<ReportCameraPage>
           accuracy: LocationAccuracy.bestForNavigation,
         ),
       );
+      debugPrint('[GPS-AUDIT-CAMERA] position captée pour texte adresse (PAS '
+          'celle enregistrée sur le signalement — report_form_page refait '
+          'son propre appel GPS indépendant): lat=${position.latitude} '
+          'lng=${position.longitude} accuracy=${position.accuracy}m '
+          'ts=${position.timestamp}');
 
       final placemarks = await placemarkFromCoordinates(
         position.latitude,

@@ -153,6 +153,9 @@ class UserLocationService extends ChangeNotifier {
   DateTime? _cachedAt;
   static const Duration _cacheDuration = Duration(seconds: 30);
 
+  // ── AUDIT TEMPORAIRE — à retirer une fois le diagnostic terminé ──
+  int _auditFixCounter = 0;
+
   StreamSubscription<Position>? _positionSub;
 
   // ── Étape 4 — ancre de position, utilisée pour tout calcul de distance ──
@@ -171,6 +174,9 @@ class UserLocationService extends ChangeNotifier {
   void _acceptPosition(Position pos) {
     final previous = _cachedPosition;
     final previousAt = _cachedAt;
+    _auditFixCounter++;
+    final auditN = _auditFixCounter;
+    double? auditJump;
     if (previous != null && previousAt != null) {
       final elapsed = DateTime.now().difference(previousAt);
       if (elapsed < _aberrationWindow) {
@@ -180,16 +186,33 @@ class UserLocationService extends ChangeNotifier {
           pos.latitude,
           pos.longitude,
         );
+        auditJump = jump;
         if (jump > _aberrationThresholdMeters) {
           // Saut invraisemblable en si peu de temps → probable rebond
           // GPS/réseau. On garde l'ancienne position.
+          debugPrint('[GPS-AUDIT] fix#$auditN REJETÉ (aberration) '
+              'lat=${pos.latitude} lng=${pos.longitude} accuracy=${pos.accuracy}m '
+              'ts=${pos.timestamp} jumpFromPrev=${jump.toStringAsFixed(1)}m '
+              'elapsedMs=${elapsed.inMilliseconds}');
           return;
         }
       }
     }
 
     final hadNoPositionBefore = _cachedPosition == null;
+    final anchorBefore = (lat: _anchor.lat, lng: _anchor.lng);
     final anchorMoved = _anchor.accept(pos.latitude, pos.longitude, pos.accuracy);
+    final driftFromAnchor = anchorBefore.lat != null
+        ? Geolocator.distanceBetween(
+            anchorBefore.lat!, anchorBefore.lng!, pos.latitude, pos.longitude)
+        : null;
+    debugPrint('[GPS-AUDIT] fix#$auditN lat=${pos.latitude} lng=${pos.longitude} '
+        'accuracy=${pos.accuracy}m ts=${pos.timestamp} '
+        'jumpFromPrevRaw=${auditJump?.toStringAsFixed(1)}m '
+        'driftFromAnchor=${driftFromAnchor?.toStringAsFixed(1)}m '
+        'anchorLockedBefore=${anchorBefore.lat != null} '
+        'anchorMoved=$anchorMoved '
+        'anchorAfter=(${_anchor.lat}, ${_anchor.lng})');
 
     if (!_anchor.isLocked) {
       // Toujours en phase de démarrage — programme le filet de sécurité
@@ -216,29 +239,45 @@ class UserLocationService extends ChangeNotifier {
   /// le bruit résiduel d'une mesure à l'autre.
   void _startWatching() {
     if (_positionSub != null) return;
+    debugPrint('[GPS-AUDIT] démarrage getPositionStream (accuracy=high, distanceFilter=8)');
     _positionSub = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
         distanceFilter: 8,
       ),
-    ).listen(_acceptPosition, onError: (_) {});
+    ).listen((pos) {
+      debugPrint('[GPS-AUDIT] source=STREAM');
+      _acceptPosition(pos);
+    }, onError: (e) {
+      debugPrint('[GPS-AUDIT] erreur stream: $e');
+    });
   }
 
   /// Étape 1 — position initiale instantanée, sans attendre un fix GPS.
   Future<Position?> _resolveInitialPosition() async {
     try {
       final last = await Geolocator.getLastKnownPosition();
-      if (last != null) return last;
-    } catch (_) {
-      // ignoré — on retombe sur getCurrentPosition ci-dessous
+      if (last != null) {
+        debugPrint('[GPS-AUDIT] source=LAST_KNOWN lat=${last.latitude} '
+            'lng=${last.longitude} accuracy=${last.accuracy}m ts=${last.timestamp} '
+            '(âge possible: position peut dater de plusieurs minutes/heures)');
+        return last;
+      }
+      debugPrint('[GPS-AUDIT] getLastKnownPosition() = null, repli sur getCurrentPosition');
+    } catch (e) {
+      debugPrint('[GPS-AUDIT] getLastKnownPosition() erreur: $e');
     }
     try {
-      return await Geolocator.getCurrentPosition(
+      final pos = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
         ),
       );
-    } catch (_) {
+      debugPrint('[GPS-AUDIT] source=GET_CURRENT(initial) lat=${pos.latitude} '
+          'lng=${pos.longitude} accuracy=${pos.accuracy}m ts=${pos.timestamp}');
+      return pos;
+    } catch (e) {
+      debugPrint('[GPS-AUDIT] getCurrentPosition(initial) erreur: $e');
       return null;
     }
   }

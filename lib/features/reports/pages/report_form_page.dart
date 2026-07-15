@@ -108,6 +108,11 @@ class _ReportFormPageState extends State<ReportFormPage> {
           accuracy: LocationAccuracy.high,
         ),
       );
+      debugPrint('[GPS-AUDIT-CREATE] position enregistrée pour le signalement: '
+          'lat=${position.latitude} lng=${position.longitude} '
+          'accuracy=${position.accuracy}m ts=${position.timestamp} '
+          '(aucun seuil d\'accuracy appliqué avant enregistrement — '
+          'accepté quelle que soit la précision)');
       final placemarks =
           await placemarkFromCoordinates(position.latitude, position.longitude);
       if (placemarks.isNotEmpty) {
