@@ -130,12 +130,21 @@ class DynamicDistanceLabel extends StatefulWidget {
   final double? latitude;
   final double? longitude;
   final TextStyle? style;
+  // true (défaut) : contexte compact (badge/chip) → "Imprécis".
+  // false : contexte avec plus de place → "Position imprécise" en entier.
+  final bool compact;
+  // Texte ajouté après la distance (ex: " de votre position") — masqué
+  // quand aucune distance fiable n'est disponible, pour éviter un texte
+  // du type "Position imprécise de votre position".
+  final String? suffix;
 
   const DynamicDistanceLabel({
     super.key,
     required this.latitude,
     required this.longitude,
     this.style,
+    this.compact = true,
+    this.suffix,
   });
 
   @override
@@ -146,7 +155,7 @@ class _DynamicDistanceLabelState extends State<DynamicDistanceLabel> {
   // Stabilité déjà garantie en amont par UserLocationService (position
   // initiale instantanée, flux filtré à 50m, rejet des sauts aberrants) —
   // ce widget affiche simplement la distance calculée à partir du cache.
-  String? _label;
+  DistanceInfo? _info;
 
   @override
   void initState() {
@@ -168,16 +177,28 @@ class _DynamicDistanceLabelState extends State<DynamicDistanceLabel> {
     if (UserLocationService.instance.lastKnownPosition == null) {
       await UserLocationService.instance.getCurrentPosition();
     }
-    final label = UserLocationService.instance
-        .distanceLabelTo(widget.latitude, widget.longitude);
-    if (mounted && label != null && label != _label) {
-      setState(() => _label = label);
+    final info = UserLocationService.instance
+        .distanceInfoTo(widget.latitude, widget.longitude);
+    if (mounted && info != null && info != _info) {
+      setState(() => _info = info);
     }
   }
 
   @override
-  Widget build(BuildContext context) =>
-      Text(_label ?? '...', style: widget.style);
+  Widget build(BuildContext context) {
+    String text;
+    if (_info == null) {
+      text = '...';
+    } else if (_info!.confidence == DistanceConfidence.unknown) {
+      text = widget.compact ? 'Imprécis' : 'Position imprécise';
+    } else {
+      text = widget.suffix != null
+          ? '${_info!.label}${widget.suffix}'
+          : _info!.label!;
+    }
+    return Text(text,
+        style: widget.style, maxLines: 1, overflow: TextOverflow.ellipsis);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────

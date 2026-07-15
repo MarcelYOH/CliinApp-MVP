@@ -90,6 +90,7 @@ class _ReportSuccessPageState extends State<ReportSuccessPage>
         gpsCoords: r.latitude != null
             ? '${r.latitude!.toStringAsFixed(4)}, ${r.longitude!.toStringAsFixed(4)}'
             : null,
+        positionApproximative: r.positionApproximative,
       );
 
       await ReportStore.instance.addReport(homeReport);

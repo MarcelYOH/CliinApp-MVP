@@ -165,6 +165,11 @@ class ReportModel {
   final String? signaleParId;
   final String? groupId;
   final bool isAnonyme;
+  // Position enregistrée alors que l'accuracy GPS était encore mauvaise
+  // (> 100m) au moment de la publication, sans correction manuelle de
+  // l'adresse — permet d'identifier après coup les signalements dont la
+  // position est peu fiable (cf. UserLocationService.approximateAccuracyMeters).
+  final bool positionApproximative;
 
   const ReportModel({
     this.id,
@@ -189,6 +194,7 @@ class ReportModel {
     this.signaleParId,
     this.groupId,
     this.isAnonyme = false,
+    this.positionApproximative = false,
   });
 
   ReportModel copyWith({
@@ -214,6 +220,7 @@ class ReportModel {
     String? signaleParId,
     String? groupId,
     bool? isAnonyme,
+    bool? positionApproximative,
   }) {
     return ReportModel(
       id: id ?? this.id,
@@ -238,6 +245,7 @@ class ReportModel {
       signaleParId: signaleParId ?? this.signaleParId,
       groupId: groupId ?? this.groupId,
       isAnonyme: isAnonyme ?? this.isAnonyme,
+      positionApproximative: positionApproximative ?? this.positionApproximative,
     );
   }
 
@@ -263,6 +271,7 @@ class ReportModel {
     'signaleParId': signaleParId,
     'groupId': groupId,
     'isAnonyme': isAnonyme,
+    'positionApproximative': positionApproximative,
   };
 
   factory ReportModel.fromJson(Map<String, dynamic> json) => ReportModel(
@@ -298,5 +307,6 @@ class ReportModel {
     signaleParId: json['signaleParId'],
     groupId: json['groupId'],
     isAnonyme: json['isAnonyme'] ?? false,
+    positionApproximative: json['positionApproximative'] ?? false,
   );
 }

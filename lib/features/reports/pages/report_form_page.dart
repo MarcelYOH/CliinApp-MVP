@@ -1,6 +1,7 @@
 // lib/features/reports/pages/report_form_page.dart
 // Page formulaire — étape 3 — CliinApp
 
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -57,8 +58,22 @@ class _ReportFormPageState extends State<ReportFormPage> {
   bool _isEditingAddress = false;
   double? _latitude;
   double? _longitude;
+  double? _accuracy;
   bool _isRefreshingLocation = false;
   bool _gpsFailed = false;
+  // true dès que l'utilisateur a lui-même modifié le champ adresse — dans
+  // ce cas on n'écrase plus le texte avec le résultat du reverse-geocoding
+  // GPS, et on ne marque pas le signalement comme "position approximative"
+  // même si l'accuracy reste mauvaise (l'utilisateur a repris la main).
+  bool _addressManuallyEdited = false;
+  StreamSubscription<Position>? _locationImprovementSub;
+
+  // Position enregistrable mais encore trop imprécise (> 100m) pour être
+  // affichée/publiée avec confiance — cf. seuils partagés avec l'affichage
+  // de distance (UserLocationService.approximateAccuracyMeters).
+  bool get _isImprovingLocation =>
+      _accuracy != null &&
+      _accuracy! > UserLocationService.approximateAccuracyMeters;
 
   @override
   void initState() {
@@ -88,6 +103,7 @@ class _ReportFormPageState extends State<ReportFormPage> {
 
   @override
   void dispose() {
+    _stopLocationImprovement();
     _descController.dispose();
     _addressController.dispose();
     super.dispose();
@@ -108,39 +124,83 @@ class _ReportFormPageState extends State<ReportFormPage> {
           accuracy: LocationAccuracy.high,
         ),
       );
-      debugPrint('[GPS-AUDIT-CREATE] position enregistrée pour le signalement: '
-          'lat=${position.latitude} lng=${position.longitude} '
-          'accuracy=${position.accuracy}m ts=${position.timestamp} '
-          '(aucun seuil d\'accuracy appliqué avant enregistrement — '
-          'accepté quelle que soit la précision)');
-      final placemarks =
-          await placemarkFromCoordinates(position.latitude, position.longitude);
-      if (placemarks.isNotEmpty) {
-        final place = placemarks.first;
-        final parts = <String>[];
-        if (place.subLocality?.isNotEmpty == true) parts.add(place.subLocality!);
-        if (place.locality?.isNotEmpty == true) parts.add(place.locality!);
-        setState(() {
-          _addressController.text =
-              parts.isNotEmpty ? parts.join(', ') : widget.address!;
-          _latitude = position.latitude;
-          _longitude = position.longitude;
-          _isEditingAddress = false;
-          _gpsFailed = false;
-        });
-        UserLocationService.instance.setKnownPosition(position);
-      }
+      await _applyPosition(position);
     } catch (e) {
       debugPrint('Erreur refresh GPS: $e');
       setState(() {
         _gpsFailed = true;
         _latitude = null;
         _longitude = null;
+        _accuracy = null;
         _isEditingAddress = true;
       });
     } finally {
-      setState(() => _isRefreshingLocation = false);
+      if (mounted) setState(() => _isRefreshingLocation = false);
     }
+  }
+
+  // Point d'entrée unique pour toute position acceptée (fix initial ou
+  // amélioration reçue en arrière-plan pendant que l'accuracy est mauvaise)
+  // — met à jour la position et l'adresse texte (sauf si l'utilisateur l'a
+  // déjà corrigée à la main), puis démarre/arrête la recherche d'un
+  // meilleur fix selon l'accuracy reçue.
+  Future<void> _applyPosition(Position position) async {
+    if (!mounted) return;
+    setState(() {
+      _latitude = position.latitude;
+      _longitude = position.longitude;
+      _accuracy = position.accuracy;
+      _gpsFailed = false;
+    });
+    UserLocationService.instance.setKnownPosition(position);
+
+    if (!_addressManuallyEdited) {
+      try {
+        final placemarks = await placemarkFromCoordinates(
+            position.latitude, position.longitude);
+        if (placemarks.isNotEmpty && mounted) {
+          final place = placemarks.first;
+          final parts = <String>[];
+          if (place.subLocality?.isNotEmpty == true) parts.add(place.subLocality!);
+          if (place.locality?.isNotEmpty == true) parts.add(place.locality!);
+          setState(() {
+            _addressController.text =
+                parts.isNotEmpty ? parts.join(', ') : widget.address!;
+            _isEditingAddress = false;
+          });
+        }
+      } catch (_) {
+        // Reverse-geocoding indisponible : la position reste utilisable,
+        // seul le texte d'adresse automatique manque.
+      }
+    }
+
+    if (position.accuracy > UserLocationService.approximateAccuracyMeters) {
+      _startLocationImprovement();
+    } else {
+      _stopLocationImprovement();
+    }
+  }
+
+  // Tant que la position n'est pas assez précise (> 100m), on continue
+  // d'écouter le flux GPS en arrière-plan : dès qu'un fix plus précis
+  // arrive, il remplace silencieusement le précédent (voir _applyPosition)
+  // et l'affichage/le seuil de publication se mettent à jour d'eux-mêmes.
+  void _startLocationImprovement() {
+    if (_locationImprovementSub != null) return;
+    _locationImprovementSub = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 0,
+      ),
+    ).listen((pos) {
+      if (_accuracy == null || pos.accuracy < _accuracy!) _applyPosition(pos);
+    }, onError: (e) => debugPrint('Erreur amélioration GPS: $e'));
+  }
+
+  void _stopLocationImprovement() {
+    _locationImprovementSub?.cancel();
+    _locationImprovementSub = null;
   }
 
   // Remplacement photo en mode édition — même interface caméra que la
@@ -190,6 +250,12 @@ class _ReportFormPageState extends State<ReportFormPage> {
       return;
     }
 
+    // Position encore imprécise (> 100m) et adresse non corrigée à la
+    // main : on publie quand même (l'utilisateur a choisi de ne pas
+    // attendre) mais le signalement est marqué pour identification
+    // ultérieure — cf. UserLocationService.approximateAccuracyMeters.
+    final isApproximate = _isImprovingLocation && !_addressManuallyEdited;
+
     final report = ReportModel(
       imagePath: widget.imagePath!,
       reportCode: _generateReportCode(),
@@ -201,6 +267,7 @@ class _ReportFormPageState extends State<ReportFormPage> {
       address: _addressController.text.trim(),
       latitude: _latitude,
       longitude: _longitude,
+      positionApproximative: isApproximate,
       createdAt: DateTime.now(),
     );
     Navigator.push(context,
@@ -406,6 +473,8 @@ class _ReportFormPageState extends State<ReportFormPage> {
                                     contentPadding: EdgeInsets.zero,
                                     border: InputBorder.none,
                                   ),
+                                  onChanged: (_) =>
+                                      _addressManuallyEdited = true,
                                   onSubmitted: (_) => setState(
                                       () => _isEditingAddress = false),
                                 )
@@ -432,7 +501,32 @@ class _ReportFormPageState extends State<ReportFormPage> {
                         ),
                       ],
                     ),
-                    if (_latitude != null) ...[
+                    if (_isImprovingLocation) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const SizedBox(
+                            width: 10,
+                            height: 10,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 1.5,
+                                color: CliinAppColors.alertOrange),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              'Position imprécise (~${_accuracy!.round()} m) '
+                              '— amélioration en cours, ou corrigez '
+                              'l\'adresse ci-dessus',
+                              style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: CliinAppColors.alertOrange),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ] else if (_latitude != null) ...[
                       const SizedBox(height: 4),
                       Text(
                         '${_latitude!.toStringAsFixed(3)}°N  ${_longitude!.toStringAsFixed(3)}°W',

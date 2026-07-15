@@ -600,28 +600,15 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
                         ),
                         const SizedBox(width: 4),
                         Expanded(
-                          child: Row(
-                            children: [
-                              DynamicDistanceLabel(
-                                latitude: _data.latitude,
-                                longitude: _data.longitude,
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  color: CliinAppColors.textSecondary,
-                                ),
-                              ),
-                              Flexible(
-                                child: Text(
-                                  ' de votre position',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    color: CliinAppColors.textSecondary,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
+                          child: DynamicDistanceLabel(
+                            latitude: _data.latitude,
+                            longitude: _data.longitude,
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: CliinAppColors.textSecondary,
+                            ),
+                            compact: false,
+                            suffix: ' de votre position',
                           ),
                         ),
                       ],

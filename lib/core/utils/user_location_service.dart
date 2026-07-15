@@ -67,16 +67,18 @@ class _PositionAnchor {
 
   double? lat;
   double? lng;
+  double? accuracy;
 
   final List<({double lat, double lng, double accuracy})> _startupFixes = [];
-  ({double lat, double lng})? _pending;
+  ({double lat, double lng, double accuracy})? _pending;
   int _pendingConfirmations = 0;
 
   bool get isLocked => lat != null;
 
   /// Traite un nouveau fix accepté. Retourne true si l'ancre vient d'être
-  /// (re)positionnée — démarrage terminé ou déplacement confirmé — auquel
-  /// cas la distance affichée doit être recalculée.
+  /// (re)positionnée ou affinée — démarrage terminé, déplacement confirmé,
+  /// ou précision améliorée sur place — auquel cas la distance affichée
+  /// doit être recalculée.
   bool accept(double fixLat, double fixLng, double accuracyMeters) {
     final safeAccuracy = accuracyMeters <= 0 ? 9999.0 : accuracyMeters;
 
@@ -93,9 +95,16 @@ class _PositionAnchor {
 
     final drift = Geolocator.distanceBetween(lat!, lng!, fixLat, fixLng);
     if (drift <= lockRadiusMeters) {
-      // Bruit — l'ancre ne bouge pas.
+      // Bruit — l'ancre ne bouge pas. Si ce fix est néanmoins plus précis
+      // que celui qui a servi à verrouiller l'ancre (ex: verrouillage de
+      // démarrage sur un fix médiocre faute de mieux), on affine la
+      // précision affichée sans déplacer la position.
       _pendingConfirmations = 0;
       _pending = null;
+      if (accuracy == null || safeAccuracy < accuracy!) {
+        accuracy = safeAccuracy;
+        return true;
+      }
       return false;
     }
 
@@ -109,15 +118,20 @@ class _PositionAnchor {
       _pendingConfirmations++;
       // Moyenne des deux mesures cohérentes plutôt que la dernière brute
       // seule — réduit l'impact résiduel du bruit sur la position finale.
-      _pending = (lat: (pending.lat + fixLat) / 2, lng: (pending.lng + fixLng) / 2);
+      _pending = (
+        lat: (pending.lat + fixLat) / 2,
+        lng: (pending.lng + fixLng) / 2,
+        accuracy: (pending.accuracy + safeAccuracy) / 2,
+      );
     } else {
       _pendingConfirmations = 1;
-      _pending = (lat: fixLat, lng: fixLng);
+      _pending = (lat: fixLat, lng: fixLng, accuracy: safeAccuracy);
     }
 
     if (_pendingConfirmations >= 2) {
       lat = _pending!.lat;
       lng = _pending!.lng;
+      accuracy = _pending!.accuracy;
       _pendingConfirmations = 0;
       _pending = null;
       return true;
@@ -141,8 +155,29 @@ class _PositionAnchor {
         _startupFixes.reduce((a, b) => a.accuracy <= b.accuracy ? a : b);
     lat = best.lat;
     lng = best.lng;
+    accuracy = best.accuracy;
     _startupFixes.clear();
   }
+}
+
+enum DistanceConfidence { reliable, approximate, unknown }
+
+/// Distance vers un point donné + niveau de confiance basé sur l'accuracy
+/// de l'ancre de position. [label] est null quand confidence == unknown
+/// (aucune valeur chiffrée ne doit être affichée dans ce cas).
+class DistanceInfo {
+  final String? label;
+  final DistanceConfidence confidence;
+  const DistanceInfo(this.label, this.confidence);
+
+  @override
+  bool operator ==(Object other) =>
+      other is DistanceInfo &&
+      other.label == label &&
+      other.confidence == confidence;
+
+  @override
+  int get hashCode => Object.hash(label, confidence);
 }
 
 class UserLocationService extends ChangeNotifier {
@@ -152,9 +187,6 @@ class UserLocationService extends ChangeNotifier {
   Position? _cachedPosition;
   DateTime? _cachedAt;
   static const Duration _cacheDuration = Duration(seconds: 30);
-
-  // ── AUDIT TEMPORAIRE — à retirer une fois le diagnostic terminé ──
-  int _auditFixCounter = 0;
 
   StreamSubscription<Position>? _positionSub;
 
@@ -174,9 +206,6 @@ class UserLocationService extends ChangeNotifier {
   void _acceptPosition(Position pos) {
     final previous = _cachedPosition;
     final previousAt = _cachedAt;
-    _auditFixCounter++;
-    final auditN = _auditFixCounter;
-    double? auditJump;
     if (previous != null && previousAt != null) {
       final elapsed = DateTime.now().difference(previousAt);
       if (elapsed < _aberrationWindow) {
@@ -186,33 +215,16 @@ class UserLocationService extends ChangeNotifier {
           pos.latitude,
           pos.longitude,
         );
-        auditJump = jump;
         if (jump > _aberrationThresholdMeters) {
           // Saut invraisemblable en si peu de temps → probable rebond
           // GPS/réseau. On garde l'ancienne position.
-          debugPrint('[GPS-AUDIT] fix#$auditN REJETÉ (aberration) '
-              'lat=${pos.latitude} lng=${pos.longitude} accuracy=${pos.accuracy}m '
-              'ts=${pos.timestamp} jumpFromPrev=${jump.toStringAsFixed(1)}m '
-              'elapsedMs=${elapsed.inMilliseconds}');
           return;
         }
       }
     }
 
     final hadNoPositionBefore = _cachedPosition == null;
-    final anchorBefore = (lat: _anchor.lat, lng: _anchor.lng);
     final anchorMoved = _anchor.accept(pos.latitude, pos.longitude, pos.accuracy);
-    final driftFromAnchor = anchorBefore.lat != null
-        ? Geolocator.distanceBetween(
-            anchorBefore.lat!, anchorBefore.lng!, pos.latitude, pos.longitude)
-        : null;
-    debugPrint('[GPS-AUDIT] fix#$auditN lat=${pos.latitude} lng=${pos.longitude} '
-        'accuracy=${pos.accuracy}m ts=${pos.timestamp} '
-        'jumpFromPrevRaw=${auditJump?.toStringAsFixed(1)}m '
-        'driftFromAnchor=${driftFromAnchor?.toStringAsFixed(1)}m '
-        'anchorLockedBefore=${anchorBefore.lat != null} '
-        'anchorMoved=$anchorMoved '
-        'anchorAfter=(${_anchor.lat}, ${_anchor.lng})');
 
     if (!_anchor.isLocked) {
       // Toujours en phase de démarrage — programme le filet de sécurité
@@ -239,45 +251,29 @@ class UserLocationService extends ChangeNotifier {
   /// le bruit résiduel d'une mesure à l'autre.
   void _startWatching() {
     if (_positionSub != null) return;
-    debugPrint('[GPS-AUDIT] démarrage getPositionStream (accuracy=high, distanceFilter=8)');
     _positionSub = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
         distanceFilter: 8,
       ),
-    ).listen((pos) {
-      debugPrint('[GPS-AUDIT] source=STREAM');
-      _acceptPosition(pos);
-    }, onError: (e) {
-      debugPrint('[GPS-AUDIT] erreur stream: $e');
-    });
+    ).listen(_acceptPosition, onError: (_) {});
   }
 
   /// Étape 1 — position initiale instantanée, sans attendre un fix GPS.
   Future<Position?> _resolveInitialPosition() async {
     try {
       final last = await Geolocator.getLastKnownPosition();
-      if (last != null) {
-        debugPrint('[GPS-AUDIT] source=LAST_KNOWN lat=${last.latitude} '
-            'lng=${last.longitude} accuracy=${last.accuracy}m ts=${last.timestamp} '
-            '(âge possible: position peut dater de plusieurs minutes/heures)');
-        return last;
-      }
-      debugPrint('[GPS-AUDIT] getLastKnownPosition() = null, repli sur getCurrentPosition');
-    } catch (e) {
-      debugPrint('[GPS-AUDIT] getLastKnownPosition() erreur: $e');
+      if (last != null) return last;
+    } catch (_) {
+      // ignoré — on retombe sur getCurrentPosition ci-dessous
     }
     try {
-      final pos = await Geolocator.getCurrentPosition(
+      return await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
         ),
       );
-      debugPrint('[GPS-AUDIT] source=GET_CURRENT(initial) lat=${pos.latitude} '
-          'lng=${pos.longitude} accuracy=${pos.accuracy}m ts=${pos.timestamp}');
-      return pos;
-    } catch (e) {
-      debugPrint('[GPS-AUDIT] getCurrentPosition(initial) erreur: $e');
+    } catch (_) {
       return null;
     }
   }
@@ -317,6 +313,19 @@ class UserLocationService extends ChangeNotifier {
 
   /// Position en cache, sans déclencher de nouvelle mesure GPS.
   Position? get lastKnownPosition => _cachedPosition;
+
+  /// Précision (mètres) de l'ancre de position actuelle, ou null si elle
+  /// n'est pas encore verrouillée.
+  double? get currentAccuracy => _anchor.accuracy;
+
+  // ── Seuils de confiance pour l'affichage d'une distance ──────────────
+  // ≤ 30m   → fiable, distance affichée normalement (formatMeters).
+  // 30-100m → approximative, affichée avec un préfixe "~".
+  // > 100m  → aucune valeur chiffrée : le calcul de distance sur une
+  //           position aussi imprécise n'a pas de valeur informative
+  //           réelle, quel que soit l'algorithme utilisé.
+  static const double reliableAccuracyMeters = 30;
+  static const double approximateAccuracyMeters = 100;
 
   /// Permet à un autre écran (ex: report_form_page.dart, qui fait son
   /// propre appel Geolocator pour combiner position + adresse via
@@ -366,5 +375,28 @@ class UserLocationService extends ChangeNotifier {
     final meters = distanceMetersTo(targetLat, targetLng);
     if (meters == null) return null;
     return formatMeters(meters);
+  }
+
+  String _formatApproximate(double meters) {
+    if (meters < 1000) return '~${meters.round()} m';
+    return '~${(meters / 1000).toStringAsFixed(1)} km';
+  }
+
+  /// Distance + niveau de confiance vers le point donné, basé sur
+  /// l'accuracy de l'ancre de position. Retourne null si l'ancre n'est pas
+  /// encore verrouillée ou si le point cible est inconnu (l'appelant
+  /// affiche alors "...").
+  DistanceInfo? distanceInfoTo(double? targetLat, double? targetLng) {
+    final meters = distanceMetersTo(targetLat, targetLng);
+    if (meters == null) return null;
+    final acc = _anchor.accuracy ?? double.infinity;
+
+    if (acc > approximateAccuracyMeters) {
+      return const DistanceInfo(null, DistanceConfidence.unknown);
+    }
+    if (acc > reliableAccuracyMeters) {
+      return DistanceInfo(_formatApproximate(meters), DistanceConfidence.approximate);
+    }
+    return DistanceInfo(formatMeters(meters), DistanceConfidence.reliable);
   }
 }

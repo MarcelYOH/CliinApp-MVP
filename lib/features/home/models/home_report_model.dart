@@ -54,6 +54,11 @@ class HomeReportModel {
   final bool isAnonyme;
   final String? gpsCoords;
   final ReportOrigin origin;
+  // Position enregistrée avec une accuracy GPS mauvaise (> 100m) au moment
+  // de la publication, sans correction manuelle de l'adresse — permet
+  // d'identifier après coup les signalements dont la position est peu
+  // fiable (cf. UserLocationService.approximateAccuracyMeters).
+  final bool positionApproximative;
 
   const HomeReportModel({
     required this.id,
@@ -83,6 +88,7 @@ class HomeReportModel {
     this.isAnonyme = false,
     this.gpsCoords,
     this.origin = ReportOrigin.espacePublic,
+    this.positionApproximative = false,
   });
 
   HomeReportModel copyWith({
@@ -113,6 +119,7 @@ class HomeReportModel {
     bool? isAnonyme,
     String? gpsCoords,
     ReportOrigin? origin,
+    bool? positionApproximative,
   }) {
     return HomeReportModel(
       id: id ?? this.id,
@@ -142,6 +149,7 @@ class HomeReportModel {
       isAnonyme: isAnonyme ?? this.isAnonyme,
       gpsCoords: gpsCoords ?? this.gpsCoords,
       origin: origin ?? this.origin,
+      positionApproximative: positionApproximative ?? this.positionApproximative,
     );
   }
 }
