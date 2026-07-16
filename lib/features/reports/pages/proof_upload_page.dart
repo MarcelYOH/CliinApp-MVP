@@ -15,6 +15,7 @@ class ProofUploadPage extends StatefulWidget {
   final String imagePath;
   final double proofLatitude;
   final double proofLongitude;
+  final double? proofAccuracy;
 
   const ProofUploadPage({
     super.key,
@@ -22,6 +23,7 @@ class ProofUploadPage extends StatefulWidget {
     required this.imagePath,
     required this.proofLatitude,
     required this.proofLongitude,
+    this.proofAccuracy,
   });
 
   @override
@@ -63,6 +65,7 @@ class _ProofUploadPageState extends State<ProofUploadPage> {
       imagePath: widget.imagePath,
       proofLatitude: widget.proofLatitude,
       proofLongitude: widget.proofLongitude,
+      proofAccuracy: widget.proofAccuracy,
     );
 
     await Future.delayed(const Duration(milliseconds: 400));

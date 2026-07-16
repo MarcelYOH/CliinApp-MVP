@@ -10,6 +10,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../models/report_comment_model.dart';
 import '../store/auth_store.dart';
+import 'report_card.dart' show buildReportImage;
 import 'package:cliinapp/features/auth/auth_guard.dart';
 
 export '../models/report_comment_model.dart';
@@ -31,6 +32,7 @@ ReportComment buildCommentFromCurrentUser(String text) {
     time: 'à l\'instant',
     text: text,
     createdAt: DateTime.now(),
+    authorAvatarPath: AuthStore.instance.currentUser?.avatarPath,
   );
 }
 
@@ -163,8 +165,20 @@ class _CommentItem extends StatelessWidget {
   final ReportComment comment;
   const _CommentItem({required this.comment});
 
+  Widget _buildInitialsCircle() => Center(
+        child: Text(comment.initials,
+            style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: CliinAppColors.primary)),
+      );
+
   @override
-  Widget build(BuildContext context) => Row(
+  Widget build(BuildContext context) {
+    final hasAvatar = comment.authorAvatarPath != null &&
+        comment.authorAvatarPath!.isNotEmpty;
+
+    return Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
@@ -174,13 +188,15 @@ class _CommentItem extends StatelessWidget {
                 color: CliinAppColors.primaryLight,
                 shape: BoxShape.circle,
                 border: Border.all(color: CliinAppColors.primary, width: 1.5)),
-            child: Center(
-              child: Text(comment.initials,
-                  style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: CliinAppColors.primary)),
-            ),
+            child: hasAvatar
+                ? ClipOval(
+                    child: buildReportImage(
+                      comment.authorAvatarPath!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => _buildInitialsCircle(),
+                    ),
+                  )
+                : _buildInitialsCircle(),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -210,6 +226,7 @@ class _CommentItem extends StatelessWidget {
           ),
         ],
       );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────

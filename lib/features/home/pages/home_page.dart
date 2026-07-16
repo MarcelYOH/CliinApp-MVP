@@ -32,6 +32,15 @@ import '../../map/models/map_filter_model.dart';
 import '../../auth/auth_guard.dart';
 import '../../profile/pages/profile_page.dart';
 
+// Salutation selon l'heure du téléphone :
+// 00h-11h59 -> Bonjour · 12h-17h59 -> Bon après-midi · 18h-23h59 -> Bonsoir
+String _greetingByHour() {
+  final hour = DateTime.now().hour;
+  if (hour < 12) return 'Bonjour';
+  if (hour < 18) return 'Bon après-midi';
+  return 'Bonsoir';
+}
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -263,7 +272,7 @@ class _HomePageState extends State<HomePage> {
                 final isAuthed = AuthStore.instance.isAuthenticated;
 
                 final greeting = isAuthed
-                    ? 'Bonjour, ${authUser!.username.split(' ').first}'
+                    ? '${_greetingByHour()}, ${authUser!.username.split(' ').first}'
                     : 'Bienvenue !';
                 final locationLabel = (isAuthed && authUser!.zone.isNotEmpty)
                     ? authUser.zone

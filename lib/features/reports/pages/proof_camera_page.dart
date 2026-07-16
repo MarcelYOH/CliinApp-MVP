@@ -11,6 +11,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/utils/user_location_service.dart';
 import '../../../../features/home/models/home_report_model.dart';
 import '../widgets/report_camera_header.dart';
 import '../widgets/report_camera_tip_banner.dart';
@@ -41,6 +42,15 @@ class _ProofCameraPageState extends State<ProofCameraPage>
   bool _isLoadingLocation = true;
   double? _latitude;
   double? _longitude;
+  double? _accuracy;
+  StreamSubscription<Position>? _locationImprovementSub;
+
+  // Position encore trop imprécise (> 100m) pour trancher une vérification
+  // anti-fraude — même seuil que la création de signalement, cf.
+  // UserLocationService.approximateAccuracyMeters.
+  bool get _isImprovingLocation =>
+      _accuracy != null &&
+      _accuracy! > UserLocationService.approximateAccuracyMeters;
 
   // Fallback Web/navigateur : utilisé quand le plugin camera natif
   // n'arrive pas à s'initialiser (contexte non sécurisé, http via IP locale,
@@ -59,6 +69,7 @@ class _ProofCameraPageState extends State<ProofCameraPage>
 
   @override
   void dispose() {
+    _stopLocationImprovement();
     WidgetsBinding.instance.removeObserver(this);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _controller?.dispose();
@@ -160,6 +171,7 @@ class _ProofCameraPageState extends State<ProofCameraPage>
             address: _address,
             proofLatitude: _latitude ?? widget.report.latitude ?? 0.0,
             proofLongitude: _longitude ?? widget.report.longitude ?? 0.0,
+            proofAccuracy: _accuracy,
           ),
         ),
       ).then((_) {
@@ -184,6 +196,7 @@ class _ProofCameraPageState extends State<ProofCameraPage>
           _address = widget.report.location;
           _latitude = widget.report.latitude;
           _longitude = widget.report.longitude;
+          _accuracy = null;
           _isLoadingLocation = false;
         });
         return;
@@ -195,16 +208,37 @@ class _ProofCameraPageState extends State<ProofCameraPage>
           timeLimit: Duration(seconds: 10),
         ),
       );
+      await _applyPosition(position);
+    } catch (e) {
+      debugPrint('Erreur GPS preuve: $e');
+      setState(() {
+        _address = widget.report.location;
+        _latitude = widget.report.latitude;
+        _longitude = widget.report.longitude;
+        _accuracy = null;
+        _isLoadingLocation = false;
+      });
+    }
+  }
 
-      _latitude = position.latitude;
-      _longitude = position.longitude;
+  // Point d'entrée unique pour toute position acceptée (fix initial ou
+  // amélioration reçue en arrière-plan pendant que l'accuracy est
+  // mauvaise) — même principe que report_form_page.dart pour la création.
+  Future<void> _applyPosition(Position position) async {
+    if (!mounted) return;
+    _latitude = position.latitude;
+    _longitude = position.longitude;
+    setState(() {
+      _accuracy = position.accuracy;
+      _isLoadingLocation = false;
+    });
 
+    try {
       final placemarks = await placemarkFromCoordinates(
         position.latitude,
         position.longitude,
       );
-
-      if (placemarks.isNotEmpty) {
+      if (placemarks.isNotEmpty && mounted) {
         final place = placemarks.first;
         final parts = <String>[];
         if (place.subLocality != null && place.subLocality!.isNotEmpty) {
@@ -214,21 +248,39 @@ class _ProofCameraPageState extends State<ProofCameraPage>
           parts.add(place.locality!);
         }
         setState(() {
-          _address = parts.isNotEmpty
-              ? parts.join(', ')
-              : widget.report.location;
-          _isLoadingLocation = false;
+          _address =
+              parts.isNotEmpty ? parts.join(', ') : widget.report.location;
         });
       }
-    } catch (e) {
-      debugPrint('Erreur GPS preuve: $e');
-      setState(() {
-        _address = widget.report.location;
-        _latitude = widget.report.latitude;
-        _longitude = widget.report.longitude;
-        _isLoadingLocation = false;
-      });
+    } catch (_) {
+      // Reverse-geocoding indisponible : la position reste utilisable.
     }
+
+    if (position.accuracy > UserLocationService.approximateAccuracyMeters) {
+      _startLocationImprovement();
+    } else {
+      _stopLocationImprovement();
+    }
+  }
+
+  // Tant que la position n'est pas assez précise (> 100m), on continue
+  // d'écouter le flux GPS en arrière-plan : dès qu'un fix plus précis
+  // arrive, il remplace silencieusement le précédent.
+  void _startLocationImprovement() {
+    if (_locationImprovementSub != null) return;
+    _locationImprovementSub = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 0,
+      ),
+    ).listen((pos) {
+      if (_accuracy == null || pos.accuracy < _accuracy!) _applyPosition(pos);
+    }, onError: (e) => debugPrint('Erreur amélioration GPS preuve: $e'));
+  }
+
+  void _stopLocationImprovement() {
+    _locationImprovementSub?.cancel();
+    _locationImprovementSub = null;
   }
 
   Future<void> _takePhoto() async {
@@ -253,6 +305,7 @@ class _ProofCameraPageState extends State<ProofCameraPage>
             address: _address,
             proofLatitude: _latitude ?? widget.report.latitude ?? 0.0,
             proofLongitude: _longitude ?? widget.report.longitude ?? 0.0,
+            proofAccuracy: _accuracy,
           ),
         ),
       ).then((_) {
@@ -379,6 +432,10 @@ class _ProofCameraPageState extends State<ProofCameraPage>
                             child: ReportCameraPositionChip(
                               address: _address,
                               isLoading: _isLoadingLocation,
+                              warningText: _isImprovingLocation
+                                  ? 'Précision faible (~${_accuracy!.round()} m) '
+                                      '— amélioration en cours…'
+                                  : null,
                             ),
                           ),
                         ),

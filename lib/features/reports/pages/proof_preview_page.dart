@@ -8,6 +8,7 @@ import 'dart:io';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/utils/user_location_service.dart';
 import '../../../../features/home/models/home_report_model.dart';
 import 'proof_camera_page.dart';
 import 'proof_upload_page.dart';
@@ -19,6 +20,7 @@ class ProofPreviewPage extends StatelessWidget {
   final String address;
   final double proofLatitude;
   final double proofLongitude;
+  final double? proofAccuracy;
 
   const ProofPreviewPage({
     super.key,
@@ -27,7 +29,12 @@ class ProofPreviewPage extends StatelessWidget {
     required this.address,
     required this.proofLatitude,
     required this.proofLongitude,
+    this.proofAccuracy,
   });
+
+  bool get _isImprecise =>
+      proofAccuracy != null &&
+      proofAccuracy! > UserLocationService.approximateAccuracyMeters;
 
   void _reprendre(BuildContext context) {
     // Retour à la caméra — remplace la page actuelle
@@ -46,6 +53,7 @@ class ProofPreviewPage extends StatelessWidget {
           imagePath: imagePath,
           proofLatitude: proofLatitude,
           proofLongitude: proofLongitude,
+          proofAccuracy: proofAccuracy,
         ),
       ),
     );
@@ -175,6 +183,18 @@ class ProofPreviewPage extends StatelessWidget {
                                     fontSize: 14, fontWeight: FontWeight.bold,
                                     color: CliinAppColors.textDark),
                                 maxLines: 2, overflow: TextOverflow.ellipsis),
+                            if (_isImprecise) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                'Précision GPS faible (~${proofAccuracy!.round()} m) '
+                                '— la vérification anti-fraude attendra une '
+                                'meilleure position avant de valider ou rejeter.',
+                                style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: CliinAppColors.alertOrange),
+                              ),
+                            ],
                           ]),
                         ),
                       ]),

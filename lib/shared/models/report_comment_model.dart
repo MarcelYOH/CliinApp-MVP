@@ -6,6 +6,11 @@ class ReportComment {
   final String time;
   final String text;
   final DateTime createdAt;
+  // Photo de profil de l'auteur AU MOMENT du commentaire (chemin local ou
+  // URL) — capturée à la création plutôt que résolue dynamiquement, pour
+  // que chaque commentaire garde la bonne photo même si l'auteur change
+  // ensuite la sienne. Null/vide -> repli sur les initiales.
+  final String? authorAvatarPath;
 
   const ReportComment({
     required this.initials,
@@ -13,5 +18,6 @@ class ReportComment {
     required this.time,
     required this.text,
     required this.createdAt,
+    this.authorAvatarPath,
   });
 }

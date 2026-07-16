@@ -10,11 +10,15 @@ import '../../../../core/constants/app_constants.dart';
 class ReportCameraPositionChip extends StatelessWidget {
   final String address;
   final bool isLoading;
+  // Texte discret affiché sous l'adresse quand la position GPS est encore
+  // imprécise (accuracy > seuil) — null quand tout va bien.
+  final String? warningText;
 
   const ReportCameraPositionChip({
     super.key,
     required this.address,
     this.isLoading = false,
+    this.warningText,
   });
 
   @override
@@ -71,6 +75,17 @@ class ReportCameraPositionChip extends StatelessWidget {
                         color: CliinAppColors.textWhite,
                       ),
                     ),
+                    if (warningText != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        warningText!,
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: CliinAppColors.alertOrange,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
         ],

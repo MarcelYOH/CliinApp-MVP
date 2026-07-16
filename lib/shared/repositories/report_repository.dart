@@ -32,6 +32,7 @@ abstract class ReportRepository {
     required String imagePath,
     required double proofLatitude,
     required double proofLongitude,
+    double? proofAccuracy,
   });
 
   Future<HomeReportModel> updateStatus({
@@ -49,16 +50,24 @@ abstract class ReportRepository {
   });
 }
 
+enum ProofVerificationStatus { valid, rejectedDistance, pendingAccuracy }
+
 class ProofVerificationResult {
-  final bool isValid;
+  final ProofVerificationStatus status;
   final double distanceMeters;
+  // Accuracy de la position de preuve quand status == pendingAccuracy —
+  // permet à l'UI d'afficher la précision actuelle en attendant mieux.
+  final double? accuracyMeters;
   final HomeReportModel? updatedReport;
   final String? errorMessage;
 
   const ProofVerificationResult({
-    required this.isValid,
+    required this.status,
     required this.distanceMeters,
+    this.accuracyMeters,
     this.updatedReport,
     this.errorMessage,
   });
+
+  bool get isValid => status == ProofVerificationStatus.valid;
 }

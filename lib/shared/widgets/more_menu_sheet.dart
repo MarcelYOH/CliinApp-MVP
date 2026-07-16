@@ -23,7 +23,7 @@ Future<void> showMoreMenuSheet(BuildContext context) {
 void _openActionTerrain(BuildContext context) {
   ScaffoldMessenger.of(context).showSnackBar(
     const SnackBar(
-      content: Text('Action Terrain — module en cours de déploiement.'),
+      content: Text('Campagnes organisées — module en cours de déploiement.'),
       behavior: SnackBarBehavior.floating,
       duration: Duration(seconds: 2),
     ),
@@ -50,7 +50,10 @@ class _MoreMenuSheet extends StatelessWidget {
   static const List<_MoreMenuEntry> _entries = [
     _MoreMenuEntry(
       icon: Icons.bolt_rounded,
-      label: 'Les Actions terrains',
+      // "Voir les campagnes organisées" ne tient pas sur une ligne dans
+      // l'espace disponible (icône + chevron) sur les petits écrans —
+      // version courte retenue comme prévu si le libellé long débordait.
+      label: 'Voir les campagnes',
       onTap: _openActionTerrain,
     ),
   ];

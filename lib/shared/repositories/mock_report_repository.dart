@@ -1,12 +1,18 @@
 // lib/shared/repositories/mock_report_repository.dart
 
 import 'dart:math';
+import '../../core/utils/user_location_service.dart';
 import '../../features/home/models/home_report_model.dart';
 import 'report_repository.dart';
 
 class MockReportRepository implements ReportRepository {
   MockReportRepository._();
   static final MockReportRepository instance = MockReportRepository._();
+
+  // Tolérance anti-fraude preuve vs signalement — cf. correction distance
+  // (même principe : une décision automatique n'a de sens que sur une
+  // position dont la précision GPS est connue et acceptable).
+  static const double _proofToleranceMeters = 50.0;
 
   // Aucune donnée de départ fictive — uniquement les signalements
   // réellement publiés par les utilisateurs pendant la session.
@@ -199,14 +205,31 @@ class MockReportRepository implements ReportRepository {
     required String imagePath,
     required double proofLatitude,
     required double proofLongitude,
+    double? proofAccuracy,
   }) async {
     await Future.delayed(const Duration(milliseconds: 400));
     final report = await fetchReportById(reportId);
     if (report == null) {
       return const ProofVerificationResult(
-        isValid: false,
+        status: ProofVerificationStatus.rejectedDistance,
         distanceMeters: 0,
         errorMessage: 'Signalement introuvable',
+      );
+    }
+
+    // Position de preuve encore imprécise (> 100m, même seuil que la
+    // création de signalement) : ni validation ni rejet — une décision
+    // anti-fraude prise sur une position à ±100m ou plus n'a aucune
+    // valeur probante, quel que soit le résultat du calcul de distance.
+    if (proofAccuracy != null &&
+        proofAccuracy > UserLocationService.approximateAccuracyMeters) {
+      return ProofVerificationResult(
+        status: ProofVerificationStatus.pendingAccuracy,
+        distanceMeters: 0,
+        accuracyMeters: proofAccuracy,
+        errorMessage:
+            'Position GPS encore imprécise (~${proofAccuracy.round()} m). '
+            'Réessayez dans quelques secondes, le temps que le signal s\'améliore.',
       );
     }
 
@@ -217,17 +240,36 @@ class MockReportRepository implements ReportRepository {
 
     if (reportLat != null && reportLon != null) {
       distance = _distanceMeters(reportLat, reportLon, proofLatitude, proofLongitude);
-      isValid = distance <= 50.0;
+      isValid = distance <= _proofToleranceMeters;
     } else {
       isValid = true;
     }
 
     if (!isValid) {
+      // Preuve hors tolérance : l'intervention n'est pas validée. Le cas
+      // est entièrement libéré — même logique que l'abandon (72h sans
+      // preuve) : statut Disponible ET intervenant retiré, pour que
+      // n'importe qui (y compris le même intervenant) puisse le reprendre
+      // depuis zéro, sans rester bloqué en "En cours" sur une preuve
+      // rejetée qui n'a jamais validé le traitement.
+      final rejectedNow = DateTime.now();
+      final reverted = report.copyWith(
+        status: ReportStatus.disponible,
+        intervenant: null,
+        history: List<ReportHistoryEntry>.of(report.history)
+          ..add(ReportHistoryEntry(
+            type: HistoryEventType.rejete,
+            dateTime: rejectedNow,
+            actorName: report.intervenant?.name,
+          )),
+      );
+      _updateReport(reverted);
       return ProofVerificationResult(
-        isValid: false,
+        status: ProofVerificationStatus.rejectedDistance,
         distanceMeters: distance,
+        updatedReport: reverted,
         errorMessage: 'La photo a été prise à ${distance.toStringAsFixed(0)} m '
-            'du signalement. Maximum autorisé : 50 m.',
+            'du signalement. Maximum autorisé : ${_proofToleranceMeters.round()} m.',
       );
     }
 
@@ -265,7 +307,7 @@ class MockReportRepository implements ReportRepository {
     _updateReport(updated);
 
     return ProofVerificationResult(
-      isValid: true,
+      status: ProofVerificationStatus.valid,
       distanceMeters: distance,
       updatedReport: updated,
     );

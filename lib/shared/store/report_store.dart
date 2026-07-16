@@ -219,6 +219,7 @@ class ReportStore extends ChangeNotifier {
     required String imagePath,
     required double proofLatitude,
     required double proofLongitude,
+    double? proofAccuracy,
   }) async {
     _setLoading(true);
     try {
@@ -227,8 +228,12 @@ class ReportStore extends ChangeNotifier {
         imagePath: imagePath,
         proofLatitude: proofLatitude,
         proofLongitude: proofLongitude,
+        proofAccuracy: proofAccuracy,
       );
-      if (result.isValid && result.updatedReport != null) {
+      // updatedReport peut être renseigné aussi bien pour une preuve
+      // validée (statut -> traité) que rejetée (statut -> disponible) —
+      // dans les deux cas le store doit refléter le nouveau statut.
+      if (result.updatedReport != null) {
         _replaceReport(result.updatedReport!);
         notifyListeners();
       }

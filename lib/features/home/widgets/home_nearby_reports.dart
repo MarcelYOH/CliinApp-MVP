@@ -72,9 +72,29 @@ class HomeNearbyReports extends StatelessWidget {
 
         const SizedBox(height: CliinAppConstants.spacingM),
 
-        // ── Scroll horizontal avec hauteur uniforme ──
+        // ── Scroll horizontal avec hauteur uniforme (2 signalements), ou
+        // carte pleine largeur si un seul (même format que "Cas récents" —
+        // sinon la carte garde son format étroit pensé pour le scroll et
+        // laisse un espace vide disgracieux à côté) ──
         if (reports.isEmpty)
           const _EmptyNearbyReports()
+        else if (reports.length == 1)
+          Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: CliinAppConstants.pagePadding),
+            child: ReportCard(
+              data: reports.first,
+              onTap: onCardTap != null
+                  ? () => onCardTap!.call(reports.first)
+                  : null,
+              onTakeCharge: onTakeCharge != null
+                  ? () => onTakeCharge!.call(reports.first)
+                  : null,
+              onContact: onContact != null
+                  ? () => onContact!.call(reports.first)
+                  : null,
+            ),
+          )
         else
           _UniformHeightCardRow(
             reports: reports,

@@ -8,6 +8,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../features/home/models/home_report_model.dart';
 import '../../../../shared/repositories/report_repository.dart';
 import 'intervenant_detail_page.dart';
+import 'proof_camera_page.dart';
 import 'report_detail_page.dart';
 import '../../../../shared/navigation/fast_page_route.dart';
 
@@ -23,9 +24,14 @@ class ProofResultPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return result.isValid
-        ? _ValidatedView(report: report, result: result)
-        : _RejectedView(report: report, result: result);
+    switch (result.status) {
+      case ProofVerificationStatus.valid:
+        return _ValidatedView(report: report, result: result);
+      case ProofVerificationStatus.rejectedDistance:
+        return _RejectedView(report: report, result: result);
+      case ProofVerificationStatus.pendingAccuracy:
+        return _PendingAccuracyView(report: report, result: result);
+    }
   }
 }
 
@@ -266,10 +272,15 @@ class _RejectedView extends StatelessWidget {
 
   HomeReportModel get _updatedReport => result.updatedReport ?? report;
 
-  void _viewIntervention(BuildContext context) {
+  // Le cas est entièrement libéré (statut Disponible, intervenant retiré,
+  // cf. mock_report_repository.submitProof) — l'utilisateur n'est plus
+  // assigné, on le renvoie donc vers l'affichage public plutôt que vers
+  // "ma prise en charge".
+  void _viewReport(BuildContext context) {
     Navigator.push(
       context,
-      fastFadeRoute<void>(IntervenantDetailPage(report: _updatedReport)),
+      fastFadeRoute<void>(
+          ReportDetailPage(data: _updatedReport, isAuthor: false)),
     );
   }
 
@@ -368,8 +379,9 @@ class _RejectedView extends StatelessWidget {
                     Expanded(
                       child: Text(
                         'La photo doit être prise sur le lieu exact du cas signalé '
-                        '(dans un rayon de 50 m). '
-                        'Assurez-vous d\'être bien sur place avant de prendre la photo.',
+                        '(dans un rayon de 50 m). Le cas redevient Disponible : '
+                        'vous pouvez le reprendre en charge une fois sur place, '
+                        'ou n\'importe qui d\'autre peut s\'en charger.',
                         style: GoogleFonts.inter(
                             fontSize: 12,
                             color: CliinAppColors.textSecondary,
@@ -384,9 +396,146 @@ class _RejectedView extends StatelessWidget {
 
               // Actions
               _ActionButton(
+                label: 'Voir le signalement',
+                icon: Icons.visibility_outlined,
+                isPrimary: true,
+                onTap: () => _viewReport(context),
+              ),
+              const SizedBox(height: CliinAppConstants.spacingL),
+              Center(
+                child: GestureDetector(
+                  onTap: () => _goHome(context),
+                  child: Text('Retour à l\'accueil',
+                      style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: CliinAppColors.textSecondary,
+                          decoration: TextDecoration.underline,
+                          decorationColor: CliinAppColors.textSecondary)),
+                ),
+              ),
+
+              const SizedBox(height: CliinAppConstants.spacingXL),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// VUE PRÉCISION GPS INSUFFISANTE — ni validée, ni rejetée
+// ─────────────────────────────────────────────────────────────────
+class _PendingAccuracyView extends StatelessWidget {
+  final HomeReportModel report;
+  final ProofVerificationResult result;
+
+  const _PendingAccuracyView({required this.report, required this.result});
+
+  void _retry(BuildContext context) {
+    Navigator.pushReplacement(
+      context,
+      fastFadeRoute<void>(ProofCameraPage(report: report)),
+    );
+  }
+
+  void _viewIntervention(BuildContext context) {
+    Navigator.push(
+      context,
+      fastFadeRoute<void>(IntervenantDetailPage(report: report)),
+    );
+  }
+
+  void _goHome(BuildContext context) {
+    Navigator.of(context).popUntil((r) => r.isFirst);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: CliinAppColors.background,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(
+              horizontal: CliinAppConstants.pagePadding),
+          child: Column(
+            children: [
+              const SizedBox(height: CliinAppConstants.spacingXL),
+
+              Container(
+                width: 80,
+                height: 80,
+                decoration: const BoxDecoration(
+                  color: CliinAppColors.primaryLight,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.gps_not_fixed_rounded,
+                    color: CliinAppColors.alertOrange, size: 44),
+              ),
+
+              const SizedBox(height: CliinAppConstants.spacingL),
+
+              Text('Position GPS encore imprécise',
+                  style: GoogleFonts.poppins(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: CliinAppColors.textDark)),
+              const SizedBox(height: CliinAppConstants.spacingS),
+              Text(
+                result.errorMessage ??
+                    'La précision GPS n\'est pas suffisante pour vérifier '
+                        'votre position. Réessayez dans quelques secondes.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                    fontSize: 13, color: CliinAppColors.textSecondary),
+              ),
+
+              const SizedBox(height: CliinAppConstants.spacingXL),
+
+              // Explication
+              Container(
+                padding: const EdgeInsets.all(CliinAppConstants.spacingL),
+                decoration: BoxDecoration(
+                  color: CliinAppColors.cardWhite,
+                  borderRadius:
+                      BorderRadius.circular(CliinAppConstants.radiusMedium),
+                  border: Border.all(color: CliinAppColors.divider),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.info_outline_rounded,
+                        color: CliinAppColors.textSecondary, size: 20),
+                    const SizedBox(width: CliinAppConstants.spacingM),
+                    Expanded(
+                      child: Text(
+                        'Ni validée ni rejetée : votre signalement reste dans '
+                        'son état actuel. Réessayez une fois le signal GPS '
+                        'amélioré (idéalement à l\'extérieur, loin des murs).',
+                        style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: CliinAppColors.textSecondary,
+                            height: 1.5),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: CliinAppConstants.spacingXL),
+
+              _ActionButton(
+                label: 'Réessayer la preuve',
+                icon: Icons.refresh_rounded,
+                isPrimary: true,
+                onTap: () => _retry(context),
+              ),
+              const SizedBox(height: CliinAppConstants.spacingM),
+              _ActionButton(
                 label: 'Voir ma prise en charge',
                 icon: Icons.assignment_turned_in_outlined,
-                isPrimary: true,
+                isPrimary: false,
                 onTap: () => _viewIntervention(context),
               ),
               const SizedBox(height: CliinAppConstants.spacingL),

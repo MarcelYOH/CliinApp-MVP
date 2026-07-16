@@ -19,6 +19,16 @@ import 'package:cliinapp/shared/models/report_history_entry.dart';
 import 'package:cliinapp/shared/models/intervenant_model.dart';
 import 'package:cliinapp/shared/models/report_comment_model.dart';
 
+// Sentinelle pour distinguer "paramètre non fourni" de "paramètre fourni
+// à null" dans copyWith() — un simple `IntervenantModel? intervenant`
+// avec repli `??` ne permet jamais d'effacer explicitement l'intervenant
+// (ex: preuve rejetée -> cas libéré). Voir copyWith() ci-dessous.
+class _Unset {
+  const _Unset();
+}
+
+const _unset = _Unset();
+
 /// Modèle d'AFFICHAGE d'un signalement sur l'accueil et la carte.
 ///
 /// Distinct de [ReportModel] (features/reports/models/report_model.dart) qui est
@@ -107,7 +117,11 @@ class HomeReportModel {
     String? timeAgo,
     DateTime? createdAt,
     ReportStatus? status,
-    IntervenantModel? intervenant,
+    // Object? + sentinelle : omettre ce paramètre garde l'intervenant
+    // actuel ; passer explicitement `intervenant: null` l'efface (cas
+    // libéré après rejet de preuve) ; passer un IntervenantModel le
+    // remplace normalement.
+    Object? intervenant = _unset,
     int? views,
     int? comments,
     int? shares,
@@ -137,7 +151,9 @@ class HomeReportModel {
       timeAgo: timeAgo ?? this.timeAgo,
       createdAt: createdAt ?? this.createdAt,
       status: status ?? this.status,
-      intervenant: intervenant ?? this.intervenant,
+      intervenant: identical(intervenant, _unset)
+          ? this.intervenant
+          : intervenant as IntervenantModel?,
       views: views ?? this.views,
       comments: comments ?? this.comments,
       shares: shares ?? this.shares,
