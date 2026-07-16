@@ -438,10 +438,18 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
                           comments: _report.commentsList,
                         ),
                         // Réserve la place occupée par la barre de
-                        // commentaire + la nav du bas, désormais en
-                        // overlay (Positioned) plutôt qu'intégrée au flux
-                        // via bottomNavigationBar.
-                        const SizedBox(height: 180),
+                        // commentaire + la nav du bas, désormais en overlay
+                        // (Positioned) plutôt qu'intégrée au flux via
+                        // bottomNavigationBar. Hauteur fixe (180)
+                        // insuffisante sur les appareils avec un inset bas
+                        // important (barre de geste) : le dernier
+                        // commentaire restait tronqué sous la barre.
+                        // ReportCommentBar (~64, inset retiré) + AppBottomNav
+                        // (80 + inset réel, lui NON retiré) = 144 + inset,
+                        // marge de sécurité 16.
+                        SizedBox(
+                            height:
+                                MediaQuery.of(context).padding.bottom + 160),
                       ],
                     ),
                   ),
