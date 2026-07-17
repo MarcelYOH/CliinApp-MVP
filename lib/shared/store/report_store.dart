@@ -71,14 +71,15 @@ class ReportStore extends ChangeNotifier {
   }
 
   // ── Compteur "À proximité" pour le message de bienvenue ──────────
-  // INDÉPENDANT de [nearbyReports] : tous statuts confondus (Disponible +
-  // En cours + Traité), dans le rayon de 2km, sans plafond d'affichage.
-  // Reflète l'activité réelle de la zone, pas seulement les 2 cartes
-  // visibles en aperçu.
-  int get nearbyAllStatusesCount {
+  // Même source de vérité que [nearbyReports] (statut Disponible
+  // UNIQUEMENT, rayon 2km) — seule différence : sans le plafond de 2
+  // cartes, puisque c'est un compte total et non une liste d'aperçu. Un
+  // cas En cours/Traité/Abandonné/Rejeté ne doit jamais y être inclus.
+  int get nearbyDisponibleCount {
     if (UserLocationService.instance.lastKnownPosition == null) return 0;
 
     return _reports.where((r) {
+      if (r.status != ReportStatus.disponible) return false;
       final meters = UserLocationService.instance
           .distanceMetersTo(r.latitude, r.longitude);
       return meters != null && meters <= _defaultRadiusMeters;

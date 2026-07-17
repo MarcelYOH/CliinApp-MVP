@@ -109,6 +109,7 @@ class _HomePageState extends State<HomePage> {
   void _goToMap({
     Set<MapPriorityFilter>? priorities,
     Set<ReportCategory>? categories,
+    String searchQuery = '',
   }) {
     Navigator.push(
       context,
@@ -118,6 +119,7 @@ class _HomePageState extends State<HomePage> {
         pageBuilder: (_, _, _) => MapPage(
           initialPriorityFilters: priorities ?? const {},
           initialCategoryFilters: categories ?? const {},
+          initialSearchQuery: searchQuery,
         ),
         transitionsBuilder: (_, animation, _, child) => FadeTransition(
           opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
@@ -125,6 +127,15 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
+  }
+
+  // Barre de recherche du header — périmètre TOUS les cas publics de la
+  // plateforme (pas seulement ceux de l'utilisateur) : navigue vers la
+  // Carte avec la recherche déjà appliquée, cohérent avec les autres points
+  // d'entrée qui y renvoient (_goToMapUrgents, etc.).
+  void _onHomeSearch(String query) {
+    if (query.trim().isEmpty) return;
+    _goToMap(searchQuery: query.trim());
   }
 
   void _goToMapUrgents() => _goToMap(priorities: {MapPriorityFilter.urgents});
@@ -280,7 +291,7 @@ class _HomePageState extends State<HomePage> {
                 // Compteur indépendant des 2 cartes affichées — tous
                 // statuts confondus dans le rayon de 2km.
                 final contextLine =
-                    '$locationLabel · ${store.nearbyAllStatusesCount} cas à proximité';
+                    '$locationLabel · ${store.nearbyDisponibleCount} cas à proximité';
 
                 Widget avatarContent;
                 if (!isAuthed) {
@@ -314,7 +325,7 @@ class _HomePageState extends State<HomePage> {
                   greeting: greeting,
                   contextLine: contextLine,
                   avatarOverride: avatarContent,
-                  onSearch: (_) {},
+                  onSearch: _onHomeSearch,
                   onNotificationTap: () {},
                   onAvatarTap: isAuthed
                       ? () => Navigator.push(

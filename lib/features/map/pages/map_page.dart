@@ -21,16 +21,21 @@ import '../widgets/interactive_map_widget.dart';
 import '../widgets/reports_bottom_sheet.dart';
 import '../widgets/map_filter_panel.dart';
 import '../widgets/map_active_filters_bar.dart';
+import '../../../shared/utils/report_search.dart';
 import 'package:cliinapp/features/auth/auth_guard.dart';
 
 class MapPage extends StatefulWidget {
   final Set<MapPriorityFilter> initialPriorityFilters;
   final Set<ReportCategory> initialCategoryFilters;
+  // Recherche déjà appliquée en arrivant depuis un autre écran (ex: barre
+  // de recherche de l'accueil) — combinée aux filtres, jamais à leur place.
+  final String initialSearchQuery;
 
   const MapPage({
     super.key,
     this.initialPriorityFilters = const {},
     this.initialCategoryFilters = const {},
+    this.initialSearchQuery = '',
   });
 
   @override
@@ -42,6 +47,7 @@ class _MapPageState extends State<MapPage> {
 
   late MapFilterState _filters;
   final TextEditingController _searchController = TextEditingController();
+  late String _searchQuery;
 
   @override
   void initState() {
@@ -50,6 +56,8 @@ class _MapPageState extends State<MapPage> {
       priorities: Set.from(widget.initialPriorityFilters),
       categories: Set.from(widget.initialCategoryFilters),
     );
+    _searchQuery = widget.initialSearchQuery;
+    _searchController.text = widget.initialSearchQuery;
     // Enregistrement différé : évite des setState() parasites pendant
     // l'animation d'ouverture de la page (transition de navigation).
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -143,6 +151,10 @@ class _MapPageState extends State<MapPage> {
         });
       }).toList();
     }
+    if (_searchQuery.isNotEmpty) {
+      result =
+          result.where((r) => matchesReportSearch(r, _searchQuery)).toList();
+    }
     return result;
   }
 
@@ -224,7 +236,8 @@ class _MapPageState extends State<MapPage> {
                   MapSearchHeader(
                     controller: _searchController,
                     onMyLocationTap: _onMyLocationTap,
-                    onSearch: (_) {},
+                    onSearch: (query) =>
+                        setState(() => _searchQuery = query),
                   ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(

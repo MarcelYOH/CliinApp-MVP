@@ -73,6 +73,7 @@ class _MapSearchHeaderState extends State<MapSearchHeader> {
     final query = widget.controller.text.trim().toLowerCase();
     if (query.isEmpty) {
       setState(() => _suggestions = []);
+      widget.onSearch?.call('');
       return;
     }
     // Recherche par code identifiant

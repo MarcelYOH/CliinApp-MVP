@@ -12,6 +12,8 @@ import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/navigation/tab_navigation.dart';
 import '../../../shared/navigation/fast_page_route.dart';
 import '../../../shared/widgets/report_card.dart' show buildReportImage;
+import '../../../shared/utils/report_search.dart';
+import '../../../core/constants/app_constants.dart';
 
 enum _TakeoverStatus { enCours, traite, abandonne, rejete }
 
@@ -71,6 +73,14 @@ class _MesPrisesEnChargePageState extends State<MesPrisesEnChargePage> {
   static const double _kCardHeight = 152.0;
 
   _TakeoverStatus? _selectedFilter;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   List<HomeReportModel> get _myTakeovers {
     final userId = AuthStore.instance.currentUser?.id;
@@ -80,11 +90,18 @@ class _MesPrisesEnChargePageState extends State<MesPrisesEnChargePage> {
         .toList();
   }
 
+  // Filtre de statut ET recherche texte se combinent — jamais l'un à la
+  // place de l'autre.
   List<HomeReportModel> _filtered(List<HomeReportModel> myTakeovers) {
-    if (_selectedFilter == null) return myTakeovers;
-    return myTakeovers
-        .where((r) => _takeoverStatusOf(r) == _selectedFilter)
-        .toList();
+    var result = myTakeovers;
+    if (_selectedFilter != null) {
+      result =
+          result.where((r) => _takeoverStatusOf(r) == _selectedFilter).toList();
+    }
+    if (_searchQuery.isNotEmpty) {
+      result = result.where((r) => matchesReportSearch(r, _searchQuery)).toList();
+    }
+    return result;
   }
 
   int _count(List<HomeReportModel> myTakeovers, _TakeoverStatus? status) {
@@ -150,6 +167,8 @@ class _MesPrisesEnChargePageState extends State<MesPrisesEnChargePage> {
                     style: CliinAppTextStyles.bodyMedium,
                   ),
                 ),
+                _buildSearchBar(),
+                const SizedBox(height: 12),
                 _buildFilterRow(myTakeovers),
                 const SizedBox(height: 12),
                 Expanded(
@@ -211,6 +230,52 @@ class _MesPrisesEnChargePageState extends State<MesPrisesEnChargePage> {
             child: Text('Mes prises en charge', style: CliinAppTextStyles.headingMedium),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        height: 46,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(CliinAppConstants.radiusLarge),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: TextField(
+          controller: _searchController,
+          onChanged: (value) => setState(() => _searchQuery = value),
+          style: CliinAppTextStyles.bodyMedium.copyWith(fontSize: 13),
+          decoration: InputDecoration(
+            hintText: 'Code, catégorie, lieu, description...',
+            hintStyle: CliinAppTextStyles.bodyMedium.copyWith(
+              fontSize: 13,
+              color: CliinAppColors.textSecondary,
+            ),
+            prefixIcon: const Icon(Icons.search_rounded,
+                color: CliinAppColors.textSecondary, size: 20),
+            suffixIcon: _searchQuery.isEmpty
+                ? null
+                : GestureDetector(
+                    onTap: () => setState(() {
+                      _searchController.clear();
+                      _searchQuery = '';
+                    }),
+                    child: const Icon(Icons.close_rounded,
+                        color: CliinAppColors.textSecondary, size: 18),
+                  ),
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          ),
+        ),
       ),
     );
   }

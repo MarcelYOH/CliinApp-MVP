@@ -32,16 +32,14 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   image_path: "assets/icon/app_icon.png"
-  # L'icône source (rounded-square vert avec coins blancs/transparents en
-  # dehors du carré arrondi) n'a pas de calque foreground séparé. Sans
-  # adaptive_icon_background explicite, Android insère l'icône legacy dans
-  # le canevas adaptatif 108dp avec une marge de sécurité — cette marge
-  # apparaît alors en blanc (fond par défaut), d'où le liseré observé.
-  # Fixer le fond à la même couleur verte que le logo (CliinAppColors.primary)
-  # rend cette marge invisible : plus de transition visible avec l'icône.
-  adaptive_icon_background: "#2DB84B"
-  adaptive_icon_foreground: "assets/icon/app_icon.png"
-  min_sdk_android: 21
+  # Option adaptive_icon_background/foreground essayée puis retirée : le
+  # foreground utilisait l'image complète (un carré arrondi, pas un motif
+  # pensé pour un masque de sécurité circulaire) — Android appliquait son
+  # propre masque circulaire par-dessus, aplatissant les bords et élargissant
+  # la zone blanche visible aux coins. Sans configuration adaptative,
+  # flutter_launcher_icons ne génère que l'icône legacy classique à partir
+  # de l'image source telle quelle (déjà verte, coins arrondis, sans ajout
+  # de bordure) — pas de masque OS supplémentaire à gérer.
 
 flutter_localizations:
   sdk: flutter

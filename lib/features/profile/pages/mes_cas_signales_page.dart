@@ -12,6 +12,8 @@ import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/navigation/tab_navigation.dart';
 import '../../../shared/navigation/fast_page_route.dart';
 import '../../../shared/widgets/report_card.dart' show buildReportImage;
+import '../../../shared/utils/report_search.dart';
+import '../../../core/constants/app_constants.dart';
 
 class MesCasSignalesPage extends StatefulWidget {
   const MesCasSignalesPage({super.key});
@@ -52,6 +54,14 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
   static const double _kCardHeight = 152.0;
 
   _CaseFilterStatus? _selectedFilter;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   List<HomeReportModel> get _myCas {
     final userId = AuthStore.instance.currentUser?.id;
@@ -61,11 +71,18 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
         .toList();
   }
 
+  // Filtre de statut ET recherche texte se combinent — jamais l'un à la
+  // place de l'autre.
   List<HomeReportModel> _filtered(List<HomeReportModel> myCas) {
-    if (_selectedFilter == null) return myCas;
-    return myCas
-        .where((r) => _caseFilterStatusOf(r) == _selectedFilter)
-        .toList();
+    var result = myCas;
+    if (_selectedFilter != null) {
+      result =
+          result.where((r) => _caseFilterStatusOf(r) == _selectedFilter).toList();
+    }
+    if (_searchQuery.isNotEmpty) {
+      result = result.where((r) => matchesReportSearch(r, _searchQuery)).toList();
+    }
+    return result;
   }
 
   int _count(List<HomeReportModel> myCas, _CaseFilterStatus? status) {
@@ -120,6 +137,8 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
                     style: CliinAppTextStyles.bodyMedium,
                   ),
                 ),
+                _buildSearchBar(),
+                const SizedBox(height: 12),
                 _buildFilterRow(myCas),
                 const SizedBox(height: 12),
                 Expanded(
@@ -181,6 +200,52 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
             child: Text('Mes cas signalés', style: CliinAppTextStyles.headingMedium),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        height: 46,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(CliinAppConstants.radiusLarge),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: TextField(
+          controller: _searchController,
+          onChanged: (value) => setState(() => _searchQuery = value),
+          style: CliinAppTextStyles.bodyMedium.copyWith(fontSize: 13),
+          decoration: InputDecoration(
+            hintText: 'Code, catégorie, lieu, description...',
+            hintStyle: CliinAppTextStyles.bodyMedium.copyWith(
+              fontSize: 13,
+              color: CliinAppColors.textSecondary,
+            ),
+            prefixIcon: const Icon(Icons.search_rounded,
+                color: CliinAppColors.textSecondary, size: 20),
+            suffixIcon: _searchQuery.isEmpty
+                ? null
+                : GestureDetector(
+                    onTap: () => setState(() {
+                      _searchController.clear();
+                      _searchQuery = '';
+                    }),
+                    child: const Icon(Icons.close_rounded,
+                        color: CliinAppColors.textSecondary, size: 18),
+                  ),
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          ),
+        ),
       ),
     );
   }
