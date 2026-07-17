@@ -304,13 +304,18 @@ class _ReportFormPageState extends State<ReportFormPage> {
     return Scaffold(
       backgroundColor: CliinAppColors.background,
       body: SafeArea(
+        top: false,
+        bottom: false,
         child: Column(
           children: [
             _buildHeader(context),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: CliinAppConstants.pagePadding),
+                padding: EdgeInsets.fromLTRB(
+                    CliinAppConstants.pagePadding,
+                    0,
+                    CliinAppConstants.pagePadding,
+                    MediaQuery.of(context).padding.bottom + 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -348,9 +353,11 @@ class _ReportFormPageState extends State<ReportFormPage> {
   // ── Header ─────────────────────────────────────────────────────
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-          horizontal: CliinAppConstants.pagePadding,
-          vertical: CliinAppConstants.spacingS),
+      padding: EdgeInsets.fromLTRB(
+          CliinAppConstants.pagePadding,
+          MediaQuery.of(context).padding.top + CliinAppConstants.spacingS,
+          CliinAppConstants.pagePadding,
+          CliinAppConstants.spacingS),
       child: Row(
         children: [
           GestureDetector(
@@ -678,28 +685,11 @@ class _ReportFormPageState extends State<ReportFormPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Text('Provenance',
-                style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: CliinAppColors.textDark)),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-              decoration: BoxDecoration(
-                color: CliinAppColors.primaryLight,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text('pré-sélectionné',
-                  style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: CliinAppColors.primary)),
-            ),
-          ],
-        ),
+        Text('Provenance',
+            style: GoogleFonts.poppins(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: CliinAppColors.textDark)),
         const SizedBox(height: 8),
         SizedBox(
           height: 80,
@@ -764,7 +754,7 @@ class _ReportFormPageState extends State<ReportFormPage> {
           ),
         ),
         const SizedBox(height: 6),
-        Text('Déjà rempli — modifiable en 1 tap si besoin, sinon rien à faire.',
+        Text('Modifiez si besoin.',
             style: GoogleFonts.inter(
                 fontSize: 11, color: CliinAppColors.textSecondary)),
       ],

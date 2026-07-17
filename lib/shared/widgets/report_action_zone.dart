@@ -10,6 +10,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../features/home/models/home_report_model.dart';
+import '../store/auth_store.dart';
 import 'package:cliinapp/features/auth/auth_guard.dart';
 
 const double _kBtnHeight = 48.0;
@@ -102,6 +103,40 @@ class _ReportActionZoneState extends State<ReportActionZone> {
   bool _showPersistPrompt = false;
   bool _isContested = false;
   bool _showDeleteConfirm = false;
+
+  // Bascule le suivi du cas — un intervenant ne peut pas suivre sa propre
+  // prise en charge (ça n'a pas de sens de se notifier soi-même). Le
+  // message de confirmation est un SnackBar temporaire, pas un état
+  // persistant, pour rester cohérent avec le reste de l'app.
+  Future<void> _toggleFollow() async {
+    if (!await requireAuth(context)) return;
+    if (!mounted) return;
+    final currentUserId = AuthStore.instance.currentUser?.id;
+    final isOwnTakeover =
+        currentUserId != null && currentUserId == widget.data.intervenant?.id;
+    if (isOwnTakeover) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Vous ne pouvez pas suivre votre propre prise en charge.',
+          ),
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+    setState(() => _isFollowing = !_isFollowing);
+    if (_isFollowing) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('🔔 Vous serez notifié dès que ce cas sera traité'),
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -318,11 +353,7 @@ class _ReportActionZoneState extends State<ReportActionZone> {
     final active = _isFollowing;
     if (widget.compact) {
       return GestureDetector(
-        onTap: () async {
-          if (await requireAuth(context)) {
-            setState(() => _isFollowing = !_isFollowing);
-          }
-        },
+        onTap: _toggleFollow,
         child: Container(
           width: _kBtnHeight,
           height: _kBtnHeight,
@@ -350,11 +381,7 @@ class _ReportActionZoneState extends State<ReportActionZone> {
     }
     // Détail : bouton outlined avec texte
     return OutlinedButton.icon(
-      onPressed: () async {
-        if (await requireAuth(context)) {
-          setState(() => _isFollowing = !_isFollowing);
-        }
-      },
+      onPressed: _toggleFollow,
       icon: Icon(
         active
             ? Icons.notifications_active_rounded
@@ -391,20 +418,6 @@ class _ReportActionZoneState extends State<ReportActionZone> {
         if (widget.compact) ...[
           const SizedBox(height: _kSpacing),
           _infoBanner(),
-          if (_isFollowing) ...[
-            const SizedBox(height: 6),
-            Center(
-              child: Text(
-                '🔔 Vous serez notifié dès que ce cas sera traité',
-                style: CliinAppTextStyles.bodySmall.copyWith(
-                  color: CliinAppColors.primary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 11,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ],
         ],
       ],
     );
@@ -522,11 +535,7 @@ class _ReportActionZoneState extends State<ReportActionZone> {
           // Bell — coin supérieur droit, indépendant du bouton Contacter
           const SizedBox(width: 4),
           GestureDetector(
-            onTap: () async {
-              if (await requireAuth(context)) {
-                setState(() => _isFollowing = !_isFollowing);
-              }
-            },
+            onTap: _toggleFollow,
             child: Container(
               width: 28,
               height: 28,
@@ -606,6 +615,26 @@ class _ReportActionZoneState extends State<ReportActionZone> {
               height: _kBtnHeight,
               child: ElevatedButton.icon(
                 onPressed: () async {
+                  // La confirmation est une action PUBLIQUE — l'auteur du
+                  // cas ne peut pas confirmer sa propre résolution, quelle
+                  // que soit la vue par laquelle il y accède (privée via
+                  // isAuthor, ou publique/carte en tant qu'utilisateur
+                  // connecté qui se trouve être l'auteur).
+                  final currentUserId = AuthStore.instance.currentUser?.id;
+                  if (currentUserId != null &&
+                      currentUserId == widget.data.signaleParId) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Vous ne pouvez pas confirmer la résolution de '
+                          'votre propre signalement.',
+                        ),
+                        behavior: SnackBarBehavior.floating,
+                        duration: Duration(seconds: 3),
+                      ),
+                    );
+                    return;
+                  }
                   if (await requireAuth(context)) {
                     setState(() => _showConfirmPrompt = true);
                   }

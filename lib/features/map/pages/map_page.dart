@@ -212,11 +212,13 @@ class _MapPageState extends State<MapPage> {
     return Scaffold(
       backgroundColor: CliinAppColors.background,
       body: SafeArea(
+        top: false,
         bottom: false,
         child: Column(
           children: [
             Container(
               color: Colors.white,
+              padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
               child: Column(
                 children: [
                   MapSearchHeader(

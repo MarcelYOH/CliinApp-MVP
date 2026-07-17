@@ -11,12 +11,44 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 
+// showModalBottomSheet pousse son contenu au-dessus de la route entière,
+// y compris la Scaffold.bottomNavigationBar : par défaut, la barre du bas
+// (et donc l'icône "Plus" censée passer en vert) se retrouve donc
+// entièrement recouverte par le sheet + son voile semi-transparent tant
+// qu'il est ouvert — invisible pour l'utilisateur, quel que soit l'état
+// isMoreMenuOpen. On construit ici un contenu qui occupe toute la hauteur
+// de l'écran mais laisse une bande transparente (et non cliquable côté
+// sheet, IgnorePointer) exactement à la hauteur de la barre de nav, pour
+// que celle-ci reste visible et interactive par-dessous — c'est ce qui
+// permet à "Plus" d'apparaître réellement vert pendant que le menu est
+// ouvert.
 Future<void> showMoreMenuSheet(BuildContext context) {
+  final double navBarHeight = 80 + MediaQuery.of(context).padding.bottom;
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => const _MoreMenuSheet(),
+    barrierColor: Colors.transparent,
+    builder: (sheetContext) => SizedBox(
+      height: MediaQuery.of(sheetContext).size.height,
+      child: Column(
+        mainAxisSize: MainAxisSize.max,
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => Navigator.of(sheetContext).maybePop(),
+              child: Container(color: Colors.black54),
+            ),
+          ),
+          const _MoreMenuSheet(),
+          IgnorePointer(
+            child: SizedBox(height: navBarHeight),
+          ),
+        ],
+      ),
+    ),
   );
 }
 

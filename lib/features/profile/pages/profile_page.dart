@@ -138,7 +138,7 @@ class _ProfilePageState extends State<ProfilePage> {
     return Scaffold(
       backgroundColor: CliinAppColors.background,
       body: SafeArea(
-        top: true,
+        top: false,
         bottom: false,
         child: ListenableBuilder(
           listenable: Listenable.merge([AuthStore.instance, ReportStore.instance]),
@@ -181,7 +181,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
+      padding: EdgeInsets.fromLTRB(
+          20, MediaQuery.of(context).padding.top + 16, 12, 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

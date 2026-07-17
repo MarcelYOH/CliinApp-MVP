@@ -200,6 +200,47 @@ class MockReportRepository implements ReportRepository {
   }
 
   @override
+  Future<HomeReportModel> editComment({
+    required String reportId,
+    required String commentId,
+    required String newText,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 150));
+    final report = await fetchReportById(reportId);
+    if (report == null) throw Exception('Signalement introuvable');
+
+    final updated = report.copyWith(
+      commentsList: [
+        for (final c in report.commentsList)
+          if (c.id == commentId)
+            c.copyWith(text: newText, edited: true)
+          else
+            c,
+      ],
+    );
+    _updateReport(updated);
+    return updated;
+  }
+
+  @override
+  Future<HomeReportModel> deleteComment({
+    required String reportId,
+    required String commentId,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 150));
+    final report = await fetchReportById(reportId);
+    if (report == null) throw Exception('Signalement introuvable');
+
+    final updated = report.copyWith(
+      commentsList:
+          report.commentsList.where((c) => c.id != commentId).toList(),
+      comments: report.comments > 0 ? report.comments - 1 : 0,
+    );
+    _updateReport(updated);
+    return updated;
+  }
+
+  @override
   Future<ProofVerificationResult> submitProof({
     required String reportId,
     required String imagePath,
@@ -247,15 +288,19 @@ class MockReportRepository implements ReportRepository {
 
     if (!isValid) {
       // Preuve hors tolérance : l'intervention n'est pas validée. Le cas
-      // est entièrement libéré — même logique que l'abandon (72h sans
-      // preuve) : statut Disponible ET intervenant retiré, pour que
-      // n'importe qui (y compris le même intervenant) puisse le reprendre
-      // depuis zéro, sans rester bloqué en "En cours" sur une preuve
-      // rejetée qui n'a jamais validé le traitement.
+      // redevient Disponible pour que n'importe qui (y compris le même
+      // intervenant) puisse le reprendre depuis zéro — MAIS l'intervenant
+      // est conservé avec outcome=rejected (pas mis à null) : c'est ce qui
+      // alimente le résidu privé consultable par l'auteur et l'ancien
+      // intervenant (Mes cas signalés / Mes prises en charge, filtres
+      // "Rejetés"). Il sera naturellement écrasé si quelqu'un reprend le
+      // cas ensuite.
       final rejectedNow = DateTime.now();
       final reverted = report.copyWith(
         status: ReportStatus.disponible,
-        intervenant: null,
+        intervenant: report.intervenant?.copyWith(
+          outcome: InterventionOutcome.rejected,
+        ),
         history: List<ReportHistoryEntry>.of(report.history)
           ..add(ReportHistoryEntry(
             type: HistoryEventType.rejete,
@@ -337,5 +382,34 @@ class MockReportRepository implements ReportRepository {
   Future<void> deleteReport(String reportId) async {
     await Future.delayed(const Duration(milliseconds: 150));
     _reports.removeWhere((r) => r.id == reportId);
+  }
+
+  @override
+  Future<List<HomeReportModel>> expireOverdueTakeovers() async {
+    final now = DateTime.now();
+    final expired = <HomeReportModel>[];
+    for (var i = 0; i < _reports.length; i++) {
+      final r = _reports[i];
+      if (r.status != ReportStatus.enCours) continue;
+      final takenAt = r.intervenant?.takenAt;
+      if (takenAt == null) continue;
+      if (now.difference(takenAt) <= const Duration(hours: 72)) continue;
+
+      final updated = r.copyWith(
+        status: ReportStatus.disponible,
+        intervenant: r.intervenant?.copyWith(
+          outcome: InterventionOutcome.abandoned,
+        ),
+        history: List<ReportHistoryEntry>.of(r.history)
+          ..add(ReportHistoryEntry(
+            type: HistoryEventType.abandonne,
+            dateTime: now,
+            actorName: r.intervenant?.name,
+          )),
+      );
+      _reports[i] = updated;
+      expired.add(updated);
+    }
+    return expired;
   }
 }

@@ -137,7 +137,7 @@ class _MesPrisesEnChargePageState extends State<MesPrisesEnChargePage> {
         return Scaffold(
           backgroundColor: CliinAppColors.background,
           body: SafeArea(
-            top: true,
+            top: false,
             bottom: false,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -190,7 +190,8 @@ class _MesPrisesEnChargePageState extends State<MesPrisesEnChargePage> {
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      padding: EdgeInsets.fromLTRB(
+          16, MediaQuery.of(context).padding.top + 16, 16, 12),
       child: Row(
         children: [
           GestureDetector(

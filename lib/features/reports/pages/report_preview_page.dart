@@ -178,16 +178,19 @@ class _ReportPreviewPageState extends State<ReportPreviewPage> {
     return Scaffold(
       backgroundColor: CliinAppColors.background,
       body: SafeArea(
+        top: false,
+        bottom: false,
         child: Column(
           children: [
             _buildHeader(context),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(
+                padding: EdgeInsets.fromLTRB(
                   CliinAppConstants.pagePadding,
                   0,
                   CliinAppConstants.pagePadding,
-                  CliinAppConstants.spacingXL,
+                  MediaQuery.of(context).padding.bottom +
+                      CliinAppConstants.spacingXL,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -218,9 +221,11 @@ class _ReportPreviewPageState extends State<ReportPreviewPage> {
   // ─────────────────────────────────────────
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: CliinAppConstants.pagePadding,
-        vertical: CliinAppConstants.spacingM,
+      padding: EdgeInsets.fromLTRB(
+        CliinAppConstants.pagePadding,
+        MediaQuery.of(context).padding.top + CliinAppConstants.spacingM,
+        CliinAppConstants.pagePadding,
+        CliinAppConstants.spacingM,
       ),
       child: Row(
         children: [

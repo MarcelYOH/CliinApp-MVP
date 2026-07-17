@@ -34,14 +34,16 @@ class _AppBottomNavState extends State<AppBottomNav> {
   // verte tant que LE sheet est affiché, peu importe l'instance
   // d'AppBottomNav qui l'a ouvert ou si elle est reconstruite entre-temps.
   Future<void> _handleTap(int index) async {
-    debugPrint('[NAV-AUDIT] tap index=$index currentIndex=${widget.currentIndex} '
-        'isMoreMenuOpen.value(avant)=${isMoreMenuOpen.value}');
     if (index == 4) {
+      if (isMoreMenuOpen.value) {
+        // Sheet déjà ouvert (re-tap sur "Plus") : on le referme au lieu
+        // d'en empiler un second.
+        Navigator.of(context).maybePop();
+        return;
+      }
       isMoreMenuOpen.value = true;
-      debugPrint('[NAV-AUDIT] isMoreMenuOpen.value(après)=${isMoreMenuOpen.value}');
       await showMoreMenuSheet(context);
       isMoreMenuOpen.value = false;
-      debugPrint('[NAV-AUDIT] sheet fermé, isMoreMenuOpen.value=${isMoreMenuOpen.value}');
       return;
     }
     widget.onTap(index);
@@ -119,9 +121,6 @@ class _AppBottomNavState extends State<AppBottomNav> {
   }) {
     final bool isActive =
         moreMenuOpen ? index == 4 : widget.currentIndex == index;
-    debugPrint('[NAV-AUDIT] build item index=$index moreMenuOpen=$moreMenuOpen '
-        'currentIndex=${widget.currentIndex} isActive=$isActive '
-        'instanceHash=${identityHashCode(this)}');
     return GestureDetector(
       onTap: () => _handleTap(index),
       behavior: HitTestBehavior.opaque,

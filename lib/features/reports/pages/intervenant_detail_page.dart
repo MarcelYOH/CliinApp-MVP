@@ -377,6 +377,7 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
       // qu'au body, on pousse nous-mêmes l'overlay via viewInsets.bottom.
       resizeToAvoidBottomInset: false,
       body: SafeArea(
+        top: false,
         bottom: false,
         child: Stack(
           children: [
@@ -435,6 +436,7 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
                         const SizedBox(height: CliinAppConstants.spacingL),
                         ReportCommentsSection(
                           count: _report.comments,
+                          reportId: _report.id,
                           comments: _report.commentsList,
                         ),
                         // Réserve la place occupée par la barre de
@@ -605,9 +607,11 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: CliinAppConstants.pagePadding,
-        vertical: CliinAppConstants.spacingM,
+      padding: EdgeInsets.fromLTRB(
+        CliinAppConstants.pagePadding,
+        MediaQuery.of(context).padding.top + CliinAppConstants.spacingM,
+        CliinAppConstants.pagePadding,
+        CliinAppConstants.spacingM,
       ),
       child: Row(
         children: [

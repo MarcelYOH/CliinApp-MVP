@@ -138,6 +138,7 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
       // qu'au body, on pousse nous-mêmes l'overlay via viewInsets.bottom.
       resizeToAvoidBottomInset: false,
       body: SafeArea(
+        top: false,
         bottom: false,
         child: Stack(
           children: [
@@ -170,6 +171,9 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
                               const SizedBox(height: 16),
                               _buildLocationSection(),
                               const SizedBox(height: 16),
+                              if (widget.isAuthor) ...[
+                                _buildResidualOutcomeBanner(),
+                              ],
                               ReportActionZone(
                                 key: ValueKey(_data.id),
                                 data: _data,
@@ -194,6 +198,7 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
                               const SizedBox(height: 16),
                               ReportCommentsSection(
                                 count: _data.comments,
+                                reportId: _data.id,
                                 comments: _data.commentsList,
                               ),
                               // Réserve la place occupée par la barre de
@@ -270,9 +275,11 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
   Widget _buildHeader(BuildContext context) {
     return Container(
       color: CliinAppColors.cardWhite,
-      padding: const EdgeInsets.symmetric(
-        horizontal: CliinAppConstants.pagePadding,
-        vertical: 12,
+      padding: EdgeInsets.fromLTRB(
+        CliinAppConstants.pagePadding,
+        12 + MediaQuery.of(context).padding.top,
+        CliinAppConstants.pagePadding,
+        12,
       ),
       child: Row(
         children: [
@@ -544,6 +551,82 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
   }
 
   // ── Localisation — miniature carte + adresse ──────────────────
+  // ── Résidu privé auteur — cas abandonné/rejeté ──────────────────
+  // Un cas Abandonné (délai 72h dépassé) ou Rejeté (preuve GPS non
+  // conforme) redevient Disponible publiquement, mais l'auteur doit
+  // pouvoir retrouver la raison sur SON propre cas (visible uniquement en
+  // vue privée, isAuthor:true — jamais en vue publique/carte).
+  Widget _buildResidualOutcomeBanner() {
+    final outcome = _data.intervenant?.outcome;
+    if (outcome != InterventionOutcome.abandoned &&
+        outcome != InterventionOutcome.rejected) {
+      return const SizedBox.shrink();
+    }
+    final isAbandoned = outcome == InterventionOutcome.abandoned;
+    final color = isAbandoned
+        ? const Color(0xFF6B7280)
+        : const Color(0xFF8E24AA);
+    final bg = isAbandoned
+        ? const Color(0xFFF0F0F0)
+        : const Color(0xFFF3E5F5);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Container(
+        padding: const EdgeInsets.all(CliinAppConstants.spacingM),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              isAbandoned
+                  ? Icons.hourglass_bottom_rounded
+                  : Icons.error_outline_rounded,
+              color: color,
+              size: 22,
+            ),
+            const SizedBox(width: CliinAppConstants.spacingM),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isAbandoned
+                        ? 'Prise en charge abandonnée'
+                        : 'Preuve refusée',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: CliinAppColors.textDark,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    isAbandoned
+                        ? 'Délai de 72h dépassé sans soumission de preuve. '
+                            'Votre cas est de nouveau Disponible pour tout '
+                            'intervenant.'
+                        : 'Preuve non conforme — écart de position GPS trop '
+                            'important. Votre cas est de nouveau Disponible '
+                            'pour tout intervenant.',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: CliinAppColors.textSecondary,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildLocationSection() {
     return Container(
       width: double.infinity,
@@ -797,6 +880,8 @@ class _PhotoFullScreen extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Colors.black,
     body: SafeArea(
+      top: false,
+      bottom: false,
       child: Stack(
         children: [
           Center(
@@ -811,7 +896,7 @@ class _PhotoFullScreen extends StatelessWidget {
             ),
           ),
           Positioned(
-            top: 12,
+            top: MediaQuery.of(context).padding.top + 12,
             right: 12,
             child: GestureDetector(
               onTap: () => Navigator.pop(context),

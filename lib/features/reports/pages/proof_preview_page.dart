@@ -72,13 +72,18 @@ class ProofPreviewPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: CliinAppColors.background,
       body: SafeArea(
+        top: false,
+        bottom: false,
         child: Column(
           children: [
             // ── Header ──────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: CliinAppConstants.pagePadding,
-                  vertical: CliinAppConstants.spacingM),
+              padding: EdgeInsets.fromLTRB(
+                  CliinAppConstants.pagePadding,
+                  MediaQuery.of(context).padding.top +
+                      CliinAppConstants.spacingM,
+                  CliinAppConstants.pagePadding,
+                  CliinAppConstants.spacingM),
               child: Row(children: [
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
@@ -102,8 +107,11 @@ class ProofPreviewPage extends StatelessWidget {
 
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: CliinAppConstants.pagePadding),
+                padding: EdgeInsets.fromLTRB(
+                    CliinAppConstants.pagePadding,
+                    0,
+                    CliinAppConstants.pagePadding,
+                    MediaQuery.of(context).padding.bottom + 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

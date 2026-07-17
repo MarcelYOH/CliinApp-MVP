@@ -117,8 +117,16 @@ String reportTimeAgoLabel(DateTime? createdAt, String fallback) {
   if (diff.inMinutes < 60) return 'Il y a ${diff.inMinutes} min';
   if (diff.inHours < 24) return 'Il y a ${diff.inHours}h';
   if (diff.inDays < 7) return 'Il y a ${diff.inDays} j';
-  return 'Il y a ${(diff.inDays / 7).floor()} sem';
+  return _fullDateLabel(createdAt);
 }
+
+const List<String> _shortMonths = [
+  'jan', 'fév', 'mar', 'avr', 'mai', 'juin',
+  'juil', 'août', 'sep', 'oct', 'nov', 'déc',
+];
+
+String _fullDateLabel(DateTime date) =>
+    '${date.day} ${_shortMonths[date.month - 1]} ${date.year}';
 
 // ─────────────────────────────────────────────────────────────────
 // Distance calculée dynamiquement — SOURCE UNIQUE d'affichage de la

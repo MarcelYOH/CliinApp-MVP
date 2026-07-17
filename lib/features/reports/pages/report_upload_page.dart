@@ -111,9 +111,14 @@ class _ReportUploadPageState extends State<ReportUploadPage>
       child: Scaffold(
         backgroundColor: CliinAppColors.background,
         body: SafeArea(
+          top: false,
+          bottom: false,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: CliinAppConstants.pagePadding,
+            padding: EdgeInsets.fromLTRB(
+              CliinAppConstants.pagePadding,
+              MediaQuery.of(context).padding.top,
+              CliinAppConstants.pagePadding,
+              MediaQuery.of(context).padding.bottom,
             ),
             child: Column(
               children: [

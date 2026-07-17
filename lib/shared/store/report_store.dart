@@ -4,6 +4,7 @@
 // Pour brancher Firebase : remplacer MockReportRepository par FirebaseReportRepository
 // sans toucher aux widgets ni aux pages
 
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../repositories/report_repository.dart';
 import '../repositories/mock_report_repository.dart';
@@ -114,8 +115,13 @@ class ReportStore extends ChangeNotifier {
   int casPubliesCount(String userId) =>
       _reports.where((r) => r.signaleParId == userId).length;
 
-  int prisEnChargeCount(String userId) =>
-      _reports.where((r) => r.intervenant?.id == userId).length;
+  // Nombre de cas ACTUELLEMENT en cours parmi ceux pris en charge par
+  // l'utilisateur — pas un cumul historique : un cas qui quitte le statut
+  // "en cours" (traité, abandonné, rejeté) ne compte plus ici.
+  int prisEnChargeCount(String userId) => _reports
+      .where((r) =>
+          r.intervenant?.id == userId && r.status == ReportStatus.enCours)
+      .length;
 
   int casTraitesCount(String userId) => _reports
       .where((r) => r.intervenant?.id == userId && r.status == ReportStatus.traite)
@@ -139,6 +145,32 @@ class ReportStore extends ChangeNotifier {
     } finally {
       _setLoading(false);
     }
+    await _checkExpiredTakeovers();
+    _startExpiryWatcher();
+  }
+
+  // ── Abandon automatique (délai 72h dépassé sans preuve) ─────────
+  // Pas de backend pour porter un job planifié dans ce MVP : on simule le
+  // même effet côté client via un ticker périodique, qui fait passer les
+  // cas "en cours" dépassés en Disponible + résidu privé (outcome
+  // abandoned), exactement comme le fait submitProof() pour un rejet.
+  Timer? _expiryTimer;
+
+  void _startExpiryWatcher() {
+    _expiryTimer?.cancel();
+    _expiryTimer = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => _checkExpiredTakeovers(),
+    );
+  }
+
+  Future<void> _checkExpiredTakeovers() async {
+    final expired = await _repository.expireOverdueTakeovers();
+    if (expired.isEmpty) return;
+    for (final report in expired) {
+      _replaceReport(report);
+    }
+    notifyListeners();
   }
 
   // ── Rafraîchir manuellement la position (ex: pull-to-refresh) ──
@@ -326,6 +358,48 @@ class ReportStore extends ChangeNotifier {
       final updated = await _repository.addComment(
         reportId: reportId,
         comment: comment,
+      );
+      _replaceReport(updated);
+      _error = null;
+      notifyListeners();
+      return updated;
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
+    }
+  }
+
+  // ── Modifier un commentaire ───────────────────────────────────
+  Future<HomeReportModel> editComment({
+    required String reportId,
+    required String commentId,
+    required String newText,
+  }) async {
+    try {
+      final updated = await _repository.editComment(
+        reportId: reportId,
+        commentId: commentId,
+        newText: newText,
+      );
+      _replaceReport(updated);
+      _error = null;
+      notifyListeners();
+      return updated;
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
+    }
+  }
+
+  // ── Supprimer un commentaire ──────────────────────────────────
+  Future<HomeReportModel> deleteComment({
+    required String reportId,
+    required String commentId,
+  }) async {
+    try {
+      final updated = await _repository.deleteComment(
+        reportId: reportId,
+        commentId: commentId,
       );
       _replaceReport(updated);
       _error = null;

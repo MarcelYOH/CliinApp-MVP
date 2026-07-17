@@ -101,9 +101,14 @@ class _ValidatedViewState extends State<_ValidatedView>
     return Scaffold(
       backgroundColor: CliinAppColors.background,
       body: SafeArea(
+        top: false,
+        bottom: false,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(
-              horizontal: CliinAppConstants.pagePadding),
+          padding: EdgeInsets.fromLTRB(
+              CliinAppConstants.pagePadding,
+              MediaQuery.of(context).padding.top,
+              CliinAppConstants.pagePadding,
+              MediaQuery.of(context).padding.bottom),
           child: FadeTransition(
             opacity: _fadeAnim,
             child: Column(
@@ -293,9 +298,14 @@ class _RejectedView extends StatelessWidget {
     return Scaffold(
       backgroundColor: CliinAppColors.background,
       body: SafeArea(
+        top: false,
+        bottom: false,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(
-              horizontal: CliinAppConstants.pagePadding),
+          padding: EdgeInsets.fromLTRB(
+              CliinAppConstants.pagePadding,
+              MediaQuery.of(context).padding.top,
+              CliinAppConstants.pagePadding,
+              MediaQuery.of(context).padding.bottom),
           child: Column(
             children: [
               const SizedBox(height: CliinAppConstants.spacingXL),
@@ -456,9 +466,14 @@ class _PendingAccuracyView extends StatelessWidget {
     return Scaffold(
       backgroundColor: CliinAppColors.background,
       body: SafeArea(
+        top: false,
+        bottom: false,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(
-              horizontal: CliinAppConstants.pagePadding),
+          padding: EdgeInsets.fromLTRB(
+              CliinAppConstants.pagePadding,
+              MediaQuery.of(context).padding.top,
+              CliinAppConstants.pagePadding,
+              MediaQuery.of(context).padding.bottom),
           child: Column(
             children: [
               const SizedBox(height: CliinAppConstants.spacingXL),

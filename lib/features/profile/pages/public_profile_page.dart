@@ -88,13 +88,14 @@ class PublicProfilePage extends StatelessWidget {
     return Scaffold(
       backgroundColor: CliinAppColors.background,
       body: SafeArea(
-        top: true,
+        top: false,
         bottom: false,
         child: Column(
           children: [
             // Header
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: EdgeInsets.fromLTRB(
+                  16, MediaQuery.of(context).padding.top + 12, 16, 12),
               child: Row(
                 children: [
                   GestureDetector(

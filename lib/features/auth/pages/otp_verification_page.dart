@@ -156,12 +156,17 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
     return Scaffold(
       backgroundColor: CliinAppColors.cardWhite,
       body: SafeArea(
+        top: false,
+        bottom: false,
         child: Column(
           children: [
             // Header
             Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: CliinAppConstants.pagePadding, vertical: 12),
+              padding: EdgeInsets.fromLTRB(
+                  CliinAppConstants.pagePadding,
+                  MediaQuery.of(context).padding.top + 12,
+                  CliinAppConstants.pagePadding,
+                  12),
               child: Row(children: [
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
@@ -193,8 +198,11 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
 
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: CliinAppConstants.pagePadding),
+                padding: EdgeInsets.fromLTRB(
+                    CliinAppConstants.pagePadding,
+                    0,
+                    CliinAppConstants.pagePadding,
+                    MediaQuery.of(context).padding.bottom + 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

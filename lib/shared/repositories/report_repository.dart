@@ -48,6 +48,24 @@ abstract class ReportRepository {
     required String reportId,
     required ReportComment comment,
   });
+
+  Future<HomeReportModel> editComment({
+    required String reportId,
+    required String commentId,
+    required String newText,
+  });
+
+  Future<HomeReportModel> deleteComment({
+    required String reportId,
+    required String commentId,
+  });
+
+  // Fait passer en Abandonné (statut Disponible, intervenant conservé avec
+  // outcome=abandoned pour le résidu privé) tout cas "en cours" dont le
+  // délai de 72h sans preuve est dépassé. Simule côté client ce qu'un vrai
+  // backend ferait via un job planifié — ReportStore l'appelle
+  // périodiquement. Retourne les cas effectivement expirés.
+  Future<List<HomeReportModel>> expireOverdueTakeovers();
 }
 
 enum ProofVerificationStatus { valid, rejectedDistance, pendingAccuracy }

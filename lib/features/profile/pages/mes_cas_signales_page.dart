@@ -20,8 +20,28 @@ class MesCasSignalesPage extends StatefulWidget {
   State<MesCasSignalesPage> createState() => _MesCasSignalesPageState();
 }
 
+// Statut affiché dans "Mes cas signalés" — distinct de ReportStatus car un
+// cas Abandonné/Rejeté redevient "Disponible" publiquement (cf.
+// mock_report_repository), mais l'auteur doit pouvoir retrouver ce résidu
+// privé dans son propre filtre plutôt que le voir se fondre dans
+// "Disponibles".
+enum _CaseFilterStatus { disponible, enCours, traite, abandonne, rejete }
+
+_CaseFilterStatus _caseFilterStatusOf(HomeReportModel r) {
+  if (r.status == ReportStatus.enCours) return _CaseFilterStatus.enCours;
+  if (r.status == ReportStatus.traite) return _CaseFilterStatus.traite;
+  final outcome = r.intervenant?.outcome;
+  if (outcome == InterventionOutcome.abandoned) {
+    return _CaseFilterStatus.abandonne;
+  }
+  if (outcome == InterventionOutcome.rejected) {
+    return _CaseFilterStatus.rejete;
+  }
+  return _CaseFilterStatus.disponible;
+}
+
 class _FilterOption {
-  final ReportStatus? status;
+  final _CaseFilterStatus? status;
   final String label;
   const _FilterOption(this.status, this.label);
 }
@@ -31,7 +51,7 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
   // la longueur du texte (titre/description tronqués via maxLines/ellipsis).
   static const double _kCardHeight = 152.0;
 
-  ReportStatus? _selectedFilter;
+  _CaseFilterStatus? _selectedFilter;
 
   List<HomeReportModel> get _myCas {
     final userId = AuthStore.instance.currentUser?.id;
@@ -43,22 +63,28 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
 
   List<HomeReportModel> _filtered(List<HomeReportModel> myCas) {
     if (_selectedFilter == null) return myCas;
-    return myCas.where((r) => r.status == _selectedFilter).toList();
+    return myCas
+        .where((r) => _caseFilterStatusOf(r) == _selectedFilter)
+        .toList();
   }
 
-  int _count(List<HomeReportModel> myCas, ReportStatus? status) {
+  int _count(List<HomeReportModel> myCas, _CaseFilterStatus? status) {
     if (status == null) return myCas.length;
-    return myCas.where((r) => r.status == status).length;
+    return myCas.where((r) => _caseFilterStatusOf(r) == status).length;
   }
 
   List<_FilterOption> _filters(List<HomeReportModel> myCas) => [
         _FilterOption(null, 'Tous (${_count(myCas, null)})'),
-        _FilterOption(ReportStatus.disponible,
-            'Disponibles (${_count(myCas, ReportStatus.disponible)})'),
-        _FilterOption(ReportStatus.enCours,
-            'En cours (${_count(myCas, ReportStatus.enCours)})'),
-        _FilterOption(ReportStatus.traite,
-            'Traités (${_count(myCas, ReportStatus.traite)})'),
+        _FilterOption(_CaseFilterStatus.disponible,
+            'Disponibles (${_count(myCas, _CaseFilterStatus.disponible)})'),
+        _FilterOption(_CaseFilterStatus.enCours,
+            'En cours (${_count(myCas, _CaseFilterStatus.enCours)})'),
+        _FilterOption(_CaseFilterStatus.traite,
+            'Traités (${_count(myCas, _CaseFilterStatus.traite)})'),
+        _FilterOption(_CaseFilterStatus.abandonne,
+            'Abandonnés (${_count(myCas, _CaseFilterStatus.abandonne)})'),
+        _FilterOption(_CaseFilterStatus.rejete,
+            'Rejetés (${_count(myCas, _CaseFilterStatus.rejete)})'),
       ];
 
   String _formatDate(DateTime? date) {
@@ -81,7 +107,7 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
         return Scaffold(
           backgroundColor: CliinAppColors.background,
           body: SafeArea(
-            top: true,
+            top: false,
             bottom: false,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -134,7 +160,8 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      padding: EdgeInsets.fromLTRB(
+          16, MediaQuery.of(context).padding.top + 16, 16, 12),
       child: Row(
         children: [
           GestureDetector(
@@ -255,9 +282,29 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          _buildStatusBadge(report.status),
+                          _buildStatusBadge(_caseFilterStatusOf(report)),
                         ],
                       ),
+                      if (_caseFilterStatusOf(report) ==
+                              _CaseFilterStatus.abandonne ||
+                          _caseFilterStatusOf(report) ==
+                              _CaseFilterStatus.rejete) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          _caseFilterStatusOf(report) ==
+                                  _CaseFilterStatus.abandonne
+                              ? 'Délai de 72h dépassé sans soumission de preuve'
+                              : 'Preuve non conforme — écart de position GPS '
+                                  'trop important',
+                          style: CliinAppTextStyles.bodySmall.copyWith(
+                            fontSize: 10,
+                            color: CliinAppColors.textSecondary,
+                            fontStyle: FontStyle.italic,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                       const SizedBox(height: 4),
                       Row(
                         children: [
@@ -334,17 +381,44 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
     );
   }
 
-  Widget _buildStatusBadge(ReportStatus status) {
+  Widget _buildStatusBadge(_CaseFilterStatus status) {
+    final (label, color, bg) = switch (status) {
+      _CaseFilterStatus.disponible => (
+          ReportStatus.disponible.label,
+          ReportStatus.disponible.color,
+          ReportStatus.disponible.bgColor,
+        ),
+      _CaseFilterStatus.enCours => (
+          ReportStatus.enCours.label,
+          ReportStatus.enCours.color,
+          ReportStatus.enCours.bgColor,
+        ),
+      _CaseFilterStatus.traite => (
+          ReportStatus.traite.label,
+          ReportStatus.traite.color,
+          ReportStatus.traite.bgColor,
+        ),
+      _CaseFilterStatus.abandonne => (
+          'Abandonné',
+          const Color(0xFF6B7280),
+          const Color(0xFFF5F5F5),
+        ),
+      _CaseFilterStatus.rejete => (
+          'Rejeté',
+          const Color(0xFF9C27B0),
+          const Color(0xFFF3E5F5),
+        ),
+    };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
-        color: status.bgColor,
+        color: bg,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
-        status.label,
+        label,
         style: TextStyle(
-          color: status.color,
+          color: color,
           fontSize: 10,
           fontWeight: FontWeight.w600,
         ),
