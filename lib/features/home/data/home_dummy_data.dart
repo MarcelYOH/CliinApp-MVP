@@ -50,6 +50,12 @@ class HomeDummyData {
       bannerAsset: 'assets/images/group_banner1.jpg',
       logoText: 'Clean\nRiviera',
       isActive: true,
+      levelBadges: ['Officiel'],
+      leaderAvatarAssets: [
+        'assets/images/profile.jpg',
+        'assets/images/profile.jpg',
+        'assets/images/profile.jpg',
+      ],
     ),
     GroupModel(
       name: 'Green City',
@@ -59,6 +65,11 @@ class HomeDummyData {
       bannerAsset: 'assets/images/group_banner2.jpg',
       hasLeafIcon: true,
       isActive: true,
+      levelBadges: ['Impact'],
+      leaderAvatarAssets: [
+        'assets/images/profile.jpg',
+        'assets/images/profile.jpg',
+      ],
     ),
     GroupModel(
       name: 'Eco Jeunes',
@@ -68,6 +79,13 @@ class HomeDummyData {
       bannerAsset: 'assets/images/group_banner3.jpg',
       logoText: 'ECO',
       isActive: true,
+      levelBadges: ['Engagé'],
+      leaderAvatarAssets: [
+        'assets/images/profile.jpg',
+        'assets/images/profile.jpg',
+        'assets/images/profile.jpg',
+        'assets/images/profile.jpg',
+      ],
     ),
   ];
 
