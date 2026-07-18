@@ -15,6 +15,7 @@
 import 'package:flutter/material.dart';
 import '../../features/home/pages/home_page.dart';
 import '../../features/map/pages/map_page.dart';
+import '../../features/groups/pages/groups_page.dart';
 import 'fast_page_route.dart';
 
 // Onglet à surligner sur HomePage après un retour à la racine via
@@ -33,9 +34,9 @@ Future<void> navigateToTab(
 }) async {
   if (targetIndex == currentIndex) return;
 
-  // Accueil, et Groupes (la section "Groupes actifs" vit sur l'accueil —
-  // pas encore de page dédiée) : retour direct à la racine.
-  if (targetIndex == 0 || targetIndex == 3) {
+  // Accueil : retour direct à la racine (HomePage est toujours la racine
+  // de la pile de navigation).
+  if (targetIndex == 0) {
     pendingHomeTabIndex.value = targetIndex;
     Navigator.popUntil(context, (route) => route.isFirst);
     return;
@@ -43,6 +44,7 @@ Future<void> navigateToTab(
 
   final Widget page = switch (targetIndex) {
     1 => const MapPage(),
+    3 => const GroupsPage(),
     _ => const HomePage(),
   };
 

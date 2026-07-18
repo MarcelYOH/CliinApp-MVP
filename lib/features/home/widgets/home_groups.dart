@@ -5,24 +5,20 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/widgets/group_card.dart';
-import '../models/group_model.dart';
+import '../../groups/models/group_model.dart';
 
 class HomeGroups extends StatelessWidget {
   final List<GroupModel> groups;
   final VoidCallback? onVoirTout;
-  final void Function(GroupModel)? onCardTap;
 
   const HomeGroups({
     super.key,
     required this.groups,
     this.onVoirTout,
-    this.onCardTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final double cardWidth = MediaQuery.of(context).size.width * 0.74;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -65,11 +61,7 @@ class HomeGroups extends StatelessWidget {
                         ? CliinAppConstants.spacingM
                         : 0,
                   ),
-                  child: GroupCard(
-                    data: groups[index],
-                    width: cardWidth,
-                    onTap: () => onCardTap?.call(groups[index]),
-                  ),
+                  child: GroupCard(data: groups[index]),
                 );
               }),
             ),

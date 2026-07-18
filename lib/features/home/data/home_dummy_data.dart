@@ -5,7 +5,6 @@ import '../models/position_model.dart';
 import '../models/quick_report_model.dart';
 import '../models/alert_banner_model.dart';
 import '../models/action_banner_model.dart';
-import '../models/group_model.dart';
 import '../models/category_model.dart';
 
 class HomeDummyData {
@@ -40,63 +39,6 @@ class HomeDummyData {
     buttonLabel: 'Voir les actions',
     imageAsset: 'assets/images/action.jpg',
   );
-
-  static const List<GroupModel> groups = [
-    GroupModel(
-      name: 'Clean Riviera',
-      location: 'Riviera 2, Cocody',
-      description:
-          'Nettoyage hebdomadaire des rues et sensibilisation au tri sélectif dans le quartier.',
-      membersCount: 23,
-      actionsCount: 12,
-      bannerAsset: 'assets/images/group_banner1.jpg',
-      logoText: 'Clean\nRiviera',
-      isActive: true,
-      levelBadges: ['Officiel', 'Engagé', 'Impact'],
-      leaderAvatarAssets: [
-        'assets/images/profile.jpg',
-        'assets/images/profile.jpg',
-        'assets/images/profile.jpg',
-        'assets/images/profile.jpg',
-      ],
-    ),
-    GroupModel(
-      name: 'Green City',
-      location: 'Plateau, Abidjan',
-      description:
-          'Collectif pour un cadre de vie plus vert : reboisement urbain et compostage communautaire.',
-      membersCount: 18,
-      actionsCount: 9,
-      bannerAsset: 'assets/images/group_banner2.jpg',
-      hasLeafIcon: true,
-      isActive: true,
-      levelBadges: ['Impact', 'Engagé', 'Officiel'],
-      leaderAvatarAssets: [
-        'assets/images/profile.jpg',
-        'assets/images/profile.jpg',
-        'assets/images/profile.jpg',
-        'assets/images/profile.jpg',
-      ],
-    ),
-    GroupModel(
-      name: 'Eco Jeunes',
-      location: 'Yopougon, Abidjan',
-      description:
-          'Mobilisation des jeunes autour des enjeux environnementaux locaux, ateliers et actions terrain.',
-      membersCount: 31,
-      actionsCount: 15,
-      bannerAsset: 'assets/images/group_banner3.jpg',
-      logoText: 'ECO',
-      isActive: true,
-      levelBadges: ['Engagé', 'Impact', 'Officiel'],
-      leaderAvatarAssets: [
-        'assets/images/profile.jpg',
-        'assets/images/profile.jpg',
-        'assets/images/profile.jpg',
-        'assets/images/profile.jpg',
-      ],
-    ),
-  ];
 
   // Métadonnées d'affichage UNIQUEMENT (icône, libellé, couleur) — le
   // compteur réel de chaque catégorie est calculé dynamiquement depuis

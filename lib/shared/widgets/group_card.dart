@@ -1,51 +1,55 @@
 // lib/shared/widgets/group_card.dart
+//
+// Carte groupe partagée — utilisée PARTOUT où une carte groupe apparaît
+// (accueil, page principale du module Groupes, recherche). Ne jamais coder
+// une variante séparément : réutiliser ce widget. Largeur fixe (260px),
+// toute la carte navigue vers GroupProfilePage sauf le bouton Suivre.
 
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
-import '../../features/home/models/group_model.dart';
+import '../../features/auth/auth_guard.dart';
+import '../../features/groups/models/group_model.dart';
+import '../../features/groups/pages/group_profile_page.dart';
+import '../navigation/fast_page_route.dart';
+import '../store/auth_store.dart';
+import '../store/group_store.dart';
+import 'group_badge_chip.dart';
 
-// Carte groupe partagée — utilisée partout où une carte groupe apparaît
-// (accueil, module Groupes, recherche). Ne jamais coder une variante
-// séparément : réutiliser ce widget.
 class GroupCard extends StatefulWidget {
   final GroupModel data;
-  final double? width;
-  final VoidCallback? onTap;
 
-  const GroupCard({
-    super.key,
-    required this.data,
-    this.width,
-    this.onTap,
-  });
+  const GroupCard({super.key, required this.data});
+
+  static const double cardWidth = 260;
 
   @override
   State<GroupCard> createState() => _GroupCardState();
 }
 
 class _GroupCardState extends State<GroupCard> {
-  bool _isFollowing = false;
+  static const double _coverHeight = 70;
+  static const double _avatarSize = 40;
 
-  static const double _coverHeight = 92;
-  static const double _avatarSize = 58;
+  Future<void> _toggleFollow() async {
+    if (!await requireAuth(context)) return;
+    if (!mounted) return;
+    final userId = AuthStore.instance.currentUser!.id;
+    final isFollowing = GroupStore.instance.isFollowing(widget.data.id, userId);
+    setState(() {
+      if (isFollowing) {
+        GroupStore.instance.unfollowGroup(widget.data.id, userId);
+      } else {
+        GroupStore.instance.followGroup(widget.data.id, userId);
+      }
+    });
+  }
 
-  void _toggleFollow() {
-    setState(() => _isFollowing = !_isFollowing);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _isFollowing
-              ? 'Vous suivez maintenant ${widget.data.name}.'
-              : 'Vous ne suivez plus ${widget.data.name}.',
-        ),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: _isFollowing
-            ? CliinAppColors.primary
-            : CliinAppColors.textSecondary,
-      ),
+  void _openProfile() {
+    Navigator.push(
+      context,
+      fastFadeRoute<void>(GroupProfilePage(groupId: widget.data.id)),
     );
   }
 
@@ -56,18 +60,18 @@ class _GroupCardState extends State<GroupCard> {
       borderRadius: BorderRadius.circular(CliinAppConstants.radiusLarge),
       child: InkWell(
         borderRadius: BorderRadius.circular(CliinAppConstants.radiusLarge),
-        onTap: widget.onTap,
+        onTap: _openProfile,
         child: Container(
-          width: widget.width,
+          width: GroupCard.cardWidth,
           decoration: BoxDecoration(
             color: CliinAppColors.cardWhite,
-            borderRadius:
-                BorderRadius.circular(CliinAppConstants.radiusLarge),
+            borderRadius: BorderRadius.circular(CliinAppConstants.radiusLarge),
+            border: Border.all(color: CliinAppColors.divider),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.07),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
@@ -95,7 +99,8 @@ class _GroupCardState extends State<GroupCard> {
     );
   }
 
-  // ── Photo de couverture ─────────────────────────────────────────
+  // ── Photo de couverture — toujours le dégradé de repli : le modèle ne
+  // porte qu'une seule image (photoPath), utilisée pour l'avatar rond ─────
   Widget _buildCover() {
     return SizedBox(
       height: _coverHeight,
@@ -106,32 +111,24 @@ class _GroupCardState extends State<GroupCard> {
         ),
         child: Stack(children: [
           Positioned.fill(
-            child: Image.asset(
-              widget.data.bannerAsset,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => _buildCoverFallback(),
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [CliinAppColors.primary, CliinAppColors.primaryDark],
+                ),
+              ),
+              child: Center(
+                child: Icon(Icons.groups_rounded,
+                    color: CliinAppColors.textWhite.withValues(alpha: 0.25),
+                    size: 34),
+              ),
             ),
           ),
-          if (widget.data.isActive)
+          if (widget.data.estActif)
             Positioned(top: 8, right: 10, child: _buildActifBadge()),
         ]),
-      ),
-    );
-  }
-
-  Widget _buildCoverFallback() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [CliinAppColors.primary, CliinAppColors.primaryDark],
-        ),
-      ),
-      child: Center(
-        child: Icon(Icons.groups_rounded,
-            color: CliinAppColors.textWhite.withValues(alpha: 0.25),
-            size: 40),
       ),
     );
   }
@@ -153,26 +150,26 @@ class _GroupCardState extends State<GroupCard> {
 
   // ── Avatar rond du groupe ────────────────────────────────────────
   Widget _buildAvatarCircle() {
-    final avatarAsset = widget.data.avatarAsset;
+    final photoPath = widget.data.photoPath;
     return Container(
       width: _avatarSize,
       height: _avatarSize,
       decoration: BoxDecoration(
         color: CliinAppColors.primaryDark,
         shape: BoxShape.circle,
-        border: Border.all(color: CliinAppColors.cardWhite, width: 2.5),
+        border: Border.all(color: CliinAppColors.cardWhite, width: 2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.18),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: avatarAsset != null
+      child: photoPath != null
           ? ClipOval(
               child: Image.asset(
-                avatarAsset,
+                photoPath,
                 fit: BoxFit.cover,
                 errorBuilder: (_, _, _) => _buildAvatarFallback(),
               ),
@@ -182,36 +179,30 @@ class _GroupCardState extends State<GroupCard> {
   }
 
   Widget _buildAvatarFallback() {
+    final initials = widget.data.nom.trim().isEmpty
+        ? '?'
+        : widget.data.nom.trim().substring(0, 1).toUpperCase();
     return Center(
-      child: widget.data.hasLeafIcon
-          ? const Icon(Icons.eco_rounded,
-              color: CliinAppColors.textWhite, size: 26)
-          : Text(
-              widget.data.logoText ?? '',
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: CliinAppTextStyles.badge.copyWith(
-                color: CliinAppColors.textWhite,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                height: 1.1,
-              ),
-            ),
+      child: Text(
+        initials,
+        style: CliinAppTextStyles.badge.copyWith(
+          color: CliinAppColors.textWhite,
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 
   // ── Infos ─────────────────────────────────────────────────────
   Widget _buildInfoSection() {
-    final orderedBadges = kGroupLevelOrder
-        .where((level) => widget.data.levelBadges.contains(level))
-        .toList();
-    final description = widget.data.description;
+    final orderedBadges =
+        kGroupBadgeOrder.where(widget.data.badges.contains).toList();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         CliinAppConstants.spacingL,
-        40,
+        26,
         CliinAppConstants.spacingS,
         CliinAppConstants.spacingS,
       ),
@@ -220,7 +211,7 @@ class _GroupCardState extends State<GroupCard> {
         children: [
           Row(children: [
             Expanded(
-              child: Text(widget.data.name,
+              child: Text(widget.data.nom,
                   style: CliinAppTextStyles.headingSmall.copyWith(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w700,
@@ -237,24 +228,23 @@ class _GroupCardState extends State<GroupCard> {
               spacing: 6,
               runSpacing: 4,
               children:
-                  orderedBadges.map((label) => _buildLevelBadge(label)).toList(),
+                  orderedBadges.map((b) => GroupBadgeChip(badge: b)).toList(),
             ),
           ],
           const SizedBox(height: CliinAppConstants.spacingS),
-          _infoRow(Icons.group_rounded, '${widget.data.membersCount} membres'),
+          _infoRow(Icons.group_rounded,
+              '${widget.data.sympathisantsCount} sympathisants'),
           const SizedBox(height: CliinAppConstants.spacingXS),
-          _infoRow(Icons.shield_rounded, '${widget.data.actionsCount} actions'),
+          _infoRow(
+              Icons.shield_rounded, '${widget.data.actionsCount} actions'),
           const SizedBox(height: CliinAppConstants.spacingXS),
-          _infoRow(Icons.location_on_rounded, widget.data.location,
-              grey: true),
-          if (description != null && description.isNotEmpty) ...[
-            const SizedBox(height: CliinAppConstants.spacingXS),
-            Text(_truncateDescription(description),
-                style: CliinAppTextStyles.bodySmall.copyWith(
-                    fontSize: 12, color: CliinAppColors.textSecondary),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis),
-          ],
+          _infoRow(Icons.location_on_rounded, widget.data.zone, grey: true),
+          const SizedBox(height: CliinAppConstants.spacingXS),
+          Text(_truncateDescription(widget.data.description),
+              style: CliinAppTextStyles.bodySmall.copyWith(
+                  fontSize: 12, color: CliinAppColors.textSecondary),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis),
         ],
       ),
     );
@@ -263,34 +253,6 @@ class _GroupCardState extends State<GroupCard> {
   String _truncateDescription(String text) {
     if (text.length <= 60) return text;
     return '${text.substring(0, 60).trimRight()}...';
-  }
-
-  Color _levelBadgeColor(String level) {
-    switch (level) {
-      case 'Engagé':
-        return CliinAppColors.levelEngage;
-      case 'Officiel':
-        return CliinAppColors.levelOfficiel;
-      case 'Impact':
-      default:
-        return CliinAppColors.primary;
-    }
-  }
-
-  Widget _buildLevelBadge(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: _levelBadgeColor(label),
-        borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
-      ),
-      child: Text(label.toUpperCase(),
-          style: CliinAppTextStyles.badge.copyWith(
-              color: CliinAppColors.textWhite,
-              fontSize: 9,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.3)),
-    );
   }
 
   Widget _infoRow(IconData icon, String text, {bool grey = false}) {
@@ -332,13 +294,14 @@ class _GroupCardState extends State<GroupCard> {
   }
 
   Widget _buildLeaderAvatars() {
-    final avatars = widget.data.leaderAvatarAssets.take(4).toList();
-    if (avatars.isEmpty) return const SizedBox.shrink();
+    final leaders = GroupStore.instance.leaderAvatars(widget.data.id);
+    if (leaders.isEmpty) return const SizedBox.shrink();
     return SizedBox(
-      width: 18.0 * (avatars.length - 1) + 30,
+      width: 18.0 * (leaders.length - 1) + 30,
       height: 30,
       child: Stack(
-        children: List.generate(avatars.length, (i) {
+        children: List.generate(leaders.length, (i) {
+          final leader = leaders[i];
           return Positioned(
             left: i * 18.0,
             child: Container(
@@ -349,16 +312,13 @@ class _GroupCardState extends State<GroupCard> {
                 border: Border.all(color: CliinAppColors.cardWhite, width: 2),
               ),
               child: ClipOval(
-                child: Image.asset(
-                  avatars[i],
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => Container(
-                    color: CliinAppColors.primaryDark
-                        .withValues(alpha: 0.7 - i * 0.1),
-                    child: const Icon(Icons.person,
-                        color: CliinAppColors.textWhite, size: 14),
-                  ),
-                ),
+                child: leader.avatarPath != null
+                    ? Image.asset(
+                        leader.avatarPath!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => _leaderFallback(i),
+                      )
+                    : _leaderFallback(i),
               ),
             ),
           );
@@ -367,19 +327,29 @@ class _GroupCardState extends State<GroupCard> {
     );
   }
 
+  Widget _leaderFallback(int i) {
+    return Container(
+      color: CliinAppColors.primaryDark.withValues(alpha: 0.7 - i * 0.1),
+      child: const Icon(Icons.person, color: CliinAppColors.textWhite, size: 14),
+    );
+  }
+
   Widget _buildFollowButton() {
+    final userId = AuthStore.instance.currentUser?.id;
+    final isFollowing = userId != null &&
+        GroupStore.instance.isFollowing(widget.data.id, userId);
     return GestureDetector(
       onTap: _toggleFollow,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: _isFollowing
+          color: isFollowing
               ? CliinAppColors.primaryLight
               : CliinAppColors.primary,
           borderRadius: BorderRadius.circular(CliinAppConstants.radiusLarge),
           border: Border.all(
-            color: _isFollowing ? CliinAppColors.primary : Colors.transparent,
+            color: isFollowing ? CliinAppColors.primary : Colors.transparent,
             width: 1.5,
           ),
         ),
@@ -387,19 +357,19 @@ class _GroupCardState extends State<GroupCard> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              _isFollowing
+              isFollowing
                   ? Icons.notifications_rounded
                   : Icons.notifications_none_rounded,
-              color: _isFollowing
+              color: isFollowing
                   ? CliinAppColors.primary
                   : CliinAppColors.textWhite,
               size: 13,
             ),
             const SizedBox(width: 4),
             Text(
-              _isFollowing ? 'Suivi' : 'Suivre',
+              isFollowing ? 'Suivi' : 'Suivre',
               style: CliinAppTextStyles.badge.copyWith(
-                color: _isFollowing
+                color: isFollowing
                     ? CliinAppColors.primary
                     : CliinAppColors.textWhite,
                 fontWeight: FontWeight.w700,

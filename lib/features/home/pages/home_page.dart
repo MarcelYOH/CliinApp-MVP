@@ -11,6 +11,7 @@ import '../../../shared/navigation/fast_page_route.dart';
 import '../../../shared/models/user_model.dart';
 import '../../../shared/store/auth_store.dart';
 import '../../../shared/store/report_store.dart';
+import '../../../shared/store/group_store.dart';
 import '../../../core/utils/whatsapp_launcher.dart';
 import '../../auth/pages/auth_gate_sheet.dart';
 import '../widgets/home_quick_report.dart';
@@ -21,7 +22,7 @@ import '../widgets/home_groups.dart';
 import '../widgets/home_categories.dart';
 import '../widgets/home_recent_reports.dart';
 import '../models/category_model.dart';
-import '../models/group_model.dart';
+import '../../groups/models/group_model.dart';
 import '../data/home_dummy_data.dart';
 import '../models/home_report_model.dart';
 import '../../reports/pages/report_camera_page.dart';
@@ -30,8 +31,21 @@ import '../../reports/pages/intervenant_detail_page.dart';
 import '../../reports/widgets/take_charge_flow.dart';
 import '../../map/pages/map_page.dart';
 import '../../map/models/map_filter_model.dart';
+import '../../groups/pages/groups_page.dart';
 import '../../auth/auth_guard.dart';
 import '../../profile/pages/profile_page.dart';
+
+// Aperçu "Groupes actifs" de l'accueil : section très sélective, réservée
+// aux groupes ayant validé les 3 badges à la fois (Engagé + Impact +
+// Officiel) — preuve d'un impact terrain complet. Si moins de 3 groupes
+// remplissent cette condition, on affiche uniquement ceux-là : jamais un
+// groupe à 1 ou 2 badges en remplacement.
+List<GroupModel> _selectFeaturedGroups(List<GroupModel> groups) {
+  const requiredBadges = ['engage', 'impact', 'officiel'];
+  return groups
+      .where((g) => requiredBadges.every(g.badges.contains))
+      .toList();
+}
 
 // Salutation selon l'heure du téléphone :
 // 00h-11h59 -> Bonjour · 12h-17h59 -> Bon après-midi · 18h-23h59 -> Bonsoir
@@ -56,6 +70,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     ReportStore.instance.addListener(_onStoreUpdate);
+    GroupStore.instance.addListener(_onStoreUpdate);
     pendingHomeTabIndex.addListener(_onPendingTabIndex);
     // init() est déjà appelé dans main() avant runApp() — ne pas rappeler ici
   }
@@ -63,6 +78,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     ReportStore.instance.removeListener(_onStoreUpdate);
+    GroupStore.instance.removeListener(_onStoreUpdate);
     pendingHomeTabIndex.removeListener(_onPendingTabIndex);
     super.dispose();
   }
@@ -98,6 +114,10 @@ class _HomePageState extends State<HomePage> {
       _goToMap();
       return;
     }
+    if (index == 3) {
+      _goToGroups();
+      return;
+    }
     // "Plus" n'ouvre plus le Profil — uniquement le menu des modules à
     // venir. Le Profil reste accessible uniquement via l'avatar du header.
     if (index == 4) {
@@ -105,6 +125,10 @@ class _HomePageState extends State<HomePage> {
       return;
     }
     setState(() => _currentNavIndex = index);
+  }
+
+  void _goToGroups() {
+    Navigator.push(context, fastFadeRoute<void>(const GroupsPage()));
   }
 
   void _goToMap({
@@ -249,9 +273,8 @@ class _HomePageState extends State<HomePage> {
       ),
       HomeActionBanner(data: HomeDummyData.actionBanner, onTap: () {}),
       HomeGroups(
-        groups: selectFeaturedGroups(HomeDummyData.groups),
+        groups: _selectFeaturedGroups(GroupStore.instance.getGroupsActifs()),
         onVoirTout: () {},
-        onCardTap: (_) {},
       ),
       HomeCategories(
         categories: categoriesWithCounts,
