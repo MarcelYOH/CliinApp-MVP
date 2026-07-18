@@ -34,16 +34,33 @@ class GroupModel {
   });
 }
 
-// Aperçu "Groupes actifs" de l'accueil : priorité aux groupes qui ont
-// validé les 3 badges à la fois. Si aucun n'en a 3, on retombe sur les
-// groupes les plus complets, triés du plus au moins de badges validés.
+// ─────────────────────────────────────────────────────────────────
+// LOGIQUE MÉTIER — sélection des groupes selon leur niveau de badges
+// (Engagé / Impact / Officiel). Basée sur des données factices pour
+// l'instant, mais la règle ci-dessous est la règle métier validée à
+// appliquer telle quelle une fois le calcul réel des badges par
+// groupe branché sur de vraies données.
+// ─────────────────────────────────────────────────────────────────
+
+// Aperçu "Groupes actifs" de la page d'accueil : section très
+// sélective, réservée aux groupes ayant validé les 3 badges à la fois
+// (Engagé + Impact + Officiel) — preuve d'un impact terrain complet.
+// Si moins de 3 groupes remplissent cette condition, on affiche
+// uniquement ceux-là : jamais de groupe à 1 ou 2 badges en remplacement.
 List<GroupModel> selectFeaturedGroups(List<GroupModel> groups) {
-  final complete = groups
+  return groups
       .where((g) => kGroupLevelOrder.every(g.levelBadges.contains))
       .toList();
-  if (complete.isNotEmpty) return complete;
+}
 
-  final sorted = [...groups]
+// Page dédiée "Groupes actifs" (module Groupes — page principale et
+// recherche, pas encore construites) : logique plus large que
+// l'aperçu accueil — d'abord les groupes à 3 badges, puis les groupes
+// à 2 badges (peu importe lesquels), triés du plus au moins complet.
+// Les groupes à 1 seul badge n'apparaissent jamais dans cette section :
+// ils ne sont pas encore considérés comme suffisamment actifs.
+List<GroupModel> selectActiveGroupsForGroupsPage(List<GroupModel> groups) {
+  final eligible = groups.where((g) => g.levelBadges.length >= 2).toList()
     ..sort((a, b) => b.levelBadges.length.compareTo(a.levelBadges.length));
-  return sorted;
+  return eligible;
 }
