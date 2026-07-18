@@ -52,8 +52,9 @@ class HomeDummyData {
       bannerAsset: 'assets/images/group_banner1.jpg',
       logoText: 'Clean\nRiviera',
       isActive: true,
-      levelBadges: ['Officiel', 'Engagé', 'Impact'],
+      levelBadges: ['Officiel'],
       leaderAvatarAssets: [
+        'assets/images/profile.jpg',
         'assets/images/profile.jpg',
         'assets/images/profile.jpg',
         'assets/images/profile.jpg',
@@ -69,8 +70,10 @@ class HomeDummyData {
       bannerAsset: 'assets/images/group_banner2.jpg',
       hasLeafIcon: true,
       isActive: true,
-      levelBadges: ['Impact', 'Engagé', 'Officiel'],
+      levelBadges: ['Impact'],
       leaderAvatarAssets: [
+        'assets/images/profile.jpg',
+        'assets/images/profile.jpg',
         'assets/images/profile.jpg',
         'assets/images/profile.jpg',
       ],

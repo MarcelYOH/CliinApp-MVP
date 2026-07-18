@@ -29,7 +29,7 @@ class _GroupCardState extends State<GroupCard> {
   bool _isFollowing = false;
 
   static const double _coverHeight = 92;
-  static const double _avatarSize = 44;
+  static const double _avatarSize = 58;
 
   void _toggleFollow() {
     setState(() => _isFollowing = !_isFollowing);
@@ -138,16 +138,16 @@ class _GroupCardState extends State<GroupCard> {
 
   Widget _buildActifBadge() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: CliinAppColors.primaryLight,
+        color: CliinAppColors.primary,
         borderRadius: BorderRadius.circular(CliinAppConstants.radiusLarge),
       ),
       child: Text('Actif',
           style: CliinAppTextStyles.badge.copyWith(
-              color: CliinAppColors.primary,
+              color: CliinAppColors.textWhite,
               fontWeight: FontWeight.w700,
-              fontSize: 10)),
+              fontSize: 11)),
     );
   }
 
@@ -185,7 +185,7 @@ class _GroupCardState extends State<GroupCard> {
     return Center(
       child: widget.data.hasLeafIcon
           ? const Icon(Icons.eco_rounded,
-              color: CliinAppColors.textWhite, size: 20)
+              color: CliinAppColors.textWhite, size: 26)
           : Text(
               widget.data.logoText ?? '',
               textAlign: TextAlign.center,
@@ -193,7 +193,7 @@ class _GroupCardState extends State<GroupCard> {
               overflow: TextOverflow.ellipsis,
               style: CliinAppTextStyles.badge.copyWith(
                 color: CliinAppColors.textWhite,
-                fontSize: 8,
+                fontSize: 10,
                 fontWeight: FontWeight.bold,
                 height: 1.1,
               ),
@@ -211,7 +211,7 @@ class _GroupCardState extends State<GroupCard> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         CliinAppConstants.spacingL,
-        32,
+        40,
         CliinAppConstants.spacingS,
         CliinAppConstants.spacingS,
       ),
