@@ -28,8 +28,8 @@ class GroupCard extends StatefulWidget {
 class _GroupCardState extends State<GroupCard> {
   bool _isFollowing = false;
 
-  static const double _coverHeight = 70;
-  static const double _avatarSize = 40;
+  static const double _coverHeight = 92;
+  static const double _avatarSize = 44;
 
   void _toggleFollow() {
     setState(() => _isFollowing = !_isFollowing);
@@ -185,7 +185,7 @@ class _GroupCardState extends State<GroupCard> {
     return Center(
       child: widget.data.hasLeafIcon
           ? const Icon(Icons.eco_rounded,
-              color: CliinAppColors.textWhite, size: 18)
+              color: CliinAppColors.textWhite, size: 20)
           : Text(
               widget.data.logoText ?? '',
               textAlign: TextAlign.center,
@@ -193,7 +193,7 @@ class _GroupCardState extends State<GroupCard> {
               overflow: TextOverflow.ellipsis,
               style: CliinAppTextStyles.badge.copyWith(
                 color: CliinAppColors.textWhite,
-                fontSize: 7,
+                fontSize: 8,
                 fontWeight: FontWeight.bold,
                 height: 1.1,
               ),
@@ -203,10 +203,15 @@ class _GroupCardState extends State<GroupCard> {
 
   // ── Infos ─────────────────────────────────────────────────────
   Widget _buildInfoSection() {
+    final orderedBadges = kGroupLevelOrder
+        .where((level) => widget.data.levelBadges.contains(level))
+        .toList();
+    final description = widget.data.description;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         CliinAppConstants.spacingL,
-        28,
+        32,
         CliinAppConstants.spacingS,
         CliinAppConstants.spacingS,
       ),
@@ -226,14 +231,13 @@ class _GroupCardState extends State<GroupCard> {
             const Icon(Icons.chevron_right,
                 color: CliinAppColors.textSecondary, size: 18),
           ]),
-          if (widget.data.levelBadges.isNotEmpty) ...[
+          if (orderedBadges.isNotEmpty) ...[
             const SizedBox(height: CliinAppConstants.spacingXS),
             Wrap(
               spacing: 6,
               runSpacing: 4,
-              children: widget.data.levelBadges
-                  .map((label) => _buildLevelBadge(label))
-                  .toList(),
+              children:
+                  orderedBadges.map((label) => _buildLevelBadge(label)).toList(),
             ),
           ],
           const SizedBox(height: CliinAppConstants.spacingS),
@@ -243,23 +247,49 @@ class _GroupCardState extends State<GroupCard> {
           const SizedBox(height: CliinAppConstants.spacingXS),
           _infoRow(Icons.location_on_rounded, widget.data.location,
               grey: true),
+          if (description != null && description.isNotEmpty) ...[
+            const SizedBox(height: CliinAppConstants.spacingXS),
+            Text(_truncateDescription(description),
+                style: CliinAppTextStyles.bodySmall.copyWith(
+                    fontSize: 12, color: CliinAppColors.textSecondary),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis),
+          ],
         ],
       ),
     );
+  }
+
+  String _truncateDescription(String text) {
+    if (text.length <= 60) return text;
+    return '${text.substring(0, 60).trimRight()}...';
+  }
+
+  Color _levelBadgeColor(String level) {
+    switch (level) {
+      case 'Engagé':
+        return CliinAppColors.levelEngage;
+      case 'Officiel':
+        return CliinAppColors.levelOfficiel;
+      case 'Impact':
+      default:
+        return CliinAppColors.primary;
+    }
   }
 
   Widget _buildLevelBadge(String label) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: CliinAppColors.primaryLight,
+        color: _levelBadgeColor(label),
         borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
       ),
-      child: Text(label,
+      child: Text(label.toUpperCase(),
           style: CliinAppTextStyles.badge.copyWith(
-              color: CliinAppColors.primary,
-              fontSize: 10,
-              fontWeight: FontWeight.w600)),
+              color: CliinAppColors.textWhite,
+              fontSize: 9,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.3)),
     );
   }
 

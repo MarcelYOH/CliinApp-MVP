@@ -15,6 +15,11 @@ class CliinAppColors {
   static const Color alertOrange    = Color(0xFFFF9800);
   static const Color alertCritical  = Color(0xFFF44336);
 
+  // Niveaux de badge groupe (Engagé / Impact / Officiel)
+  static const Color levelEngage    = Color(0xFF7C3AED); // violet vif
+  static const Color levelOfficiel  = Color(0xFF1565C0); // bleu vif
+  // Impact réutilise primary (vert) — pas de nouvelle constante nécessaire.
+
   // Textes
   static const Color textDark       = Color(0xFF1A1A2E);
   static const Color textSecondary  = Color(0xFF6B7280);

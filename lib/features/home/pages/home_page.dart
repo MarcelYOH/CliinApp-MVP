@@ -21,6 +21,7 @@ import '../widgets/home_groups.dart';
 import '../widgets/home_categories.dart';
 import '../widgets/home_recent_reports.dart';
 import '../models/category_model.dart';
+import '../models/group_model.dart';
 import '../data/home_dummy_data.dart';
 import '../models/home_report_model.dart';
 import '../../reports/pages/report_camera_page.dart';
@@ -248,7 +249,7 @@ class _HomePageState extends State<HomePage> {
       ),
       HomeActionBanner(data: HomeDummyData.actionBanner, onTap: () {}),
       HomeGroups(
-        groups: HomeDummyData.groups,
+        groups: selectFeaturedGroups(HomeDummyData.groups),
         onVoirTout: () {},
         onCardTap: (_) {},
       ),

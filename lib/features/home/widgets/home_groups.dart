@@ -21,7 +21,7 @@ class HomeGroups extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double cardWidth = MediaQuery.of(context).size.width * 0.62;
+    final double cardWidth = MediaQuery.of(context).size.width * 0.74;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

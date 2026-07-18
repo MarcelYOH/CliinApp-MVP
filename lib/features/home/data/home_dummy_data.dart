@@ -45,12 +45,14 @@ class HomeDummyData {
     GroupModel(
       name: 'Clean Riviera',
       location: 'Riviera 2, Cocody',
+      description:
+          'Nettoyage hebdomadaire des rues et sensibilisation au tri sélectif dans le quartier.',
       membersCount: 23,
       actionsCount: 12,
       bannerAsset: 'assets/images/group_banner1.jpg',
       logoText: 'Clean\nRiviera',
       isActive: true,
-      levelBadges: ['Officiel'],
+      levelBadges: ['Officiel', 'Engagé', 'Impact'],
       leaderAvatarAssets: [
         'assets/images/profile.jpg',
         'assets/images/profile.jpg',
@@ -60,12 +62,14 @@ class HomeDummyData {
     GroupModel(
       name: 'Green City',
       location: 'Plateau, Abidjan',
+      description:
+          'Collectif pour un cadre de vie plus vert : reboisement urbain et compostage communautaire.',
       membersCount: 18,
       actionsCount: 9,
       bannerAsset: 'assets/images/group_banner2.jpg',
       hasLeafIcon: true,
       isActive: true,
-      levelBadges: ['Impact'],
+      levelBadges: ['Impact', 'Engagé', 'Officiel'],
       leaderAvatarAssets: [
         'assets/images/profile.jpg',
         'assets/images/profile.jpg',
@@ -74,6 +78,8 @@ class HomeDummyData {
     GroupModel(
       name: 'Eco Jeunes',
       location: 'Yopougon, Abidjan',
+      description:
+          'Mobilisation des jeunes autour des enjeux environnementaux locaux, ateliers et actions terrain.',
       membersCount: 31,
       actionsCount: 15,
       bannerAsset: 'assets/images/group_banner3.jpg',
