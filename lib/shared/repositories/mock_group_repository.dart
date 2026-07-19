@@ -257,6 +257,34 @@ class MockGroupRepository implements GroupRepository {
     return List.of(_members[groupId] ?? const []);
   }
 
+  // Pool factice de sympathisants (annuaire multi-utilisateurs réel
+  // inexistant dans ce mock — l'app ne connaît qu'un seul utilisateur
+  // courant) — permet de faire fonctionner la recherche "Ajouter un
+  // administrateur" (Lot 3) en attendant un vrai annuaire Firebase.
+  static const List<String> _sympathisantNames = [
+    'Aline Kouassi',
+    'Bakary Sanogo',
+    'Chantal Yao',
+    'David Kra',
+    'Estelle N\'Dri',
+    'Franck Ehouman',
+  ];
+
+  @override
+  Future<List<GroupMemberModel>> fetchSympathisants(String groupId) async {
+    await Future.delayed(const Duration(milliseconds: 80));
+    final existingIds =
+        (_members[groupId] ?? const []).map((m) => m.id).toSet();
+    return [
+      for (var i = 0; i < _sympathisantNames.length; i++)
+        GroupMemberModel(
+          id: 'symp_${groupId}_$i',
+          nom: _sympathisantNames[i],
+          estAdmin: false,
+        ),
+    ].where((m) => !existingIds.contains(m.id)).toList();
+  }
+
   @override
   Future<GroupModel> addGroup(GroupModel group, GroupMemberModel createur) async {
     await Future.delayed(const Duration(milliseconds: 200));

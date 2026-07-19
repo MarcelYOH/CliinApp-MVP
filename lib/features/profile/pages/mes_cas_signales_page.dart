@@ -16,7 +16,17 @@ import '../../../shared/utils/report_search.dart';
 import '../../../core/constants/app_constants.dart';
 
 class MesCasSignalesPage extends StatefulWidget {
-  const MesCasSignalesPage({super.key});
+  // Overrides optionnels — permettent de réutiliser cette page telle quelle
+  // pour "Nos cas signalés" (Espace gestion d'un groupe, Lot 3) sans dupliquer
+  // son UI. Aucun impact sur les appels existants (Profil individuel).
+  final String? headerTitle;
+  final bool Function(HomeReportModel)? filterOverride;
+
+  const MesCasSignalesPage({
+    super.key,
+    this.headerTitle,
+    this.filterOverride,
+  });
 
   @override
   State<MesCasSignalesPage> createState() => _MesCasSignalesPageState();
@@ -64,6 +74,11 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
   }
 
   List<HomeReportModel> get _myCas {
+    if (widget.filterOverride != null) {
+      return ReportStore.instance.reports
+          .where(widget.filterOverride!)
+          .toList();
+    }
     final userId = AuthStore.instance.currentUser?.id;
     if (userId == null) return const [];
     return ReportStore.instance.reports
@@ -197,7 +212,8 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text('Mes cas signalés', style: CliinAppTextStyles.headingMedium),
+            child: Text(widget.headerTitle ?? 'Mes cas signalés',
+                style: CliinAppTextStyles.headingMedium),
           ),
         ],
       ),

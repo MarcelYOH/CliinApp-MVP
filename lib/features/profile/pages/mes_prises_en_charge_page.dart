@@ -61,7 +61,18 @@ class _FilterOption {
 }
 
 class MesPrisesEnChargePage extends StatefulWidget {
-  const MesPrisesEnChargePage({super.key});
+  // Overrides optionnels — permettent de réutiliser cette page telle quelle
+  // pour "Nos prises en charge" (Espace gestion d'un groupe, Lot 3) sans
+  // dupliquer son UI. Aucun impact sur les appels existants (Profil
+  // individuel).
+  final String? headerTitle;
+  final bool Function(HomeReportModel)? filterOverride;
+
+  const MesPrisesEnChargePage({
+    super.key,
+    this.headerTitle,
+    this.filterOverride,
+  });
 
   @override
   State<MesPrisesEnChargePage> createState() => _MesPrisesEnChargePageState();
@@ -83,6 +94,11 @@ class _MesPrisesEnChargePageState extends State<MesPrisesEnChargePage> {
   }
 
   List<HomeReportModel> get _myTakeovers {
+    if (widget.filterOverride != null) {
+      return ReportStore.instance.reports
+          .where(widget.filterOverride!)
+          .toList();
+    }
     final userId = AuthStore.instance.currentUser?.id;
     if (userId == null) return const [];
     return ReportStore.instance.reports
@@ -227,7 +243,8 @@ class _MesPrisesEnChargePageState extends State<MesPrisesEnChargePage> {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text('Mes prises en charge', style: CliinAppTextStyles.headingMedium),
+            child: Text(widget.headerTitle ?? 'Mes prises en charge',
+                style: CliinAppTextStyles.headingMedium),
           ),
         ],
       ),

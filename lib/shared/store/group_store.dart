@@ -75,6 +75,35 @@ class GroupStore extends ChangeNotifier {
     return cached.where((m) => m.estBureauExecutif).take(4).toList();
   }
 
+  // Tous les membres en cache (synchrone) — chaque élément est TOUJOURS un
+  // administrateur (estAdmin == true), voir GroupMemberModel. Utilisé par
+  // l'Espace gestion (avatars de tous les administrateurs).
+  List<GroupMemberModel> cachedMembers(String groupId) =>
+      List.unmodifiable(_membersCache[groupId] ?? const []);
+
+  // Équipe dirigeante complète (estBureauExecutif), non plafonnée — "Notre
+  // équipe" du profil. Les administrateurs délégués n'y apparaissent jamais.
+  List<GroupMemberModel> bureauExecutifMembers(String groupId) =>
+      cachedMembers(groupId).where((m) => m.estBureauExecutif).toList();
+
+  bool isAdmin(String groupId, String userId) =>
+      cachedMembers(groupId).any((m) => m.id == userId && m.estAdmin);
+
+  // Sympathisants du groupe pouvant être promus administrateurs — exclut
+  // ceux déjà administrateurs. Filtre par nom uniquement (voir
+  // fetchSympathisants : pas d'annuaire téléphone réel dans ce mock).
+  Future<List<GroupMemberModel>> searchSympathisants(
+    String groupId,
+    String query,
+  ) async {
+    final pool = await _repository.fetchSympathisants(groupId);
+    final normalized = query.trim().toLowerCase();
+    if (normalized.isEmpty) return pool;
+    return pool
+        .where((m) => m.nom.toLowerCase().contains(normalized))
+        .toList();
+  }
+
   // ── Création ────────────────────────────────────────────────────
   // Le créateur devient automatiquement le premier administrateur (poste
   // "Président") ET le premier sympathisant (sympathisantsCount = 1).
