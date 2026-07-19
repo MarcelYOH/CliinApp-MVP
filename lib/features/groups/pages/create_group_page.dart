@@ -33,6 +33,11 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
   bool _isDetectingZone = false;
   bool _isSubmitting = false;
 
+  // Coordonnées de la détection GPS ci-dessous — jamais devinées à partir
+  // du texte de zone, seulement capturées au moment d'un fix GPS réel.
+  double? _latitude;
+  double? _longitude;
+
   bool get _canSubmit =>
       !_isSubmitting &&
       _nomController.text.trim().isNotEmpty &&
@@ -69,7 +74,11 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
         if (place.subLocality?.isNotEmpty == true) parts.add(place.subLocality!);
         if (place.locality?.isNotEmpty == true) parts.add(place.locality!);
         if (parts.isNotEmpty) {
-          setState(() => _zoneController.text = parts.join(', '));
+          setState(() {
+            _zoneController.text = parts.join(', ');
+            _latitude = position.latitude;
+            _longitude = position.longitude;
+          });
         }
       }
     } catch (_) {
@@ -110,6 +119,8 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
         description: _descController.text.trim(),
         type: _selectedType,
         zone: _zoneController.text.trim(),
+        latitude: _latitude,
+        longitude: _longitude,
         photoPath: _photoPath,
         createurId: user.id,
         createurNom: user.username,

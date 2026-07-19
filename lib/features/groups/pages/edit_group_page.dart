@@ -5,6 +5,8 @@
 // administrateurs.
 
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
@@ -33,6 +35,13 @@ class _EditGroupPageState extends State<EditGroupPage> {
   String? _photoPath;
   GroupType _selectedType = GroupType.ong;
   bool _isSubmitting = false;
+  bool _isDetectingZone = false;
+
+  // Coordonnées existantes du groupe par défaut — ne changent que sur une
+  // nouvelle détection GPS explicite (_redetectZone), jamais sur une simple
+  // modification manuelle du texte de zone.
+  double? _latitude;
+  double? _longitude;
 
   bool get _canSubmit =>
       !_isSubmitting &&
@@ -50,6 +59,47 @@ class _EditGroupPageState extends State<EditGroupPage> {
       _descController.text = group.description;
       _photoPath = group.photoPath;
       _selectedType = group.type;
+      _latitude = group.latitude;
+      _longitude = group.longitude;
+    }
+  }
+
+  // Même logique que create_group_page.dart : position GPS puis reverse-
+  // geocoding. Contrairement à la détection automatique à la création,
+  // celle-ci est déclenchée explicitement par l'utilisateur (icône de
+  // localisation) et écrase toujours le texte + les coordonnées.
+  Future<void> _redetectZone() async {
+    setState(() => _isDetectingZone = true);
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+      final placemarks =
+          await placemarkFromCoordinates(position.latitude, position.longitude);
+      if (placemarks.isNotEmpty && mounted) {
+        final place = placemarks.first;
+        final parts = <String>[];
+        if (place.subLocality?.isNotEmpty == true) parts.add(place.subLocality!);
+        if (place.locality?.isNotEmpty == true) parts.add(place.locality!);
+        if (parts.isNotEmpty) {
+          setState(() {
+            _zoneController.text = parts.join(', ');
+            _latitude = position.latitude;
+            _longitude = position.longitude;
+          });
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Position indisponible — réessayez ou saisissez la zone manuellement.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isDetectingZone = false);
     }
   }
 
@@ -96,6 +146,8 @@ class _EditGroupPageState extends State<EditGroupPage> {
         description: _descController.text.trim(),
         type: _selectedType,
         zone: _zoneController.text.trim(),
+        latitude: _latitude,
+        longitude: _longitude,
       );
       if (mounted) Navigator.pop(context);
     } catch (_) {
@@ -172,10 +224,27 @@ class _EditGroupPageState extends State<EditGroupPage> {
                     const SizedBox(height: CliinAppConstants.spacingL),
                     buildGroupFormLabeledField(
                       label: 'Zone principale',
-                      helper: 'Détectée automatiquement — modifiable si besoin.',
+                      helper: 'Modifiable manuellement, ou relancez la détection GPS.',
                       child: buildGroupFormTextField(
                         controller: _zoneController,
                         hint: 'Ex : Riviera 2, Cocody',
+                        suffixIcon: _isDetectingZone
+                            ? const Padding(
+                                padding: EdgeInsets.all(12),
+                                child: SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: CliinAppColors.primary),
+                                ),
+                              )
+                            : IconButton(
+                                icon: const Icon(Icons.my_location_rounded,
+                                    color: CliinAppColors.primary, size: 20),
+                                onPressed: _redetectZone,
+                                tooltip: 'Redétecter ma position',
+                              ),
                       ),
                     ),
                     const SizedBox(height: CliinAppConstants.spacingL),

@@ -55,6 +55,14 @@ class GroupModel {
   final String description;
   final GroupType type;
   final String zone;
+  // Coordonnées GPS réelles capturées au moment où [zone] a été détectée
+  // automatiquement (création ou nouvelle détection en modification) —
+  // jamais devinées à partir du texte. Restent null tant qu'aucune
+  // détection GPS n'a eu lieu (ex: groupes créés avant l'ajout de ce
+  // champ) ; alimentent le tri "Plus proches" (Lot 5), jamais de distance
+  // inventée pour un groupe sans coordonnées.
+  final double? latitude;
+  final double? longitude;
   // Sous-ensemble de ["engage", "impact", "officiel"] — calculé
   // automatiquement par GroupStore.recalculerBadges(), jamais saisi.
   final List<String> badges;
@@ -87,6 +95,8 @@ class GroupModel {
     required this.description,
     required this.type,
     required this.zone,
+    this.latitude,
+    this.longitude,
     this.badges = const [],
     this.estActif = false,
     required this.createdAt,
@@ -111,6 +121,8 @@ class GroupModel {
     String? description,
     GroupType? type,
     String? zone,
+    double? latitude,
+    double? longitude,
     List<String>? badges,
     bool? estActif,
     DateTime? createdAt,
@@ -134,6 +146,8 @@ class GroupModel {
       description: description ?? this.description,
       type: type ?? this.type,
       zone: zone ?? this.zone,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
       badges: badges ?? this.badges,
       estActif: estActif ?? this.estActif,
       createdAt: createdAt ?? this.createdAt,
@@ -159,6 +173,8 @@ class GroupModel {
         'description': description,
         'type': type.name,
         'zone': zone,
+        'latitude': latitude,
+        'longitude': longitude,
         'badges': badges,
         'estActif': estActif,
         'createdAt': createdAt.toIso8601String(),
@@ -183,6 +199,8 @@ class GroupModel {
         description: json['description'] as String,
         type: GroupType.values.byName(json['type'] as String),
         zone: json['zone'] as String,
+        latitude: json['latitude']?.toDouble(),
+        longitude: json['longitude']?.toDouble(),
         badges: (json['badges'] as List).cast<String>(),
         estActif: json['estActif'] as bool,
         createdAt: DateTime.parse(json['createdAt'] as String),
