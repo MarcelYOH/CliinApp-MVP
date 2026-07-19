@@ -1,36 +1,37 @@
-// lib/features/groups/pages/create_group_page.dart
-// Création d'un groupe — philosophie "moins d'une minute", 4 champs +
-// photo facultative — CliinApp
+// lib/features/groups/pages/edit_group_page.dart
+// Modification d'un groupe existant — même structure visuelle exacte que
+// CreateGroupPage, pré-remplie avec les valeurs actuelles. Accessible
+// uniquement depuis les Paramètres du groupe (Lot 3), réservé aux
+// administrateurs.
 
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/navigation/fast_page_route.dart';
-import '../../../shared/store/auth_store.dart';
 import '../../../shared/store/group_store.dart';
 import '../../reports/pages/report_camera_page.dart';
 import '../models/group_model.dart';
 import '../widgets/group_form_fields.dart';
-import 'group_profile_page.dart';
 
-class CreateGroupPage extends StatefulWidget {
-  const CreateGroupPage({super.key});
+class EditGroupPage extends StatefulWidget {
+  final String groupId;
+
+  const EditGroupPage({super.key, required this.groupId});
 
   @override
-  State<CreateGroupPage> createState() => _CreateGroupPageState();
+  State<EditGroupPage> createState() => _EditGroupPageState();
 }
 
-class _CreateGroupPageState extends State<CreateGroupPage> {
+class _EditGroupPageState extends State<EditGroupPage> {
+  late final GroupModel? _group;
+
   final _nomController = TextEditingController();
   final _zoneController = TextEditingController();
   final _descController = TextEditingController();
 
   String? _photoPath;
   GroupType _selectedType = GroupType.ong;
-  bool _isDetectingZone = false;
   bool _isSubmitting = false;
 
   bool get _canSubmit =>
@@ -41,7 +42,15 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _detectZone());
+    _group = GroupStore.instance.groupById(widget.groupId);
+    final group = _group;
+    if (group != null) {
+      _nomController.text = group.nom;
+      _zoneController.text = group.zone;
+      _descController.text = group.description;
+      _photoPath = group.photoPath;
+      _selectedType = group.type;
+    }
   }
 
   @override
@@ -50,33 +59,6 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
     _zoneController.dispose();
     _descController.dispose();
     super.dispose();
-  }
-
-  // Même logique que report_form_page.dart : position GPS puis reverse-
-  // geocoding. Simplifié (pas de suivi continu) — la zone d'un groupe n'a
-  // pas besoin de la même précision anti-fraude qu'un signalement.
-  Future<void> _detectZone() async {
-    setState(() => _isDetectingZone = true);
-    try {
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-      );
-      final placemarks =
-          await placemarkFromCoordinates(position.latitude, position.longitude);
-      if (placemarks.isNotEmpty && mounted && _zoneController.text.trim().isEmpty) {
-        final place = placemarks.first;
-        final parts = <String>[];
-        if (place.subLocality?.isNotEmpty == true) parts.add(place.subLocality!);
-        if (place.locality?.isNotEmpty == true) parts.add(place.locality!);
-        if (parts.isNotEmpty) {
-          setState(() => _zoneController.text = parts.join(', '));
-        }
-      }
-    } catch (_) {
-      // Détection indisponible — l'utilisateur saisit la zone manuellement.
-    } finally {
-      if (mounted) setState(() => _isDetectingZone = false);
-    }
   }
 
   Future<void> _pickPhoto() async {
@@ -103,24 +85,19 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
   Future<void> _submit() async {
     if (!_canSubmit) return;
     setState(() => _isSubmitting = true);
-    final user = AuthStore.instance.currentUser!;
     try {
-      final created = await GroupStore.instance.createGroup(
+      // GroupModel.description EST "Qui sommes-nous" — même donnée, jamais
+      // une copie séparée : la mise à jour se reflète directement dans le
+      // profil au retour.
+      await GroupStore.instance.updateGroup(
+        widget.groupId,
         nom: _nomController.text.trim(),
+        photoPath: _photoPath,
         description: _descController.text.trim(),
         type: _selectedType,
         zone: _zoneController.text.trim(),
-        photoPath: _photoPath,
-        createurId: user.id,
-        createurNom: user.username,
-        createurAvatarPath: user.avatarPath,
       );
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          fastFadeRoute<void>(GroupProfilePage(groupId: created.id)),
-        );
-      }
+      if (mounted) Navigator.pop(context);
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -136,6 +113,27 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_group == null) {
+      return Scaffold(
+        backgroundColor: CliinAppColors.background,
+        body: SafeArea(
+          top: false,
+          bottom: false,
+          child: Column(
+            children: [
+              _buildHeader(context),
+              Expanded(
+                child: Center(
+                  child: Text('Groupe introuvable',
+                      style: CliinAppTextStyles.bodyMedium),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: CliinAppColors.background,
       body: SafeArea(
@@ -177,21 +175,7 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
                       helper: 'Détectée automatiquement — modifiable si besoin.',
                       child: buildGroupFormTextField(
                         controller: _zoneController,
-                        hint: _isDetectingZone
-                            ? 'Détection en cours...'
-                            : 'Ex : Riviera 2, Cocody',
-                        suffixIcon: _isDetectingZone
-                            ? const Padding(
-                                padding: EdgeInsets.all(12),
-                                child: SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: CliinAppColors.primary),
-                                ),
-                              )
-                            : null,
+                        hint: 'Ex : Riviera 2, Cocody',
                       ),
                     ),
                     const SizedBox(height: CliinAppConstants.spacingL),
@@ -221,7 +205,7 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
                 enabled: _canSubmit,
                 isSubmitting: _isSubmitting,
                 onPressed: _submit,
-                label: 'Créer le groupe',
+                label: 'Enregistrer les modifications',
               ),
             ),
           ],
@@ -245,7 +229,7 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
               color: CliinAppColors.textDark, size: 24),
         ),
         const SizedBox(width: CliinAppConstants.spacingM),
-        Text('Créer un groupe', style: CliinAppTextStyles.headingMedium),
+        Text('Modifier le groupe', style: CliinAppTextStyles.headingMedium),
       ]),
     );
   }
