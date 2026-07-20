@@ -43,7 +43,8 @@ _CaseFilterStatus _caseFilterStatusOf(HomeReportModel r) {
   if (r.status == ReportStatus.enCours) return _CaseFilterStatus.enCours;
   if (r.status == ReportStatus.traite) return _CaseFilterStatus.traite;
   final outcome = r.intervenant?.outcome;
-  if (outcome == InterventionOutcome.abandoned) {
+  if (outcome == InterventionOutcome.abandoned ||
+      outcome == InterventionOutcome.abandonedVoluntary) {
     return _CaseFilterStatus.abandonne;
   }
   if (outcome == InterventionOutcome.rejected) {

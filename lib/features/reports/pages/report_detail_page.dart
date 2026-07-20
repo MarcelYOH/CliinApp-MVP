@@ -559,10 +559,14 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
   Widget _buildResidualOutcomeBanner() {
     final outcome = _data.intervenant?.outcome;
     if (outcome != InterventionOutcome.abandoned &&
+        outcome != InterventionOutcome.abandonedVoluntary &&
         outcome != InterventionOutcome.rejected) {
       return const SizedBox.shrink();
     }
-    final isAbandoned = outcome == InterventionOutcome.abandoned;
+    final isAbandonedAuto = outcome == InterventionOutcome.abandoned;
+    final isAbandonedVoluntary =
+        outcome == InterventionOutcome.abandonedVoluntary;
+    final isAbandoned = isAbandonedAuto || isAbandonedVoluntary;
     final color = isAbandoned
         ? const Color(0xFF6B7280)
         : const Color(0xFF8E24AA);
@@ -605,13 +609,17 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    isAbandoned
-                        ? 'Délai de 72h dépassé sans soumission de preuve. '
-                            'Votre cas est de nouveau Disponible pour tout '
-                            'intervenant.'
-                        : 'Preuve non conforme — écart de position GPS trop '
-                            'important. Votre cas est de nouveau Disponible '
-                            'pour tout intervenant.',
+                    isAbandonedVoluntary
+                        ? 'L\'intervenant a volontairement abandonné sa prise '
+                            'en charge avant la fin du délai. Votre cas est de '
+                            'nouveau Disponible pour tout intervenant.'
+                        : isAbandonedAuto
+                            ? 'Délai de 72h dépassé sans soumission de preuve. '
+                                'Votre cas est de nouveau Disponible pour tout '
+                                'intervenant.'
+                            : 'Preuve non conforme — écart de position GPS trop '
+                                'important. Votre cas est de nouveau Disponible '
+                                'pour tout intervenant.',
                     style: GoogleFonts.inter(
                       fontSize: 11,
                       color: CliinAppColors.textSecondary,

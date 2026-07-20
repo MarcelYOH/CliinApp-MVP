@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/app_text_styles.dart';
+import '../../../../shared/data/mock_groups.dart';
 import '../../../../shared/store/report_store.dart';
 import '../../../../shared/widgets/report_action_zone.dart';
 import '../../../../shared/widgets/report_stats_comments.dart';
@@ -317,15 +318,12 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
     );
   }
 
-  bool get _showPublicViewLink {
-    final outcome = _report.intervenant?.outcome;
-    return outcome != InterventionOutcome.abandoned &&
-        outcome != InterventionOutcome.rejected;
-  }
+  bool get _showPublicViewLink => !_isTerminalOutcome;
 
   bool get _isTerminalOutcome {
     final outcome = _report.intervenant?.outcome;
     return outcome == InterventionOutcome.abandoned ||
+        outcome == InterventionOutcome.abandonedVoluntary ||
         outcome == InterventionOutcome.rejected;
   }
 
@@ -413,6 +411,10 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
                             InterventionOutcome.abandoned) ...[
                           const SizedBox(height: CliinAppConstants.spacingM),
                           _buildAbandonedCard(),
+                        ] else if (_report.intervenant?.outcome ==
+                            InterventionOutcome.abandonedVoluntary) ...[
+                          const SizedBox(height: CliinAppConstants.spacingM),
+                          _buildAbandonedVoluntaryCard(),
                         ] else if (_report.intervenant?.outcome ==
                             InterventionOutcome.rejected) ...[
                           const SizedBox(height: CliinAppConstants.spacingM),
@@ -554,6 +556,57 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
     );
   }
 
+  // ── Carte "Abandonné" — abandon volontaire, avant la fin du délai ──
+  // Même famille visuelle que _buildAbandonedCard (grise, neutre) — motif
+  // distinct dans le texte, pour ne jamais confondre avec l'abandon
+  // automatique par délai dépassé.
+  Widget _buildAbandonedVoluntaryCard() {
+    return Container(
+      padding: const EdgeInsets.all(CliinAppConstants.spacingM),
+      decoration: BoxDecoration(
+        color: CliinAppColors.background,
+        borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.remove_circle_outline_rounded,
+            color: CliinAppColors.textSecondary,
+            size: 22,
+          ),
+          const SizedBox(width: CliinAppConstants.spacingM),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Abandon volontaire',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: CliinAppColors.textDark,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Vous avez volontairement abandonné cette prise en charge '
+                  'avant la fin du délai. Ce cas est redevenu Disponible — un '
+                  'autre intervenant peut désormais le prendre en charge.',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: CliinAppColors.textSecondary,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── Carte "Rejeté" — preuve refusée (GPS hors marge) ────────────
   Widget _buildRejectedCard() {
     return Container(
@@ -644,17 +697,423 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
               ),
             ),
           ),
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: CliinAppColors.background,
-              shape: BoxShape.circle,
+          GestureDetector(
+            onTap: _canManageTakeover ? _openManageMenu : null,
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: CliinAppColors.background,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.more_vert_rounded,
+                color: CliinAppColors.textDark,
+                size: 20,
+              ),
             ),
-            child: const Icon(
-              Icons.more_vert_rounded,
-              color: CliinAppColors.textDark,
-              size: 20,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Prise en charge active — options "Modifier"/"Abandonner"
+  // uniquement disponibles tant que le cas est En cours et non déjà
+  // résolu (outcome none) ──────────────────────────────────────────
+  bool get _canManageTakeover =>
+      _report.status == ReportStatus.enCours &&
+      (_report.intervenant?.outcome ?? InterventionOutcome.none) ==
+          InterventionOutcome.none;
+
+  void _openManageMenu() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(CliinAppConstants.radiusLarge),
+            topRight: Radius.circular(CliinAppConstants.radiusLarge),
+          ),
+        ),
+        padding: const EdgeInsets.fromLTRB(
+          CliinAppConstants.pagePadding,
+          CliinAppConstants.spacingM,
+          CliinAppConstants.pagePadding,
+          CliinAppConstants.spacingL,
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(
+                      bottom: CliinAppConstants.spacingL),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: CliinAppColors.divider,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              _manageMenuTile(
+                icon: Icons.swap_horiz_rounded,
+                iconColor: CliinAppColors.primary,
+                label: 'Modifier ma prise en charge',
+                subtitle: 'Basculer entre «en mon nom» et «au nom '
+                    'd\'un groupe»',
+                onTap: () {
+                  Navigator.pop(context);
+                  _openChangeAttributionSheet();
+                },
+              ),
+              const SizedBox(height: CliinAppConstants.spacingS),
+              _manageMenuTile(
+                icon: Icons.cancel_outlined,
+                iconColor: CliinAppColors.alertRed,
+                label: 'Abandonner ma prise en charge',
+                subtitle: 'Le cas redevient Disponible pour un autre '
+                    'intervenant',
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmAbandon();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _manageMenuTile({
+    required IconData icon,
+    required Color iconColor,
+    required String label,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(CliinAppConstants.spacingM),
+        decoration: BoxDecoration(
+          color: CliinAppColors.background,
+          borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: CliinAppColors.cardWhite,
+                borderRadius:
+                    BorderRadius.circular(CliinAppConstants.radiusSmall),
+              ),
+              child: Icon(icon, color: iconColor, size: 18),
+            ),
+            const SizedBox(width: CliinAppConstants.spacingM),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: CliinAppColors.textDark,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: CliinAppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Correction 1 — Modifier l'attribution de la prise en charge ────
+  void _openChangeAttributionSheet() {
+    final currentGroupName = _report.intervenant?.groupName;
+    bool isSelf = currentGroupName == null;
+    String? selectedGroup = currentGroupName;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: StatefulBuilder(
+          builder: (ctx, setModal) => Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(CliinAppConstants.radiusLarge),
+                topRight: Radius.circular(CliinAppConstants.radiusLarge),
+              ),
+            ),
+            padding: const EdgeInsets.fromLTRB(
+              CliinAppConstants.pagePadding,
+              0,
+              CliinAppConstants.pagePadding,
+              0,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      margin:
+                          const EdgeInsets.only(top: CliinAppConstants.spacingM),
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: CliinAppColors.divider,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: CliinAppConstants.spacingL),
+                  Text(
+                    'Modifier ma prise en charge',
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: CliinAppColors.textDark,
+                    ),
+                  ),
+                  Text(
+                    'Au nom de qui intervenez-vous sur ce cas ?',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: CliinAppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: CliinAppConstants.spacingL),
+                  _AttributionChoiceCard(
+                    selected: isSelf,
+                    icon: Icons.person_rounded,
+                    title: 'En mon nom',
+                    subtitle: 'Cette prise en charge compte dans vos '
+                        'statistiques personnelles.',
+                    onTap: () => setModal(() {
+                      isSelf = true;
+                      selectedGroup = null;
+                    }),
+                  ),
+                  const SizedBox(height: CliinAppConstants.spacingM),
+                  _AttributionChoiceCard(
+                    selected: !isSelf,
+                    icon: Icons.group_rounded,
+                    title: 'Au nom d\'un groupe',
+                    subtitle: 'Cette prise en charge compte dans les '
+                        'statistiques du groupe choisi.',
+                    onTap: () => setModal(() => isSelf = false),
+                  ),
+                  if (!isSelf) ...[
+                    const SizedBox(height: CliinAppConstants.spacingM),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: CliinAppColors.background,
+                        borderRadius: BorderRadius.circular(
+                            CliinAppConstants.radiusSmall),
+                        border: Border.all(color: CliinAppColors.divider),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: selectedGroup,
+                          isExpanded: true,
+                          hint: Text('Choisir un groupe',
+                              style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  color: CliinAppColors.textSecondary)),
+                          items: kMockUserGroups
+                              .map((g) => DropdownMenuItem(
+                                    value: g,
+                                    child:
+                                        Text(g, style: GoogleFonts.inter(fontSize: 13)),
+                                  ))
+                              .toList(),
+                          onChanged: (g) => setModal(() => selectedGroup = g),
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: CliinAppConstants.spacingXL),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          style: OutlinedButton.styleFrom(
+                            side:
+                                const BorderSide(color: CliinAppColors.divider),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                  CliinAppConstants.radiusMedium),
+                            ),
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          child: Text(
+                            'Annuler',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: CliinAppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: CliinAppConstants.spacingM),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: (!isSelf && selectedGroup == null)
+                              ? null
+                              : () async {
+                                  final newGroupName =
+                                      isSelf ? null : selectedGroup;
+                                  final unchanged =
+                                      newGroupName == currentGroupName;
+                                  Navigator.pop(ctx);
+                                  if (unchanged) return;
+                                  try {
+                                    await ReportStore.instance
+                                        .changeAttribution(
+                                      reportId: _report.id,
+                                      groupName: newGroupName,
+                                    );
+                                  } catch (e) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content:
+                                              Text('Erreur : ${e.toString()}'),
+                                          backgroundColor:
+                                              CliinAppColors.alertRed,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: CliinAppColors.primary,
+                            disabledBackgroundColor: CliinAppColors.divider,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                  CliinAppConstants.radiusMedium),
+                            ),
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 14),
+                            elevation: 0,
+                          ),
+                          child: Text(
+                            'Confirmer',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: CliinAppColors.textWhite,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: MediaQuery.of(ctx).padding.bottom + 8),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Correction 2 — Abandon volontaire ───────────────────────────
+  void _confirmAbandon() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: CliinAppColors.cardWhite,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
+        ),
+        title: Text(
+          'Abandonner cette prise en charge ?',
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: CliinAppColors.textDark,
+          ),
+        ),
+        content: Text(
+          'Êtes-vous sûr de vouloir abandonner ? Le cas redeviendra '
+          'immédiatement Disponible et un autre intervenant pourra le '
+          'prendre en charge.',
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            color: CliinAppColors.textSecondary,
+            height: 1.4,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              'Annuler',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: CliinAppColors.textSecondary,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                await ReportStore.instance.abandonTakeoverVoluntarily(
+                  reportId: _report.id,
+                );
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Erreur : ${e.toString()}'),
+                      backgroundColor: CliinAppColors.alertRed,
+                    ),
+                  );
+                }
+              }
+            },
+            child: Text(
+              'Oui, abandonner',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: CliinAppColors.alertRed,
+              ),
             ),
           ),
         ],
@@ -673,7 +1132,8 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
       );
     }
     final outcome = _report.intervenant?.outcome;
-    if (outcome == InterventionOutcome.abandoned) {
+    if (outcome == InterventionOutcome.abandoned ||
+        outcome == InterventionOutcome.abandonedVoluntary) {
       return (
         label: 'Abandonné',
         color: const Color(0xFF6B7280),
@@ -718,6 +1178,15 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
         color: const Color(0xFF6B7280),
         bg: const Color(0xFFF0F0F0),
         icon: Icons.hourglass_disabled_rounded,
+      );
+    }
+    if (outcome == InterventionOutcome.abandonedVoluntary) {
+      return (
+        label: 'Abandon',
+        value: 'Volontaire',
+        color: const Color(0xFF6B7280),
+        bg: const Color(0xFFF0F0F0),
+        icon: Icons.remove_circle_outline_rounded,
       );
     }
     if (outcome == InterventionOutcome.rejected) {
@@ -1430,6 +1899,74 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
 // ─────────────────────────────────────────────────────────────────
 // WIDGETS INTERNES
 // ─────────────────────────────────────────────────────────────────
+
+// ── Choix d'attribution — même style que take_charge_flow._ChoiceCard,
+// dupliqué localement pour rester dans le périmètre de ce fichier ────
+class _AttributionChoiceCard extends StatelessWidget {
+  final bool selected;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _AttributionChoiceCard({
+    required this.selected,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      padding: const EdgeInsets.all(CliinAppConstants.spacingL),
+      decoration: BoxDecoration(
+        color: selected ? CliinAppColors.primaryLight : CliinAppColors.cardWhite,
+        borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
+        border: Border.all(
+          color: selected ? CliinAppColors.primary : CliinAppColors.divider,
+          width: selected ? 1.5 : 1.0,
+        ),
+      ),
+      child: Row(children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: selected ? CliinAppColors.primary : CliinAppColors.background,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon,
+              color:
+                  selected ? CliinAppColors.textWhite : CliinAppColors.textSecondary,
+              size: 20),
+        ),
+        const SizedBox(width: CliinAppConstants.spacingM),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title,
+                style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: CliinAppColors.textDark)),
+            Text(subtitle,
+                style: GoogleFonts.inter(
+                    fontSize: 12, color: CliinAppColors.textSecondary)),
+          ]),
+        ),
+        Icon(
+          selected
+              ? Icons.radio_button_checked_rounded
+              : Icons.radio_button_off_rounded,
+          color: selected ? CliinAppColors.primary : CliinAppColors.textSecondary,
+        ),
+      ]),
+    ),
+  );
+}
 
 class _MiniChip extends StatelessWidget {
   final String? label;

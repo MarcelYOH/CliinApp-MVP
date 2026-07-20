@@ -9,6 +9,7 @@ enum HistoryEventType {
   enCoursDeTraitement,
   traite,
   abandonne,
+  abandonneVolontairement,
   rejete,
 }
 
@@ -20,6 +21,7 @@ extension HistoryEventTypeExtension on HistoryEventType {
       case HistoryEventType.enCoursDeTraitement: return 'En cours de traitement';
       case HistoryEventType.traite:              return 'Traité';
       case HistoryEventType.abandonne:           return 'Abandonné';
+      case HistoryEventType.abandonneVolontairement: return 'Abandon volontaire';
       case HistoryEventType.rejete:              return 'Rejeté';
     }
   }
@@ -36,6 +38,7 @@ extension HistoryEventTypeExtension on HistoryEventType {
       case HistoryEventType.enCoursDeTraitement: return ReportStatus.enCours.label;
       case HistoryEventType.traite:              return ReportStatus.traite.label;
       case HistoryEventType.abandonne:           return 'Abandonné';
+      case HistoryEventType.abandonneVolontairement: return 'Abandonné';
       case HistoryEventType.rejete:              return 'Rejeté';
     }
   }
@@ -47,6 +50,7 @@ extension HistoryEventTypeExtension on HistoryEventType {
       case HistoryEventType.enCoursDeTraitement: return ReportStatus.enCours.color;
       case HistoryEventType.traite:              return ReportStatus.traite.color;
       case HistoryEventType.abandonne:           return const Color(0xFF9E9E9E);
+      case HistoryEventType.abandonneVolontairement: return const Color(0xFF9E9E9E);
       case HistoryEventType.rejete:              return const Color(0xFF9C27B0);
     }
   }
@@ -58,6 +62,7 @@ extension HistoryEventTypeExtension on HistoryEventType {
       case HistoryEventType.enCoursDeTraitement: return ReportStatus.enCours.bgColor;
       case HistoryEventType.traite:              return ReportStatus.traite.bgColor;
       case HistoryEventType.abandonne:           return const Color(0xFFF5F5F5);
+      case HistoryEventType.abandonneVolontairement: return const Color(0xFFF5F5F5);
       case HistoryEventType.rejete:              return const Color(0xFFF3E5F5);
     }
   }
@@ -69,6 +74,7 @@ extension HistoryEventTypeExtension on HistoryEventType {
       case HistoryEventType.enCoursDeTraitement: return 'En attente de preuve de résolution';
       case HistoryEventType.traite:              return 'Preuve APRÈS validée et publiée';
       case HistoryEventType.abandonne:           return 'Aucune preuve soumise dans le délai imparti';
+      case HistoryEventType.abandonneVolontairement: return 'L\'intervenant a volontairement abandonné avant la fin du délai';
       case HistoryEventType.rejete:               return 'La position GPS de la preuve ne correspondait pas';
     }
   }
@@ -80,6 +86,7 @@ extension HistoryEventTypeExtension on HistoryEventType {
       case HistoryEventType.enCoursDeTraitement: return const Color(0xFF9E9E9E);
       case HistoryEventType.traite:              return const Color(0xFFE53935);
       case HistoryEventType.abandonne:           return const Color(0xFF6B7280);
+      case HistoryEventType.abandonneVolontairement: return const Color(0xFF6B7280);
       case HistoryEventType.rejete:              return const Color(0xFF8E24AA);
     }
   }
@@ -91,6 +98,7 @@ extension HistoryEventTypeExtension on HistoryEventType {
       case HistoryEventType.enCoursDeTraitement: return Icons.hourglass_top_rounded;
       case HistoryEventType.traite:              return Icons.check_circle_rounded;
       case HistoryEventType.abandonne:           return Icons.cancel_rounded;
+      case HistoryEventType.abandonneVolontairement: return Icons.remove_circle_outline_rounded;
       case HistoryEventType.rejete:              return Icons.error_rounded;
     }
   }

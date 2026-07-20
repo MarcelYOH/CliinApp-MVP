@@ -9,6 +9,7 @@ import '../../../shared/navigation/fast_page_route.dart';
 import '../../../shared/navigation/tab_navigation.dart';
 import '../../../shared/store/auth_store.dart';
 import '../../../shared/store/group_store.dart';
+import '../../../shared/store/report_store.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/widgets/group_badge_chip.dart';
 import '../../auth/auth_guard.dart';
@@ -40,12 +41,17 @@ class _GroupProfilePageState extends State<GroupProfilePage> {
     super.initState();
     GroupStore.instance.addListener(_onStoreUpdate);
     AuthStore.instance.addListener(_onStoreUpdate);
+    // "Pris en charge" (onglet À propos) est calculé dynamiquement depuis
+    // ReportStore (casPrisEnChargeCountForGroup) — doit se rafraîchir dès
+    // qu'une attribution change, sans attendre une réouverture de la page.
+    ReportStore.instance.addListener(_onStoreUpdate);
   }
 
   @override
   void dispose() {
     GroupStore.instance.removeListener(_onStoreUpdate);
     AuthStore.instance.removeListener(_onStoreUpdate);
+    ReportStore.instance.removeListener(_onStoreUpdate);
     super.dispose();
   }
 

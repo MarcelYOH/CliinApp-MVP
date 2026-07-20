@@ -20,6 +20,22 @@ abstract class ReportRepository {
     required bool visible,
   });
 
+  // ── Modifier l'attribution d'une prise en charge active (En cours) ──
+  // groupName == null -> "en mon nom" ; groupName renseigné -> "au nom de
+  // ce groupe". Aucune autre donnée du signalement ne change.
+  Future<HomeReportModel> changeAttribution({
+    required String reportId,
+    required String? groupName,
+  });
+
+  // ── Abandon volontaire — avant la fin du délai de 72h ────────────
+  // Motif distinct de expireOverdueTakeovers() (délai dépassé) : cas
+  // entièrement libéré (statut Disponible, intervenant conservé avec
+  // outcome=abandonedVoluntary pour le résidu privé).
+  Future<HomeReportModel> abandonTakeoverVoluntarily({
+    required String reportId,
+  });
+
   // ── Nouvelle méthode : ajouter/modifier le numéro WhatsApp ──
   Future<HomeReportModel> updateWhatsAppNumber({
     required String reportId,

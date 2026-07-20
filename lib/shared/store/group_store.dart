@@ -69,10 +69,12 @@ class GroupStore extends ChangeNotifier {
   }
 
   // Membres en cache (synchrone) — équipe dirigeante (estBureauExecutif)
-  // uniquement, jusqu'à 4, pour l'affichage compact de GroupCard.
+  // uniquement, jusqu'à 5, pour l'affichage compact de GroupCard. Ordre de
+  // création préservé (créateur en premier, cf. createGroup/addAdmin) —
+  // le mécanisme "+N" de GroupCard prend le relais au-delà de 5.
   List<GroupMemberModel> leaderAvatars(String groupId) {
     final cached = _membersCache[groupId] ?? const [];
-    return cached.where((m) => m.estBureauExecutif).take(4).toList();
+    return cached.where((m) => m.estBureauExecutif).take(5).toList();
   }
 
   // Tous les membres en cache (synchrone) — chaque élément est TOUJOURS un

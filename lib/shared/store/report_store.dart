@@ -117,15 +117,36 @@ class ReportStore extends ChangeNotifier {
       _reports.where((r) => r.signaleParId == userId).length;
 
   // Nombre de cas ACTUELLEMENT en cours parmi ceux pris en charge par
-  // l'utilisateur — pas un cumul historique : un cas qui quitte le statut
-  // "en cours" (traité, abandonné, rejeté) ne compte plus ici.
+  // l'utilisateur EN SON NOM PERSONNEL — pas un cumul historique : un cas
+  // qui quitte le statut "en cours" (traité, abandonné, rejeté) ne compte
+  // plus ici. Un cas pris en charge (ou rebasculé, voir changeAttribution)
+  // au nom d'un groupe (intervenant.groupName != null) ne compte JAMAIS
+  // dans les statistiques personnelles — il bascule entièrement vers celles
+  // du groupe (voir casPrisEnChargeCountForGroup).
   int prisEnChargeCount(String userId) => _reports
       .where((r) =>
-          r.intervenant?.id == userId && r.status == ReportStatus.enCours)
+          r.intervenant?.id == userId &&
+          r.intervenant?.groupName == null &&
+          r.status == ReportStatus.enCours)
       .length;
 
   int casTraitesCount(String userId) => _reports
-      .where((r) => r.intervenant?.id == userId && r.status == ReportStatus.traite)
+      .where((r) =>
+          r.intervenant?.id == userId &&
+          r.intervenant?.groupName == null &&
+          r.status == ReportStatus.traite)
+      .length;
+
+  // ── Statistique groupe — "Pris en charge" ────────────────────────
+  // Miroir de prisEnChargeCount, mais côté groupe : compte les cas
+  // ACTUELLEMENT en cours pris en charge au nom de ce groupe (peu importe
+  // quel administrateur a effectué la prise en charge ou le rebasculement
+  // d'attribution). Appariement par nom de groupe — même convention que
+  // intervenant.groupName / take_charge_flow.
+  int casPrisEnChargeCountForGroup(String groupName) => _reports
+      .where((r) =>
+          r.intervenant?.groupName == groupName &&
+          r.status == ReportStatus.enCours)
       .length;
 
   // ── Compteur par catégorie — section "Catégories" (accueil) ──────
@@ -223,6 +244,44 @@ class ReportStore extends ChangeNotifier {
       rethrow;
     } finally {
       _setLoading(false);
+    }
+  }
+
+  // ── Modifier l'attribution d'une prise en charge active ──────────
+  Future<HomeReportModel> changeAttribution({
+    required String reportId,
+    required String? groupName,
+  }) async {
+    try {
+      final updated = await _repository.changeAttribution(
+        reportId: reportId,
+        groupName: groupName,
+      );
+      _replaceReport(updated);
+      _error = null;
+      notifyListeners();
+      return updated;
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
+    }
+  }
+
+  // ── Abandon volontaire — avant la fin du délai de 72h ────────────
+  Future<HomeReportModel> abandonTakeoverVoluntarily({
+    required String reportId,
+  }) async {
+    try {
+      final updated = await _repository.abandonTakeoverVoluntarily(
+        reportId: reportId,
+      );
+      _replaceReport(updated);
+      _error = null;
+      notifyListeners();
+      return updated;
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
     }
   }
 

@@ -40,11 +40,22 @@ import '../../profile/pages/profile_page.dart';
 // Officiel) — preuve d'un impact terrain complet. Si moins de 3 groupes
 // remplissent cette condition, on affiche uniquement ceux-là : jamais un
 // groupe à 1 ou 2 badges en remplacement.
+//
+// Cartes factices : les groupes de démonstration seedés (createurId
+// préfixé 'seed_', voir mock_group_repository.dart) jouent le même rôle
+// d'accroche que les cartes factices "signalements" — plafonné à 3 au
+// total, avec priorité systématique aux vrais groupes créés par des
+// utilisateurs dès qu'ils atteignent les 3 badges (remplacement individuel,
+// jamais ajoutés à côté).
 List<GroupModel> _selectFeaturedGroups(List<GroupModel> groups) {
   const requiredBadges = ['engage', 'impact', 'officiel'];
-  return groups
-      .where((g) => requiredBadges.every(g.badges.contains))
-      .toList();
+  final qualifying =
+      groups.where((g) => requiredBadges.every(g.badges.contains)).toList();
+  final real =
+      qualifying.where((g) => !g.createurId.startsWith('seed_')).toList();
+  final demo =
+      qualifying.where((g) => g.createurId.startsWith('seed_')).toList();
+  return [...real, ...demo].take(3).toList();
 }
 
 // Salutation selon l'heure du téléphone :
@@ -184,7 +195,25 @@ class _HomePageState extends State<HomePage> {
     return map[label];
   }
 
+  // ── Cartes factices "accroche" — message explicatif au tap, jamais de
+  // navigation vers un faux détail ni d'action réelle (prise en charge,
+  // contact) sur du contenu qui n'existe pas dans ReportStore ───────────
+  void _showFakeReportNotice() {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text(
+        'Ceci est un exemple. Soyez le premier à signaler un cas réel dans '
+        'votre zone !',
+      ),
+      behavior: SnackBarBehavior.floating,
+      duration: Duration(seconds: 3),
+    ));
+  }
+
   void _onCardTap(HomeReportModel report) {
+    if (HomeDummyData.isFakeReport(report)) {
+      _showFakeReportNotice();
+      return;
+    }
     Navigator.push(
       context,
       fastFadeRoute<void>(ReportDetailPage(data: report)),
@@ -192,6 +221,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _onTakeCharge(HomeReportModel report) async {
+    if (HomeDummyData.isFakeReport(report)) {
+      _showFakeReportNotice();
+      return;
+    }
     if (await requireAuth(context)) {
       if (!mounted) return;
       showTakeChargeFlow(
@@ -213,6 +246,10 @@ class _HomePageState extends State<HomePage> {
   // Déclenché uniquement si intervenant.isContactable = true
   // (whatsAppVisible = true ET whatsAppNumber != null)
   void _onContact(HomeReportModel report) {
+    if (HomeDummyData.isFakeReport(report)) {
+      _showFakeReportNotice();
+      return;
+    }
     openWhatsApp(context: context, intervenant: report.intervenant);
   }
 
@@ -240,10 +277,21 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final store = ReportStore.instance;
 
-    // Zéro donnée de repli : uniquement les vrais cas disponibles du
-    // ReportStore, jamais de carte inventée.
-    final nearbyReports = store.nearbyReports;
-    final recentReports = store.recentReports;
+    // Priorité systématique aux vrais signalements du ReportStore — les
+    // cartes factices ne servent que d'accroche tant qu'aucun vrai contenu
+    // équivalent n'existe, et s'effacent individuellement dès qu'un vrai
+    // cas remplit les mêmes critères (statut Disponible, rayon 2km pour "À
+    // proximité" ; statut Disponible le plus récent pour "Cas récents").
+    // 1 seul vrai résultat -> occupe toute la largeur (jamais accompagné
+    // d'une carte factice) ; 0 -> les 2/1 cartes factices habituelles.
+    final realNearbyReports = store.nearbyReports;
+    final nearbyReports = realNearbyReports.isEmpty
+        ? HomeDummyData.fakeNearbyReports
+        : realNearbyReports;
+    final realRecentReports = store.recentReports;
+    final recentReports = realRecentReports.isEmpty
+        ? HomeDummyData.fakeRecentReports
+        : realRecentReports;
 
     // Compteurs par catégorie — calculés dynamiquement depuis ReportStore
     // (tous statuts confondus), jamais lus depuis HomeDummyData qui ne

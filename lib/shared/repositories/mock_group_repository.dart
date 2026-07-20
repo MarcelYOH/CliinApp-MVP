@@ -65,6 +65,10 @@ class MockGroupRepository implements GroupRepository {
       group(
         id: 'grp_clean_riviera',
         nom: 'Clean Riviera',
+        // Réutilise une image déjà présente dans les assets du module
+        // Groupes (aucune nouvelle image créée) — donne un aperçu vivant à
+        // ce groupe factice sur l'accueil (correction cartes factices).
+        photoPath: 'assets/images/group_banner1.jpg',
         description:
             'Collectif de riverains mobilisé pour la propreté de Riviera 2 : '
             'nettoyage hebdomadaire des rues et sensibilisation au tri sélectif.',
@@ -82,6 +86,7 @@ class MockGroupRepository implements GroupRepository {
       group(
         id: 'grp_green_city',
         nom: 'Green City',
+        photoPath: 'assets/images/group_banner2.jpg',
         description:
             'Association pour un cadre de vie plus vert au Plateau : '
             'reboisement urbain, compostage communautaire et propreté des espaces publics.',
@@ -99,6 +104,7 @@ class MockGroupRepository implements GroupRepository {
       group(
         id: 'grp_eco_jeunes',
         nom: 'Eco Jeunes',
+        photoPath: 'assets/images/group_banner3.jpg',
         description:
             'Mobilisation des jeunes de Yopougon autour des enjeux environnementaux '
             'locaux : ateliers de sensibilisation et actions terrain.',

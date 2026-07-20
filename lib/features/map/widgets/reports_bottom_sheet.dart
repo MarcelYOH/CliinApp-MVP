@@ -29,6 +29,10 @@ class ReportsBottomSheet extends StatefulWidget {
   final void Function(HomeReportModel)? onTakeCharge;
   final void Function(HomeReportModel)? onContact; // ← WhatsApp public
   final double availableHeight;
+  // Message d'état vide personnalisé (ex: recherche par zone sans résultat)
+  // — remplace le message générique "Aucun cas trouvé avec ces critères"
+  // quand renseigné.
+  final String? emptyStateMessage;
 
   const ReportsBottomSheet({
     super.key,
@@ -38,6 +42,7 @@ class ReportsBottomSheet extends StatefulWidget {
     this.onCardTap,
     this.onTakeCharge,
     this.onContact,
+    this.emptyStateMessage,
   });
 
   @override
@@ -321,7 +326,8 @@ class _ReportsBottomSheetState extends State<ReportsBottomSheet>
                                     .withValues(alpha: 0.4)),
                             const SizedBox(height: 12),
                             Text(
-                              'Aucun cas trouvé avec ces critères',
+                              widget.emptyStateMessage ??
+                                  'Aucun cas trouvé avec ces critères',
                               textAlign: TextAlign.center,
                               style: CliinAppTextStyles.bodyMedium.copyWith(
                                   color: CliinAppColors.textSecondary),

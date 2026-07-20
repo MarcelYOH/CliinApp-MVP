@@ -6,6 +6,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/store/group_store.dart';
+import '../../../shared/store/report_store.dart';
 import '../models/group_model.dart';
 import 'group_profile_widgets.dart';
 
@@ -184,7 +185,12 @@ class GroupAboutTab extends StatelessWidget {
     final cards = [
       (Icons.campaign_rounded, '${group.casSignalesCount}', 'Cas signalés'),
       (Icons.task_alt_rounded, '${group.casTraitesCount}', 'Cas traités'),
-      (Icons.volunteer_activism_rounded, '${group.casPrisEnChargeCount}',
+      // Calculé dynamiquement depuis les vraies prises en charge attribuées
+      // à ce groupe (intervenant.groupName) — jamais depuis le compteur
+      // statique casPrisEnChargeCount, qui n'est alimenté par aucun
+      // événement réel de l'application.
+      (Icons.volunteer_activism_rounded,
+          '${ReportStore.instance.casPrisEnChargeCountForGroup(group.nom)}',
           'Pris en charge'),
       (Icons.bolt_rounded, '${group.actionsCount}', 'Actions'),
       (Icons.groups_rounded, '—', 'Mobilisation\nmoyenne/action'),

@@ -19,8 +19,13 @@ import 'group_badge_chip.dart';
 
 class GroupCard extends StatefulWidget {
   final GroupModel data;
+  // Override optionnel — permet une carte pleine largeur (ex: accueil,
+  // aperçu "Groupes actifs" quand un seul groupe qualifie), cohérent avec
+  // ReportCard qui propose déjà ce même mécanisme. null = largeur fixe
+  // habituelle (cardWidth), inchangée partout ailleurs.
+  final double? width;
 
-  const GroupCard({super.key, required this.data});
+  const GroupCard({super.key, required this.data, this.width});
 
   static const double cardWidth = 260;
 
@@ -62,7 +67,7 @@ class _GroupCardState extends State<GroupCard> {
         borderRadius: BorderRadius.circular(CliinAppConstants.radiusLarge),
         onTap: _openProfile,
         child: Container(
-          width: GroupCard.cardWidth,
+          width: widget.width ?? GroupCard.cardWidth,
           decoration: BoxDecoration(
             color: CliinAppColors.cardWhite,
             borderRadius: BorderRadius.circular(CliinAppConstants.radiusLarge),
@@ -296,33 +301,64 @@ class _GroupCardState extends State<GroupCard> {
   Widget _buildLeaderAvatars() {
     final leaders = GroupStore.instance.leaderAvatars(widget.data.id);
     if (leaders.isEmpty) return const SizedBox.shrink();
+    // "+N" au-delà de 5 administrateurs — même mécanisme que l'Espace
+    // gestion (group_management_tab._buildAdminsRow).
+    final totalLeaders =
+        GroupStore.instance.bureauExecutifMembers(widget.data.id).length;
+    final overflow = totalLeaders - leaders.length;
+    final slots = leaders.length + (overflow > 0 ? 1 : 0);
     return SizedBox(
-      width: 18.0 * (leaders.length - 1) + 30,
+      width: 18.0 * (slots - 1) + 30,
       height: 30,
       child: Stack(
-        children: List.generate(leaders.length, (i) {
-          final leader = leaders[i];
-          return Positioned(
-            left: i * 18.0,
-            child: Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: CliinAppColors.cardWhite, width: 2),
+        children: [
+          ...List.generate(leaders.length, (i) {
+            final leader = leaders[i];
+            return Positioned(
+              left: i * 18.0,
+              child: Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: CliinAppColors.cardWhite, width: 2),
+                ),
+                child: ClipOval(
+                  child: leader.avatarPath != null
+                      ? Image.asset(
+                          leader.avatarPath!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => _leaderFallback(i),
+                        )
+                      : _leaderFallback(i),
+                ),
               ),
-              child: ClipOval(
-                child: leader.avatarPath != null
-                    ? Image.asset(
-                        leader.avatarPath!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => _leaderFallback(i),
-                      )
-                    : _leaderFallback(i),
+            );
+          }),
+          if (overflow > 0)
+            Positioned(
+              left: leaders.length * 18.0,
+              child: Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: CliinAppColors.background,
+                  border: Border.all(color: CliinAppColors.cardWhite, width: 2),
+                ),
+                child: Center(
+                  child: Text(
+                    '+$overflow',
+                    style: CliinAppTextStyles.badge.copyWith(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      color: CliinAppColors.textDark,
+                    ),
+                  ),
+                ),
               ),
             ),
-          );
-        }),
+        ],
       ),
     );
   }

@@ -1,6 +1,8 @@
 // lib/features/map/pages/map_page.dart
 
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
@@ -49,6 +51,17 @@ class _MapPageState extends State<MapPage> {
   final TextEditingController _searchController = TextEditingController();
   late String _searchQuery;
 
+  // ── Correction 4/5 — recentrage "Ma position" + recherche par zone ──
+  // Centre effectif d'un mode "proximité" (2km) : soit la position réelle
+  // de l'utilisateur (après tap "Ma position"), soit le centre géocodé
+  // d'une zone recherchée. null tant qu'aucune des deux actions n'a été
+  // déclenchée — la carte reste alors en mode "explorer tout" (comportement
+  // existant, jamais modifié par défaut).
+  ({double lat, double lng})? _zoneCenter;
+  bool _proximityModeActive = false;
+  String? _searchedZoneLabel;
+  int _searchToken = 0;
+
   @override
   void initState() {
     super.initState();
@@ -86,7 +99,54 @@ class _MapPageState extends State<MapPage> {
   static const Duration _recentWindow = Duration(hours: 72);
   static const double _nearbyRadiusMeters = 2000;
 
+  // Distance vers le centre effectif (position réelle ou zone recherchée) —
+  // même rayon de 2km que "À proximité" sur l'accueil, appliqué autour d'un
+  // centre potentiellement différent de la position de l'utilisateur.
+  double? _distanceToZoneCenter(HomeReportModel r) {
+    final center = _zoneCenter;
+    if (center == null) {
+      return UserLocationService.instance.distanceMetersTo(r.latitude, r.longitude);
+    }
+    if (r.latitude == null || r.longitude == null) return null;
+    return Geolocator.distanceBetween(
+      center.lat, center.lng, r.latitude!, r.longitude!,
+    );
+  }
+
   List<HomeReportModel> get _filteredReports {
+    // ── Mode proximité (Ma position / recherche de zone) — NOUVELLE
+    // LOGIQUE MÉTIER : recentre l'affichage sur un centre (position réelle
+    // ou zone recherchée) et ne montre que les cas Disponibles dans un
+    // rayon de 2km autour de ce centre, triés du plus proche au plus
+    // éloigné — cohérent avec Google Maps. Remplace entièrement le mode
+    // "explorer tout" tant que ce mode est actif.
+    if (_proximityModeActive) {
+      final result = ReportStore.instance.mapReports
+          .where((r) => r.status == ReportStatus.disponible)
+          .map((r) => (report: r, meters: _distanceToZoneCenter(r)))
+          .where((e) => e.meters != null && e.meters! <= _nearbyRadiusMeters)
+          .toList()
+        ..sort((a, b) => a.meters!.compareTo(b.meters!));
+      var filtered = result.map((e) => e.report).toList();
+      if (_filters.categories.isNotEmpty) {
+        filtered =
+            filtered.where((r) => _filters.categories.contains(r.category)).toList();
+      }
+      if (_filters.gravities.isNotEmpty) {
+        filtered = filtered.where((r) {
+          return _filters.gravities.any((g) {
+            switch (g) {
+              case MapGravityFilter.critique: return r.severity == ReportSeverity.critique;
+              case MapGravityFilter.eleve:    return r.severity == ReportSeverity.eleve;
+              case MapGravityFilter.moyen:    return r.severity == ReportSeverity.moyen;
+              case MapGravityFilter.faible:   return r.severity == ReportSeverity.faible;
+            }
+          });
+        }).toList();
+      }
+      return filtered;
+    }
+
     List<HomeReportModel> result = List.from(ReportStore.instance.mapReports);
 
     final priorities = _filters.priorities;
@@ -168,12 +228,82 @@ class _MapPageState extends State<MapPage> {
   void _onNavTap(int index) =>
       navigateToTab(context, currentIndex: _navIndex, targetIndex: index);
 
-  void _onMyLocationTap() {
+  // ── Correction 4 — "Ma position" réinitialise complètement la vue ────
+  Future<void> _onMyLocationTap() async {
+    _searchToken++;
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
       content: Text('Recentrage sur votre position...'),
       duration: Duration(seconds: 1),
       behavior: SnackBarBehavior.floating,
     ));
+    // Position GPS actuelle réelle — force un nouveau relevé plutôt que le
+    // cache, pour garantir qu'on recentre bien sur la position présente.
+    await UserLocationService.instance.getCurrentPosition(forceRefresh: true);
+    if (!mounted) return;
+    setState(() {
+      _zoneCenter = null; // centre = position réelle (live), pas un point figé
+      _proximityModeActive = true;
+      _searchedZoneLabel = null;
+      _searchQuery = '';
+      _searchController.clear();
+    });
+  }
+
+  // ── Correction 5 — recherche par zone : recentrage + rayon 2km ───────
+  Future<void> _onSearch(String query) async {
+    final token = ++_searchToken;
+    if (query.isEmpty) {
+      setState(() {
+        _searchQuery = '';
+        _zoneCenter = null;
+        _proximityModeActive = false;
+        _searchedZoneLabel = null;
+      });
+      return;
+    }
+
+    // Recherche par code identifiant (#CLN-...) : comportement texte
+    // existant, jamais transformé en recherche de zone géographique.
+    final looksLikeCode =
+        query.startsWith('#') || RegExp(r'^cln', caseSensitive: false).hasMatch(query);
+    if (looksLikeCode) {
+      setState(() {
+        _searchQuery = query;
+        _zoneCenter = null;
+        _proximityModeActive = false;
+        _searchedZoneLabel = null;
+      });
+      return;
+    }
+
+    // Géocodage du nom de zone tapé — pilote San-Pedro, Côte d'Ivoire
+    // (cf. pubspec) : suffixe le pays pour lever l'ambiguïté des noms de
+    // quartiers/communes locaux.
+    try {
+      final locations = await locationFromAddress('$query, Côte d\'Ivoire');
+      if (token != _searchToken || !mounted) return;
+      if (locations.isNotEmpty) {
+        final loc = locations.first;
+        setState(() {
+          _zoneCenter = (lat: loc.latitude, lng: loc.longitude);
+          _proximityModeActive = true;
+          _searchedZoneLabel = query;
+          _searchQuery = '';
+        });
+        return;
+      }
+    } catch (_) {
+      // Géocodage indisponible/échoué — repli sur la recherche texte
+      // existante ci-dessous plutôt que de bloquer l'utilisateur.
+    }
+
+    if (token != _searchToken || !mounted) return;
+    setState(() {
+      _searchQuery = query;
+      _zoneCenter = null;
+      _proximityModeActive = false;
+      _searchedZoneLabel = null;
+    });
   }
 
   void _openFilterPanel() {
@@ -217,6 +347,58 @@ class _MapPageState extends State<MapPage> {
     );
   }
 
+  // ── Bandeau "autour de..." — confirme visuellement le centre actif et
+  // permet de revenir au mode "explorer tout" ─────────────────────────
+  Widget _buildProximityBanner() {
+    final label = _zoneCenter != null
+        ? 'Autour de « $_searchedZoneLabel » (2 km)'
+        : 'Autour de votre position (2 km)';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: CliinAppConstants.spacingS),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: CliinAppColors.primaryLight,
+          borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.my_location_rounded,
+                size: 14, color: CliinAppColors.primary),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                label,
+                style: CliinAppTextStyles.badge.copyWith(
+                  color: CliinAppColors.primary,
+                  fontSize: 11,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            GestureDetector(
+              onTap: () => setState(() {
+                _proximityModeActive = false;
+                _zoneCenter = null;
+                _searchedZoneLabel = null;
+              }),
+              child: Text(
+                'Tout afficher',
+                style: CliinAppTextStyles.badge.copyWith(
+                  color: CliinAppColors.primary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 11,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final hasFilters = !_filters.isEmpty;
@@ -236,8 +418,7 @@ class _MapPageState extends State<MapPage> {
                   MapSearchHeader(
                     controller: _searchController,
                     onMyLocationTap: _onMyLocationTap,
-                    onSearch: (query) =>
-                        setState(() => _searchQuery = query),
+                    onSearch: _onSearch,
                   ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(
@@ -288,6 +469,7 @@ class _MapPageState extends State<MapPage> {
                         onClearAll: () => setState(() => _filters = const MapFilterState()),
                       ),
                     ),
+                  if (_proximityModeActive) _buildProximityBanner(),
                 ],
               ),
             ),
@@ -308,6 +490,9 @@ class _MapPageState extends State<MapPage> {
                       onCardTap: _onCardTap,
                       onTakeCharge: _onTakeCharge,
                       onContact: _onContact,
+                      emptyStateMessage: _proximityModeActive && _zoneCenter != null
+                          ? 'Aucun cas dans cette zone pour le moment'
+                          : null,
                     ),
                   ],
                 ),

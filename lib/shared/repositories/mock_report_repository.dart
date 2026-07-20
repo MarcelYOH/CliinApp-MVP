@@ -154,6 +154,63 @@ class MockReportRepository implements ReportRepository {
     return updated;
   }
 
+  // ── Modifier l'attribution d'une prise en charge active ──────────
+  @override
+  Future<HomeReportModel> changeAttribution({
+    required String reportId,
+    required String? groupName,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 150));
+    final report = await fetchReportById(reportId);
+    if (report == null) throw Exception('Signalement introuvable');
+    final current = report.intervenant;
+    if (current == null) throw Exception('Aucun intervenant');
+
+    final updated = report.copyWith(
+      intervenant: IntervenantModel(
+        id: current.id,
+        name: current.name,
+        logoAsset: current.logoAsset,
+        takenAgo: current.takenAgo,
+        takenAt: current.takenAt,
+        treatedAt: current.treatedAt,
+        groupName: groupName,
+        whatsAppNumber: current.whatsAppNumber,
+        whatsAppVisible: current.whatsAppVisible,
+        outcome: current.outcome,
+      ),
+    );
+    _updateReport(updated);
+    return updated;
+  }
+
+  // ── Abandon volontaire — avant la fin du délai de 72h ────────────
+  @override
+  Future<HomeReportModel> abandonTakeoverVoluntarily({
+    required String reportId,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 150));
+    final report = await fetchReportById(reportId);
+    if (report == null) throw Exception('Signalement introuvable');
+    if (report.intervenant == null) throw Exception('Aucun intervenant');
+
+    final now = DateTime.now();
+    final updated = report.copyWith(
+      status: ReportStatus.disponible,
+      intervenant: report.intervenant?.copyWith(
+        outcome: InterventionOutcome.abandonedVoluntary,
+      ),
+      history: List<ReportHistoryEntry>.of(report.history)
+        ..add(ReportHistoryEntry(
+          type: HistoryEventType.abandonneVolontairement,
+          dateTime: now,
+          actorName: report.intervenant?.name,
+        )),
+    );
+    _updateReport(updated);
+    return updated;
+  }
+
   // ── Nouvelle méthode : ajouter/modifier le numéro WhatsApp ────
   @override
   Future<HomeReportModel> updateWhatsAppNumber({

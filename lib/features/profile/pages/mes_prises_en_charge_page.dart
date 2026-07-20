@@ -49,7 +49,10 @@ extension _TakeoverStatusExt on _TakeoverStatus {
 _TakeoverStatus _takeoverStatusOf(HomeReportModel r) {
   if (r.status == ReportStatus.traite) return _TakeoverStatus.traite;
   final outcome = r.intervenant?.outcome;
-  if (outcome == InterventionOutcome.abandoned) return _TakeoverStatus.abandonne;
+  if (outcome == InterventionOutcome.abandoned ||
+      outcome == InterventionOutcome.abandonedVoluntary) {
+    return _TakeoverStatus.abandonne;
+  }
   if (outcome == InterventionOutcome.rejected) return _TakeoverStatus.rejete;
   return _TakeoverStatus.enCours;
 }

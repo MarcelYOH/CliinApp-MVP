@@ -47,26 +47,36 @@ class HomeGroups extends StatelessWidget {
 
         const SizedBox(height: CliinAppConstants.spacingM),
 
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(
-              horizontal: CliinAppConstants.pagePadding),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: List.generate(groups.length, (index) {
-                return Padding(
-                  padding: EdgeInsets.only(
-                    right: index < groups.length - 1
-                        ? CliinAppConstants.spacingM
-                        : 0,
-                  ),
-                  child: GroupCard(data: groups[index]),
-                );
-              }),
+        // 1 seul groupe -> pleine largeur (même comportement que les
+        // sections signalements à 1 carte) ; sinon scroll horizontal
+        // habituel.
+        if (groups.length == 1)
+          Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: CliinAppConstants.pagePadding),
+            child: GroupCard(data: groups.first, width: double.infinity),
+          )
+        else
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(
+                horizontal: CliinAppConstants.pagePadding),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: List.generate(groups.length, (index) {
+                  return Padding(
+                    padding: EdgeInsets.only(
+                      right: index < groups.length - 1
+                          ? CliinAppConstants.spacingM
+                          : 0,
+                    ),
+                    child: GroupCard(data: groups[index]),
+                  );
+                }),
+              ),
             ),
           ),
-        ),
       ],
     );
   }
