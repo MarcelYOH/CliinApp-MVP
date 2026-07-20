@@ -77,7 +77,7 @@ Widget buildGroupFormBannerPicker({
                           const Icon(Icons.image_outlined,
                               color: CliinAppColors.primary, size: 26),
                           const SizedBox(height: 4),
-                          Text('Photo de bannière',
+                          Text('Photo de couverture',
                               style: CliinAppTextStyles.bodySmall.copyWith(
                                   color: CliinAppColors.primary,
                                   fontWeight: FontWeight.w600)),

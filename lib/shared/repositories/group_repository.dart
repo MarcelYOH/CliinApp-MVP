@@ -7,7 +7,7 @@ abstract class GroupRepository {
   Future<GroupModel?> fetchGroupById(String id);
   Future<List<GroupMemberModel>> fetchMembers(String groupId);
 
-  // Sympathisants du groupe éligibles à une promotion administrateur (donc
+  // Membres du groupe éligibles à une promotion administrateur (donc
   // hors administrateurs déjà en poste). Alimente la recherche de la sheet
   // "Ajouter un administrateur" — mock aujourd'hui (pas d'annuaire
   // multi-utilisateurs réel dans l'app), remplacé par un vrai annuaire

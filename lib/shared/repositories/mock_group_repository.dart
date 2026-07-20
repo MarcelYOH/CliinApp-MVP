@@ -330,7 +330,7 @@ class MockGroupRepository implements GroupRepository {
     return List.of(_members[groupId] ?? const []);
   }
 
-  // Pool factice de sympathisants (annuaire multi-utilisateurs réel
+  // Pool factice de membres (annuaire multi-utilisateurs réel
   // inexistant dans ce mock — l'app ne connaît qu'un seul utilisateur
   // courant) — permet de faire fonctionner la recherche "Ajouter un
   // administrateur" (Lot 3) en attendant un vrai annuaire Firebase.

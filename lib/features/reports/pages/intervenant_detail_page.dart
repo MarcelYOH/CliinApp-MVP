@@ -6,7 +6,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/app_text_styles.dart';
-import '../../../../shared/data/mock_groups.dart';
+import '../../../../shared/store/auth_store.dart';
+import '../../../../shared/store/group_store.dart';
 import '../../../../shared/store/report_store.dart';
 import '../../../../shared/widgets/report_action_zone.dart';
 import '../../../../shared/widgets/report_stats_comments.dart';
@@ -810,6 +811,13 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
     final currentGroupName = _report.intervenant?.groupName;
     bool isSelf = currentGroupName == null;
     String? selectedGroup = currentGroupName;
+    // Vrais groupes dont l'utilisateur connecté est administrateur — même
+    // source que la prise en charge initiale (GroupStore.adminGroups),
+    // jamais une liste factice déconnectée.
+    final userId = AuthStore.instance.currentUser?.id;
+    final myGroups = userId == null
+        ? const <String>[]
+        : GroupStore.instance.adminGroups(userId).map((g) => g.nom).toList();
 
     showModalBottomSheet<void>(
       context: context,
@@ -877,16 +885,18 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
                       selectedGroup = null;
                     }),
                   ),
-                  const SizedBox(height: CliinAppConstants.spacingM),
-                  _AttributionChoiceCard(
-                    selected: !isSelf,
-                    icon: Icons.group_rounded,
-                    title: 'Au nom d\'un groupe',
-                    subtitle: 'Cette prise en charge compte dans les '
-                        'statistiques du groupe choisi.',
-                    onTap: () => setModal(() => isSelf = false),
-                  ),
-                  if (!isSelf) ...[
+                  if (myGroups.isNotEmpty) ...[
+                    const SizedBox(height: CliinAppConstants.spacingM),
+                    _AttributionChoiceCard(
+                      selected: !isSelf,
+                      icon: Icons.group_rounded,
+                      title: 'Au nom d\'un groupe',
+                      subtitle: 'Cette prise en charge compte dans les '
+                          'statistiques du groupe choisi.',
+                      onTap: () => setModal(() => isSelf = false),
+                    ),
+                  ],
+                  if (!isSelf && myGroups.isNotEmpty) ...[
                     const SizedBox(height: CliinAppConstants.spacingM),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -904,7 +914,7 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
                               style: GoogleFonts.inter(
                                   fontSize: 13,
                                   color: CliinAppColors.textSecondary)),
-                          items: kMockUserGroups
+                          items: myGroups
                               .map((g) => DropdownMenuItem(
                                     value: g,
                                     child:

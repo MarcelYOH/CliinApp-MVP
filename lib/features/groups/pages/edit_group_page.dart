@@ -15,6 +15,7 @@ import '../../../shared/store/group_store.dart';
 import '../../reports/pages/report_camera_page.dart';
 import '../models/group_model.dart';
 import '../widgets/group_form_fields.dart';
+import 'group_photo_adjust_page.dart';
 
 class EditGroupPage extends StatefulWidget {
   final String groupId;
@@ -34,6 +35,8 @@ class _EditGroupPageState extends State<EditGroupPage> {
 
   String? _photoPath;
   String? _bannerPath;
+  double _photoAlignY = 0.0;
+  double _bannerAlignY = 0.0;
   GroupType _selectedType = GroupType.ong;
   bool _isSubmitting = false;
   bool _isDetectingZone = false;
@@ -60,6 +63,8 @@ class _EditGroupPageState extends State<EditGroupPage> {
       _descController.text = group.description;
       _photoPath = group.photoPath;
       _bannerPath = group.bannerPath;
+      _photoAlignY = group.photoAlignY;
+      _bannerAlignY = group.bannerAlignY;
       _selectedType = group.type;
       _latitude = group.latitude;
       _longitude = group.longitude;
@@ -121,7 +126,20 @@ class _EditGroupPageState extends State<EditGroupPage> {
           const ReportCameraPage(replaceMode: true, isAvatarMode: true),
         ),
       );
-      if (path != null && mounted) setState(() => _photoPath = path);
+      if (path == null || !mounted) return;
+      final alignY = await Navigator.push<double>(
+        context,
+        MaterialPageRoute<double>(
+          builder: (_) =>
+              GroupPhotoAdjustPage(imagePath: path, isCircular: true),
+        ),
+      );
+      if (mounted) {
+        setState(() {
+          _photoPath = path;
+          _photoAlignY = alignY ?? 0.0;
+        });
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -142,7 +160,20 @@ class _EditGroupPageState extends State<EditGroupPage> {
           const ReportCameraPage(replaceMode: true, isAvatarMode: true),
         ),
       );
-      if (path != null && mounted) setState(() => _bannerPath = path);
+      if (path == null || !mounted) return;
+      final alignY = await Navigator.push<double>(
+        context,
+        MaterialPageRoute<double>(
+          builder: (_) =>
+              GroupPhotoAdjustPage(imagePath: path, isCircular: false),
+        ),
+      );
+      if (mounted) {
+        setState(() {
+          _bannerPath = path;
+          _bannerAlignY = alignY ?? 0.0;
+        });
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -167,6 +198,8 @@ class _EditGroupPageState extends State<EditGroupPage> {
         nom: _nomController.text.trim(),
         photoPath: _photoPath,
         bannerPath: _bannerPath,
+        photoAlignY: _photoAlignY,
+        bannerAlignY: _bannerAlignY,
         description: _descController.text.trim(),
         type: _selectedType,
         zone: _zoneController.text.trim(),
@@ -227,9 +260,7 @@ class _EditGroupPageState extends State<EditGroupPage> {
                   children: [
                     const SizedBox(height: CliinAppConstants.spacingM),
                     buildGroupFormLabeledField(
-                      label: 'Photo de bannière',
-                      helper: 'Facultative — visible en arrière-plan partout '
-                          'où le groupe apparaît.',
+                      label: 'Photo de couverture',
                       child: buildGroupFormBannerPicker(
                           bannerPath: _bannerPath, onTap: _pickBanner),
                     ),

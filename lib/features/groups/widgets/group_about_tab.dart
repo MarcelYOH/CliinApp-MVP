@@ -7,6 +7,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/store/group_store.dart';
 import '../../../shared/store/report_store.dart';
+import '../../../shared/widgets/report_card.dart' show buildReportImage;
 import '../models/group_model.dart';
 import 'group_profile_widgets.dart';
 
@@ -101,7 +102,7 @@ class GroupAboutTab extends StatelessWidget {
                     ],
                   ]),
             const SizedBox(height: CliinAppConstants.spacingL),
-            Text('Nos sympathisants',
+            Text('Nos membres',
                 style: CliinAppTextStyles.headingSmall.copyWith(fontSize: 13.5)),
             const SizedBox(height: CliinAppConstants.spacingM),
             _buildSympathisantsCard(),
@@ -212,6 +213,7 @@ class GroupAboutTab extends StatelessWidget {
   }
 
   Widget _buildTeamMemberRow(GroupMemberModel member) {
+    final avatarPath = GroupStore.instance.effectiveAvatarPath(member);
     return Row(children: [
       Container(
         width: 40,
@@ -220,9 +222,9 @@ class GroupAboutTab extends StatelessWidget {
           color: CliinAppColors.primaryDark,
           shape: BoxShape.circle,
         ),
-        child: member.avatarPath != null
+        child: avatarPath != null
             ? ClipOval(
-                child: Image.asset(member.avatarPath!,
+                child: buildReportImage(avatarPath,
                     fit: BoxFit.cover,
                     errorBuilder: (_, _, _) => _initialsAvatar(member.nom)))
             : _initialsAvatar(member.nom),
@@ -272,7 +274,7 @@ class GroupAboutTab extends StatelessWidget {
                 text: '${group.sympathisantsCount} ',
                 style: CliinAppTextStyles.headingSmall.copyWith(fontSize: 15),
               ),
-              const TextSpan(text: 'sympathisants au total'),
+              const TextSpan(text: 'membres au total'),
             ],
           ),
         ),

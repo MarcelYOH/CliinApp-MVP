@@ -92,19 +92,26 @@ Widget buildReportImage(
   String imagePath, {
   required BoxFit fit,
   Widget Function(BuildContext, Object, StackTrace?)? errorBuilder,
+  // Recadrage simple (voir GroupModel.photoAlignY/bannerAlignY) : reste
+  // Alignment.center pour tout appelant qui ne s'en préoccupe pas.
+  Alignment alignment = Alignment.center,
 }) {
   if (imagePath.startsWith('assets/')) {
-    return Image.asset(imagePath, fit: fit, errorBuilder: errorBuilder);
+    return Image.asset(imagePath,
+        fit: fit, alignment: alignment, errorBuilder: errorBuilder);
   }
   if (imagePath.startsWith('http://') ||
       imagePath.startsWith('https://') ||
       imagePath.startsWith('blob:')) {
-    return Image.network(imagePath, fit: fit, errorBuilder: errorBuilder);
+    return Image.network(imagePath,
+        fit: fit, alignment: alignment, errorBuilder: errorBuilder);
   }
   if (!kIsWeb) {
-    return Image.file(File(imagePath), fit: fit, errorBuilder: errorBuilder);
+    return Image.file(File(imagePath),
+        fit: fit, alignment: alignment, errorBuilder: errorBuilder);
   }
-  return Image.network(imagePath, fit: fit, errorBuilder: errorBuilder);
+  return Image.network(imagePath,
+      fit: fit, alignment: alignment, errorBuilder: errorBuilder);
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -226,7 +233,7 @@ Future<void> copyReportCode(BuildContext context, String reference) async {
 // SECTION PHOTO
 // ─────────────────────────────────────────────────────────────────
 
-void _openPhoto(BuildContext context, String imagePath) {
+void openFullScreenPhoto(BuildContext context, String imagePath) {
   Navigator.of(context).push(MaterialPageRoute<void>(
     builder: (_) => _PhotoFullScreen(imagePath: imagePath),
   ));
@@ -311,7 +318,7 @@ class _CardPhotoSection extends StatelessWidget {
               bottom: CliinAppConstants.spacingS,
               right: CliinAppConstants.spacingS,
               child: _ZoomButton(
-                  onTap: () => _openPhoto(context, data.imageAsset))),
+                  onTap: () => openFullScreenPhoto(context, data.imageAsset))),
       ]),
     );
   }
@@ -353,7 +360,7 @@ class _BeforeAfterPhotos extends StatelessWidget {
               top: CliinAppConstants.spacingS,
               right: CliinAppConstants.spacingS,
               child: _ZoomButton(
-                  onTap: () => _openPhoto(context, data.imageAsset))),
+                  onTap: () => openFullScreenPhoto(context, data.imageAsset))),
         ]),
       ),
       // Séparateur fin 2px (remplace l'ancien rond avec flèche)
@@ -376,7 +383,7 @@ class _BeforeAfterPhotos extends StatelessWidget {
               left: CliinAppConstants.spacingS,
               child: _ZoomButton(
                   onTap: data.imageAfterAsset != null
-                      ? () => _openPhoto(context, data.imageAfterAsset!)
+                      ? () => openFullScreenPhoto(context, data.imageAfterAsset!)
                       : null)),
         ]),
       ),

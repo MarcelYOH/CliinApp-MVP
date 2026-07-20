@@ -56,6 +56,13 @@ class GroupModel {
   // (logo, cercle). Affichée en arrière-plan partout où le groupe apparaît
   // (GroupCard, GroupProfilePage) ; null = dégradé de repli habituel.
   final String? bannerPath;
+  // Ajustement vertical choisi par l'utilisateur après upload (recadrage
+  // simple) — -1.0 (haut de la photo) à 1.0 (bas), 0.0 = centre. Appliqué
+  // comme Alignment partout où la photo correspondante est affichée en
+  // BoxFit.cover, pour éviter qu'un cadrage par défaut mal choisi reste
+  // figé sans possibilité de correction.
+  final double photoAlignY;
+  final double bannerAlignY;
   final String description;
   final GroupType type;
   final String zone;
@@ -89,7 +96,7 @@ class GroupModel {
   final int casPrisEnChargeCount;
   final int actionsCount;
 
-  // Le créateur compte comme premier sympathisant dès la création.
+  // Le créateur compte comme premier membre dès la création.
   final int sympathisantsCount;
 
   const GroupModel({
@@ -97,6 +104,8 @@ class GroupModel {
     required this.nom,
     this.photoPath,
     this.bannerPath,
+    this.photoAlignY = 0.0,
+    this.bannerAlignY = 0.0,
     required this.description,
     required this.type,
     required this.zone,
@@ -124,6 +133,8 @@ class GroupModel {
     String? nom,
     String? photoPath,
     String? bannerPath,
+    double? photoAlignY,
+    double? bannerAlignY,
     String? description,
     GroupType? type,
     String? zone,
@@ -150,6 +161,8 @@ class GroupModel {
       nom: nom ?? this.nom,
       photoPath: photoPath ?? this.photoPath,
       bannerPath: bannerPath ?? this.bannerPath,
+      photoAlignY: photoAlignY ?? this.photoAlignY,
+      bannerAlignY: bannerAlignY ?? this.bannerAlignY,
       description: description ?? this.description,
       type: type ?? this.type,
       zone: zone ?? this.zone,
@@ -178,6 +191,8 @@ class GroupModel {
         'nom': nom,
         'photoPath': photoPath,
         'bannerPath': bannerPath,
+        'photoAlignY': photoAlignY,
+        'bannerAlignY': bannerAlignY,
         'description': description,
         'type': type.name,
         'zone': zone,
@@ -205,6 +220,8 @@ class GroupModel {
         nom: json['nom'] as String,
         photoPath: json['photoPath'] as String?,
         bannerPath: json['bannerPath'] as String?,
+        photoAlignY: (json['photoAlignY'] as num?)?.toDouble() ?? 0.0,
+        bannerAlignY: (json['bannerAlignY'] as num?)?.toDouble() ?? 0.0,
         description: json['description'] as String,
         type: GroupType.values.byName(json['type'] as String),
         zone: json['zone'] as String,

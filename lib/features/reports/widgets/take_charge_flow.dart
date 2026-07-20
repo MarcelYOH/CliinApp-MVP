@@ -6,7 +6,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../shared/store/report_store.dart';
 import '../../../../shared/store/auth_store.dart';
-import '../../../../shared/data/mock_groups.dart';
+import '../../../../shared/store/group_store.dart';
 import '../../../../features/home/models/home_report_model.dart';
 
 // ── Modèle indicatif téléphonique — extensible ───────────────────
@@ -77,8 +77,13 @@ class _TakeChargeSheetState extends State<_TakeChargeSheet> {
 
   _CountryCode _selectedCountry = _kCountryCodes.first;
 
-  // À remplacer par ReportStore.instance.userGroups (ou équivalent) une fois le module Groupes implémenté.
-  static const List<String> _mockGroups = kMockUserGroups;
+  // Vrais groupes dont l'utilisateur connecté est administrateur — jamais
+  // une liste factice (voir GroupStore.adminGroups).
+  List<String> get _myGroups {
+    final userId = AuthStore.instance.currentUser?.id;
+    if (userId == null) return const [];
+    return GroupStore.instance.adminGroups(userId).map((g) => g.nom).toList();
+  }
 
   @override
   void dispose() {
@@ -305,7 +310,7 @@ class _TakeChargeSheetState extends State<_TakeChargeSheet> {
             key: const ValueKey(1),
             isSelf: _isSelf,
             selectedGroup: _selectedGroup,
-            groups: _mockGroups,
+            groups: _myGroups,
             isValid: _step1Valid,
             onSelfSelected: () => setState(() {
               _isSelf = true;
@@ -389,15 +394,17 @@ class _Step1Sheet extends StatelessWidget {
             subtitle: 'Je prends ce cas en charge en mon nom.',
             onTap: onSelfSelected,
           ),
-          const SizedBox(height: CliinAppConstants.spacingM),
-          _ChoiceCard(
-            selected: !isSelf,
-            icon: Icons.group_rounded,
-            title: 'Au nom d\'un groupe',
-            subtitle: 'Intervenir au nom d\'un groupe auquel j\'appartiens.',
-            onTap: onGroupSelected,
-          ),
-          if (!isSelf) ...[
+          if (groups.isNotEmpty) ...[
+            const SizedBox(height: CliinAppConstants.spacingM),
+            _ChoiceCard(
+              selected: !isSelf,
+              icon: Icons.group_rounded,
+              title: 'Au nom d\'un groupe',
+              subtitle: 'Intervenir au nom d\'un groupe auquel j\'appartiens.',
+              onTap: onGroupSelected,
+            ),
+          ],
+          if (!isSelf && groups.isNotEmpty) ...[
             const SizedBox(height: CliinAppConstants.spacingS),
             Container(
               padding: const EdgeInsets.all(CliinAppConstants.spacingM),

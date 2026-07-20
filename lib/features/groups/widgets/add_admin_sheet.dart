@@ -1,6 +1,6 @@
 // lib/features/groups/widgets/add_admin_sheet.dart
 // Sheet "Ajouter un administrateur" — Espace gestion du profil groupe.
-// Étape 1 : recherche parmi les sympathisants déjà existants du groupe.
+// Étape 1 : recherche parmi les membres déjà existants du groupe.
 // Étape 2 : choix du rôle parmi 6 options.
 
 import 'package:flutter/material.dart';
@@ -129,7 +129,7 @@ class _AddAdminSheetState extends State<_AddAdminSheet> {
         Text('Ajouter un administrateur',
             style: CliinAppTextStyles.headingSmall.copyWith(fontSize: 18)),
         const SizedBox(height: 4),
-        Text('Recherchez parmi les sympathisants du groupe.',
+        Text('Recherchez parmi les membres du groupe.',
             style: CliinAppTextStyles.bodySmall),
         const SizedBox(height: CliinAppConstants.spacingM),
         Container(
@@ -157,11 +157,13 @@ class _AddAdminSheetState extends State<_AddAdminSheet> {
           child: _results.isEmpty
               ? Padding(
                   padding: const EdgeInsets.symmetric(vertical: CliinAppConstants.spacingL),
-                  child: Text('Aucun sympathisant trouvé.',
+                  child: Text('Aucun membre trouvé.',
                       style: CliinAppTextStyles.bodySmall),
                 )
               : ListView.separated(
                   shrinkWrap: true,
+                  padding:
+                      const EdgeInsets.only(bottom: CliinAppConstants.spacingM),
                   itemCount: _results.length,
                   separatorBuilder: (_, _) =>
                       const Divider(height: 1, color: CliinAppColors.divider),

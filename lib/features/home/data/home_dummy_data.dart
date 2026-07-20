@@ -125,14 +125,18 @@ class HomeDummyData {
         HomeReportModel(
           id: 'demo_recent_1',
           reference: '#CLN-DEMO',
-          title: 'Poubelle collective saturée',
+          title: 'Dépôt sauvage près du marché',
           location: 'Cité, San-Pedro',
           description:
-              'Bac de collecte plein depuis plusieurs jours, déchets qui '
-              'débordent au sol.',
+              'Déchets entassés en bordure de route depuis plusieurs jours, '
+              'non collectés.',
           severity: ReportSeverity.moyen,
-          category: ReportCategory.bacPoubelleSature,
-          imageAsset: ReportCategory.bacPoubelleSature.imageAsset,
+          // Seuls 2 visuels factices existent (depot.jpg / caniveau.jpg) —
+          // la catégorie DOIT toujours correspondre à l'image utilisée,
+          // jamais une catégorie officielle sans photo dédiée assortie
+          // d'une image sans rapport.
+          category: ReportCategory.depotsSauvages,
+          imageAsset: ReportCategory.depotsSauvages.imageAsset,
           distance: '1,5 km',
           latitude: 4.7450,
           longitude: -6.6320,

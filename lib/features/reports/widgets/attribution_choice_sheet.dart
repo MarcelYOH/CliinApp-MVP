@@ -7,7 +7,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../shared/store/auth_store.dart';
-import '../../../../shared/data/mock_groups.dart';
+import '../../../../shared/store/group_store.dart';
+import '../../../../features/groups/models/group_model.dart' show GroupModel;
 
 class ReportAttribution {
   final String signaleParNom;
@@ -28,13 +29,20 @@ enum _AttributionChoice { self, group, anonymous }
 Future<ReportAttribution> showAttributionChoiceSheet(
     BuildContext context) async {
   final user = AuthStore.instance.currentUser!;
+  // Vrais groupes dont l'utilisateur connecté est administrateur — jamais
+  // une liste factice déconnectée (voir GroupStore.adminGroups).
+  final myGroups = GroupStore.instance.adminGroups(user.id);
   final result = await showModalBottomSheet<ReportAttribution>(
     context: context,
     isScrollControlled: true,
     isDismissible: false,
     enableDrag: false,
     backgroundColor: Colors.transparent,
-    builder: (_) => _AttributionSheet(username: user.username, userId: user.id),
+    builder: (_) => _AttributionSheet(
+      username: user.username,
+      userId: user.id,
+      myGroups: myGroups,
+    ),
   );
   return result ??
       ReportAttribution(signaleParNom: user.username, signaleParId: user.id);
@@ -43,7 +51,12 @@ Future<ReportAttribution> showAttributionChoiceSheet(
 class _AttributionSheet extends StatefulWidget {
   final String username;
   final String userId;
-  const _AttributionSheet({required this.username, required this.userId});
+  final List<GroupModel> myGroups;
+  const _AttributionSheet({
+    required this.username,
+    required this.userId,
+    required this.myGroups,
+  });
 
   @override
   State<_AttributionSheet> createState() => _AttributionSheetState();
@@ -51,7 +64,7 @@ class _AttributionSheet extends StatefulWidget {
 
 class _AttributionSheetState extends State<_AttributionSheet> {
   _AttributionChoice _choice = _AttributionChoice.self;
-  String? _selectedGroup;
+  GroupModel? _selectedGroup;
 
   bool get _isValid =>
       _choice != _AttributionChoice.group || _selectedGroup != null;
@@ -67,9 +80,9 @@ class _AttributionSheetState extends State<_AttributionSheet> {
       case _AttributionChoice.group:
         final group = _selectedGroup!;
         attribution = ReportAttribution(
-          signaleParNom: group,
+          signaleParNom: group.nom,
           signaleParId: widget.userId,
-          groupId: mockGroupId(group),
+          groupId: group.id,
         );
       case _AttributionChoice.anonymous:
         attribution = ReportAttribution(
@@ -126,7 +139,7 @@ class _AttributionSheetState extends State<_AttributionSheet> {
               subtitle: 'Votre nom sera visible publiquement sur ce cas.',
               onTap: () => setState(() => _choice = _AttributionChoice.self),
             ),
-            if (kMockUserGroups.isNotEmpty) ...[
+            if (widget.myGroups.isNotEmpty) ...[
               const SizedBox(height: CliinAppConstants.spacingM),
               _AttributionCard(
                 selected: _choice == _AttributionChoice.group,
@@ -145,15 +158,15 @@ class _AttributionSheetState extends State<_AttributionSheet> {
                     border: Border.all(color: CliinAppColors.divider),
                   ),
                   child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
+                    child: DropdownButton<GroupModel>(
                       value: _selectedGroup,
                       isExpanded: true,
                       hint: Text('Choisir un groupe',
                           style: GoogleFonts.inter(
                               fontSize: 13, color: CliinAppColors.textSecondary)),
-                      items: kMockUserGroups.map((g) => DropdownMenuItem(
+                      items: widget.myGroups.map((g) => DropdownMenuItem(
                         value: g,
-                        child: Text(g, style: GoogleFonts.inter(fontSize: 13)),
+                        child: Text(g.nom, style: GoogleFonts.inter(fontSize: 13)),
                       )).toList(),
                       onChanged: (g) => setState(() => _selectedGroup = g),
                     ),

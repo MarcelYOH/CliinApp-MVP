@@ -5,10 +5,10 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
-import '../../../shared/data/mock_groups.dart';
 import '../../../shared/navigation/fast_page_route.dart';
 import '../../../shared/store/group_store.dart';
 import '../../../shared/store/report_store.dart';
+import '../../../shared/widgets/report_card.dart' show buildReportImage;
 import '../../home/models/home_report_model.dart';
 import '../../profile/pages/mes_cas_signales_page.dart';
 import '../../profile/pages/mes_prises_en_charge_page.dart';
@@ -26,7 +26,7 @@ class GroupManagementTab extends StatelessWidget {
     required this.isAdmin,
   });
 
-  bool _isGroupCas(HomeReportModel r) => r.groupId == mockGroupId(group.nom);
+  bool _isGroupCas(HomeReportModel r) => r.groupId == group.id;
   bool _isGroupPriseEnCharge(HomeReportModel r) =>
       r.intervenant?.groupName == group.nom;
 
@@ -72,15 +72,32 @@ class GroupManagementTab extends StatelessWidget {
                       const Divider(height: 1, color: CliinAppColors.divider),
                   itemBuilder: (_, i) {
                     final m = admins[i];
+                    final avatarPath = GroupStore.instance.effectiveAvatarPath(m);
+                    final initials = CircleAvatar(
+                      backgroundColor: CliinAppColors.primaryDark,
+                      child: Text(
+                        m.nom.trim().isEmpty ? '?' : m.nom.trim()[0].toUpperCase(),
+                        style: const TextStyle(color: CliinAppColors.textWhite),
+                      ),
+                    );
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: CircleAvatar(
-                        backgroundColor: CliinAppColors.primaryDark,
-                        child: Text(
-                          m.nom.trim().isEmpty ? '?' : m.nom.trim()[0].toUpperCase(),
-                          style: const TextStyle(color: CliinAppColors.textWhite),
-                        ),
-                      ),
+                      leading: avatarPath == null
+                          ? initials
+                          : CircleAvatar(
+                              backgroundColor: CliinAppColors.primaryDark,
+                              child: ClipOval(
+                                child: SizedBox(
+                                  width: 40,
+                                  height: 40,
+                                  child: buildReportImage(
+                                    avatarPath,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, _, _) => initials,
+                                  ),
+                                ),
+                              ),
+                            ),
                       title: Text(m.nom,
                           style: CliinAppTextStyles.bodyMedium
                               .copyWith(color: CliinAppColors.textDark)),
@@ -214,15 +231,35 @@ class GroupManagementTab extends StatelessWidget {
         for (final m in visible)
           Padding(
             padding: const EdgeInsets.only(right: 10),
-            child: CircleAvatar(
-              radius: 24,
-              backgroundColor: CliinAppColors.primaryDark,
-              child: Text(
-                m.nom.trim().isEmpty ? '?' : m.nom.trim()[0].toUpperCase(),
-                style: const TextStyle(
-                    color: CliinAppColors.textWhite, fontWeight: FontWeight.bold),
-              ),
-            ),
+            child: Builder(builder: (_) {
+              final avatarPath = GroupStore.instance.effectiveAvatarPath(m);
+              final initials = CircleAvatar(
+                radius: 24,
+                backgroundColor: CliinAppColors.primaryDark,
+                child: Text(
+                  m.nom.trim().isEmpty ? '?' : m.nom.trim()[0].toUpperCase(),
+                  style: const TextStyle(
+                      color: CliinAppColors.textWhite,
+                      fontWeight: FontWeight.bold),
+                ),
+              );
+              if (avatarPath == null) return initials;
+              return CircleAvatar(
+                radius: 24,
+                backgroundColor: CliinAppColors.primaryDark,
+                child: ClipOval(
+                  child: SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: buildReportImage(
+                      avatarPath,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => initials,
+                    ),
+                  ),
+                ),
+              );
+            }),
           ),
         if (overflow > 0)
           Padding(

@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import '../repositories/group_repository.dart';
 import '../repositories/mock_group_repository.dart';
 import '../../features/groups/models/group_model.dart';
+import 'auth_store.dart';
 
 class GroupStore extends ChangeNotifier {
   GroupStore._();
@@ -25,7 +26,7 @@ class GroupStore extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
 
-  // Sympathisants par groupe — bookkeeping interne au store (le modèle ne
+  // Membres par groupe — bookkeeping interne au store (le modèle ne
   // conserve que sympathisantsCount, un compteur agrégé). Nécessaire pour
   // déterminer si UN utilisateur donné suit déjà un groupe (getMesGroupes,
   // getGroupesADecouvrir, garde-fou d'addAdmin).
@@ -68,6 +69,22 @@ class GroupStore extends ChangeNotifier {
     return _repository.fetchMembers(groupId);
   }
 
+  // ── Avatar effectif d'un membre ────────────────────────────────
+  // Si ce membre EST l'utilisateur connecté, retourne sa vraie photo de
+  // profil ACTUELLE (AuthStore.currentUser.avatarPath) plutôt que la copie
+  // figée au moment de la création du groupe / de son ajout comme
+  // administrateur — sinon un changement ultérieur de photo de profil
+  // personnelle resterait invisible sur les cartes/l'Espace gestion.
+  // Pour tout autre membre (mock, pas de vrai annuaire multi-utilisateurs
+  // dans cette app), retourne sa photo enregistrée telle quelle.
+  String? effectiveAvatarPath(GroupMemberModel member) {
+    final currentUser = AuthStore.instance.currentUser;
+    if (currentUser != null && member.id == currentUser.id) {
+      return currentUser.avatarPath;
+    }
+    return member.avatarPath;
+  }
+
   // Membres en cache (synchrone) — équipe dirigeante (estBureauExecutif)
   // uniquement, jusqu'à 5, pour l'affichage compact de GroupCard. Ordre de
   // création préservé (créateur en premier, cf. createGroup/addAdmin) —
@@ -91,7 +108,7 @@ class GroupStore extends ChangeNotifier {
   bool isAdmin(String groupId, String userId) =>
       cachedMembers(groupId).any((m) => m.id == userId && m.estAdmin);
 
-  // Sympathisants du groupe pouvant être promus administrateurs — exclut
+  // Membres du groupe pouvant être promus administrateurs — exclut
   // ceux déjà administrateurs. Filtre par nom uniquement (voir
   // fetchSympathisants : pas d'annuaire téléphone réel dans ce mock).
   Future<List<GroupMemberModel>> searchSympathisants(
@@ -108,7 +125,7 @@ class GroupStore extends ChangeNotifier {
 
   // ── Création ────────────────────────────────────────────────────
   // Le créateur devient automatiquement le premier administrateur (poste
-  // "Président") ET le premier sympathisant (sympathisantsCount = 1).
+  // "Président") ET le premier membre (sympathisantsCount = 1).
   Future<GroupModel> createGroup({
     required String nom,
     required String description,
@@ -118,6 +135,8 @@ class GroupStore extends ChangeNotifier {
     double? longitude,
     String? photoPath,
     String? bannerPath,
+    double photoAlignY = 0.0,
+    double bannerAlignY = 0.0,
     required String createurId,
     String createurNom = 'Vous',
     String? createurAvatarPath,
@@ -129,6 +148,8 @@ class GroupStore extends ChangeNotifier {
         nom: nom,
         photoPath: photoPath,
         bannerPath: bannerPath,
+        photoAlignY: photoAlignY,
+        bannerAlignY: bannerAlignY,
         description: description,
         type: type,
         zone: zone,
@@ -170,6 +191,8 @@ class GroupStore extends ChangeNotifier {
     String? nom,
     String? photoPath,
     String? bannerPath,
+    double? photoAlignY,
+    double? bannerAlignY,
     String? description,
     GroupType? type,
     String? zone,
@@ -189,6 +212,8 @@ class GroupStore extends ChangeNotifier {
       nom: nom,
       photoPath: photoPath,
       bannerPath: bannerPath,
+      photoAlignY: photoAlignY,
+      bannerAlignY: bannerAlignY,
       description: description,
       type: type,
       zone: zone,
@@ -213,12 +238,12 @@ class GroupStore extends ChangeNotifier {
   }
 
   // ── Suivre / ne plus suivre ────────────────────────────────────
-  // Action immédiate, sans validation ni invitation. "Sympathisant"
+  // Action immédiate, sans validation ni invitation. "Membre"
   // englobe tout le monde dans le groupe (bureau exécutif, administrateurs
   // délégués, simples suiveurs) : ce compteur augmente dès qu'une personne
   // suit le groupe, qu'elle devienne ensuite administratrice ou non.
   // C'est aussi la SEULE façon de "quitter" un groupe pour un simple
-  // sympathisant (unfollowGroup) — pas de bouton "Quitter" séparé, réservé
+  // membre (unfollowGroup) — pas de bouton "Quitter" séparé, réservé
   // aux administrateurs dans les Paramètres.
   Future<void> followGroup(String groupId, String userId) async {
     final current = groupById(groupId);
@@ -244,9 +269,9 @@ class GroupStore extends ChangeNotifier {
       _followerIds[groupId]?.contains(userId) ?? false;
 
   // ── Administrateurs ────────────────────────────────────────────
-  // Rappel : la personne ajoutée doit déjà être sympathisante du groupe
+  // Rappel : la personne ajoutée doit déjà être membre du groupe
   // (avoir suivi) avant de pouvoir être promue administratrice — le
-  // mécanisme de recherche du Lot 3 ne propose que des sympathisants.
+  // mécanisme de recherche du Lot 3 ne propose que des membres.
   // poste != null -> estBureauExecutif = true, role = poste (apparaît
   // dans "Notre équipe"). poste == null -> "Administrateur sans poste
   // officiel", visible uniquement dans l'Espace gestion.
@@ -309,6 +334,19 @@ class GroupStore extends ChangeNotifier {
 
   List<GroupModel> getMesGroupes(String userId) {
     return _groups.where((g) => isFollowing(g.id, userId)).toList();
+  }
+
+  // ── Groupes où l'utilisateur peut agir "au nom du groupe" ────────
+  // Source unique pour toute liste d'attribution "au nom d'un groupe"
+  // (publication d'un signalement, prise en charge, modification
+  // d'attribution) — un utilisateur ne peut intervenir au nom d'un groupe
+  // que s'il en est administrateur, cohérent avec la règle déjà affichée
+  // dans ces mêmes écrans ("Vous devez être administrateur ou responsable
+  // d'un groupe pour intervenir en son nom"). Jamais une liste factice
+  // déconnectée : reflète toujours l'appartenance réelle de l'utilisateur
+  // connecté dans GroupStore.
+  List<GroupModel> adminGroups(String userId) {
+    return _groups.where((g) => isAdmin(g.id, userId)).toList();
   }
 
   List<GroupModel> getGroupesADecouvrir(String userId) {

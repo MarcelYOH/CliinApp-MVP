@@ -12,7 +12,8 @@ import '../../../shared/store/group_store.dart';
 import '../../../shared/store/report_store.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/widgets/group_badge_chip.dart';
-import '../../../shared/widgets/report_card.dart' show buildReportImage;
+import '../../../shared/widgets/report_card.dart'
+    show buildReportImage, openFullScreenPhoto;
 import '../../auth/auth_guard.dart';
 import '../../reports/pages/report_camera_page.dart';
 import '../models/group_model.dart';
@@ -221,8 +222,13 @@ class _GroupProfilePageState extends State<GroupProfilePage> {
             top: 0,
             left: 0,
             right: 0,
-            child: SizedBox(
-                height: coverHeight, child: _buildCoverBackground(group)),
+            child: GestureDetector(
+              onTap: group.bannerPath != null
+                  ? () => openFullScreenPhoto(context, group.bannerPath!)
+                  : null,
+              child: SizedBox(
+                  height: coverHeight, child: _buildCoverBackground(group)),
+            ),
           ),
           Positioned(
             top: MediaQuery.of(context).padding.top + 12,
@@ -244,7 +250,14 @@ class _GroupProfilePageState extends State<GroupProfilePage> {
             top: coverHeight - avatarSize / 2,
             left: 0,
             right: 0,
-            child: Center(child: _buildAvatar(group, avatarSize)),
+            child: Center(
+              child: GestureDetector(
+                onTap: group.photoPath != null
+                    ? () => openFullScreenPhoto(context, group.photoPath!)
+                    : null,
+                child: _buildAvatar(group, avatarSize),
+              ),
+            ),
           ),
         ],
       ),
@@ -257,6 +270,7 @@ class _GroupProfilePageState extends State<GroupProfilePage> {
       return buildReportImage(
         bannerPath,
         fit: BoxFit.cover,
+        alignment: Alignment(0, group.bannerAlignY),
         errorBuilder: (_, _, _) => _coverFallback(),
       );
     }
@@ -315,6 +329,7 @@ class _GroupProfilePageState extends State<GroupProfilePage> {
               child: buildReportImage(
                 group.photoPath!,
                 fit: BoxFit.cover,
+                alignment: Alignment(0, group.photoAlignY),
                 errorBuilder: (_, _, _) => _avatarInitials(group.nom),
               ),
             )

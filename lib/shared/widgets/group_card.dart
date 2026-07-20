@@ -122,6 +122,7 @@ class _GroupCardState extends State<GroupCard> {
                 ? buildReportImage(
                     bannerPath,
                     fit: BoxFit.cover,
+                    alignment: Alignment(0, widget.data.bannerAlignY),
                     errorBuilder: (_, _, _) => _buildCoverFallback(),
                   )
                 : _buildCoverFallback(),
@@ -187,6 +188,7 @@ class _GroupCardState extends State<GroupCard> {
               child: buildReportImage(
                 photoPath,
                 fit: BoxFit.cover,
+                alignment: Alignment(0, widget.data.photoAlignY),
                 errorBuilder: (_, _, _) => _buildAvatarFallback(),
               ),
             )
@@ -249,7 +251,7 @@ class _GroupCardState extends State<GroupCard> {
           ],
           const SizedBox(height: CliinAppConstants.spacingS),
           _infoRow(Icons.group_rounded,
-              '${widget.data.sympathisantsCount} sympathisants'),
+              '${widget.data.sympathisantsCount} membres'),
           const SizedBox(height: CliinAppConstants.spacingXS),
           _infoRow(
               Icons.shield_rounded, '${widget.data.actionsCount} actions'),
@@ -325,6 +327,7 @@ class _GroupCardState extends State<GroupCard> {
         children: [
           ...List.generate(leaders.length, (i) {
             final leader = leaders[i];
+            final avatarPath = GroupStore.instance.effectiveAvatarPath(leader);
             return Positioned(
               left: i * 18.0,
               child: Container(
@@ -335,9 +338,9 @@ class _GroupCardState extends State<GroupCard> {
                   border: Border.all(color: CliinAppColors.cardWhite, width: 2),
                 ),
                 child: ClipOval(
-                  child: leader.avatarPath != null
-                      ? Image.asset(
-                          leader.avatarPath!,
+                  child: avatarPath != null
+                      ? buildReportImage(
+                          avatarPath,
                           fit: BoxFit.cover,
                           errorBuilder: (_, _, _) => _leaderFallback(i),
                         )
