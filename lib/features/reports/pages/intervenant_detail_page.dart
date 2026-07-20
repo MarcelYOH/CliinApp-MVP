@@ -400,6 +400,10 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
                           const SizedBox(height: CliinAppConstants.spacingM),
                           _buildIntervenantWhatsAppBlock(),
                         ],
+                        if (_canManageTakeover) ...[
+                          const SizedBox(height: CliinAppConstants.spacingM),
+                          _buildManageActionsSection(),
+                        ],
                         if (_report.status == ReportStatus.traite) ...[
                           const SizedBox(height: CliinAppConstants.spacingM),
                           ReportActionZone(
@@ -697,20 +701,17 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
               ),
             ),
           ),
-          GestureDetector(
-            onTap: _canManageTakeover ? _openManageMenu : null,
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: CliinAppColors.background,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.more_vert_rounded,
-                color: CliinAppColors.textDark,
-                size: 20,
-              ),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: CliinAppColors.background,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.more_vert_rounded,
+              color: CliinAppColors.textDark,
+              size: 20,
             ),
           ),
         ],
@@ -726,124 +727,80 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
       (_report.intervenant?.outcome ?? InterventionOutcome.none) ==
           InterventionOutcome.none;
 
-  void _openManageMenu() {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(CliinAppConstants.radiusLarge),
-            topRight: Radius.circular(CliinAppConstants.radiusLarge),
-          ),
-        ),
-        padding: const EdgeInsets.fromLTRB(
-          CliinAppConstants.pagePadding,
-          CliinAppConstants.spacingM,
-          CliinAppConstants.pagePadding,
-          CliinAppConstants.spacingL,
-        ),
-        child: SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Center(
-                child: Container(
-                  margin: const EdgeInsets.only(
-                      bottom: CliinAppConstants.spacingL),
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: CliinAppColors.divider,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              _manageMenuTile(
-                icon: Icons.swap_horiz_rounded,
-                iconColor: CliinAppColors.primary,
-                label: 'Modifier ma prise en charge',
-                subtitle: 'Basculer entre «en mon nom» et «au nom '
-                    'd\'un groupe»',
-                onTap: () {
-                  Navigator.pop(context);
-                  _openChangeAttributionSheet();
-                },
-              ),
-              const SizedBox(height: CliinAppConstants.spacingS),
-              _manageMenuTile(
-                icon: Icons.cancel_outlined,
-                iconColor: CliinAppColors.alertRed,
-                label: 'Abandonner ma prise en charge',
-                subtitle: 'Le cas redevient Disponible pour un autre '
-                    'intervenant',
-                onTap: () {
-                  Navigator.pop(context);
-                  _confirmAbandon();
-                },
-              ),
-            ],
-          ),
-        ),
+  // ── Section visible (pas cachée derrière un menu) — corrections 1 & 2 ──
+  // Affichée directement dans le corps de la page, juste sous le bloc
+  // WhatsApp, pour garantir que l'intervenant la voie sans avoir à
+  // deviner qu'une icône doit être tapée.
+  Widget _buildManageActionsSection() {
+    return Container(
+      padding: const EdgeInsets.all(CliinAppConstants.spacingM),
+      decoration: BoxDecoration(
+        color: CliinAppColors.cardWhite,
+        borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
+        border: Border.all(color: CliinAppColors.divider),
       ),
-    );
-  }
-
-  Widget _manageMenuTile({
-    required IconData icon,
-    required Color iconColor,
-    required String label,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(CliinAppConstants.spacingM),
-        decoration: BoxDecoration(
-          color: CliinAppColors.background,
-          borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: CliinAppColors.cardWhite,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Gérer ma prise en charge',
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: CliinAppColors.textDark,
+            ),
+          ),
+          const SizedBox(height: CliinAppConstants.spacingM),
+          OutlinedButton.icon(
+            onPressed: _openChangeAttributionSheet,
+            icon: const Icon(
+              Icons.swap_horiz_rounded,
+              color: CliinAppColors.primary,
+              size: 18,
+            ),
+            label: Text(
+              'Modifier ma prise en charge',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: CliinAppColors.primary,
+              ),
+            ),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: CliinAppColors.primary),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
                 borderRadius:
-                    BorderRadius.circular(CliinAppConstants.radiusSmall),
-              ),
-              child: Icon(icon, color: iconColor, size: 18),
-            ),
-            const SizedBox(width: CliinAppConstants.spacingM),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: CliinAppColors.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      color: CliinAppColors.textSecondary,
-                    ),
-                  ),
-                ],
+                    BorderRadius.circular(CliinAppConstants.radiusMedium),
               ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: CliinAppConstants.spacingS),
+          OutlinedButton.icon(
+            onPressed: _confirmAbandon,
+            icon: const Icon(
+              Icons.cancel_outlined,
+              color: CliinAppColors.alertRed,
+              size: 18,
+            ),
+            label: Text(
+              'Abandonner ma prise en charge',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: CliinAppColors.alertRed,
+              ),
+            ),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: CliinAppColors.alertRed),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius:
+                    BorderRadius.circular(CliinAppConstants.radiusMedium),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

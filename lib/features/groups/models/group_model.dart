@@ -52,6 +52,10 @@ class GroupModel {
   final String id;
   final String nom;
   final String? photoPath;
+  // Photo de bannière/couverture (rectangulaire) — distincte de [photoPath]
+  // (logo, cercle). Affichée en arrière-plan partout où le groupe apparaît
+  // (GroupCard, GroupProfilePage) ; null = dégradé de repli habituel.
+  final String? bannerPath;
   final String description;
   final GroupType type;
   final String zone;
@@ -92,6 +96,7 @@ class GroupModel {
     required this.id,
     required this.nom,
     this.photoPath,
+    this.bannerPath,
     required this.description,
     required this.type,
     required this.zone,
@@ -118,6 +123,7 @@ class GroupModel {
     String? id,
     String? nom,
     String? photoPath,
+    String? bannerPath,
     String? description,
     GroupType? type,
     String? zone,
@@ -143,6 +149,7 @@ class GroupModel {
       id: id ?? this.id,
       nom: nom ?? this.nom,
       photoPath: photoPath ?? this.photoPath,
+      bannerPath: bannerPath ?? this.bannerPath,
       description: description ?? this.description,
       type: type ?? this.type,
       zone: zone ?? this.zone,
@@ -170,6 +177,7 @@ class GroupModel {
         'id': id,
         'nom': nom,
         'photoPath': photoPath,
+        'bannerPath': bannerPath,
         'description': description,
         'type': type.name,
         'zone': zone,
@@ -196,6 +204,7 @@ class GroupModel {
         id: json['id'] as String,
         nom: json['nom'] as String,
         photoPath: json['photoPath'] as String?,
+        bannerPath: json['bannerPath'] as String?,
         description: json['description'] as String,
         type: GroupType.values.byName(json['type'] as String),
         zone: json['zone'] as String,

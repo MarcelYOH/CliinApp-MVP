@@ -4,12 +4,12 @@
 // même structure visuelle exacte pour les deux (photo, nom, type, zone,
 // description). Ne jamais dupliquer ces widgets localement dans une page.
 
-import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../shared/widgets/report_card.dart' show buildReportImage;
 import '../models/group_model.dart';
 
 Widget buildGroupFormPhotoPicker({
@@ -37,13 +37,57 @@ Widget buildGroupFormPhotoPicker({
             ),
             clipBehavior: Clip.antiAlias,
             child: photoPath != null
-                ? Image.file(File(photoPath),
-                    fit: BoxFit.cover, width: 78, height: 78)
+                ? buildReportImage(photoPath, fit: BoxFit.cover)
                 : const Icon(Icons.camera_alt_rounded,
                     color: CliinAppColors.primary, size: 30),
           ),
         ]),
       ),
+    ),
+  );
+}
+
+// ── Photo de bannière/couverture — rectangulaire, distincte du logo ─────
+Widget buildGroupFormBannerPicker({
+  required String? bannerPath,
+  required VoidCallback onTap,
+}) {
+  return GestureDetector(
+    onTap: onTap,
+    child: SizedBox(
+      width: double.infinity,
+      height: 110,
+      child: Stack(fit: StackFit.expand, children: [
+        CustomPaint(
+          painter: GroupFormDashedRectPainter(color: CliinAppColors.primary),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(3),
+          child: ClipRRect(
+            borderRadius:
+                BorderRadius.circular(CliinAppConstants.radiusMedium - 2),
+            child: Container(
+              color: CliinAppColors.primaryLight,
+              child: bannerPath != null
+                  ? buildReportImage(bannerPath, fit: BoxFit.cover)
+                  : Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.image_outlined,
+                              color: CliinAppColors.primary, size: 26),
+                          const SizedBox(height: 4),
+                          Text('Photo de bannière',
+                              style: CliinAppTextStyles.bodySmall.copyWith(
+                                  color: CliinAppColors.primary,
+                                  fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ),
+            ),
+          ),
+        ),
+      ]),
     ),
   );
 }
@@ -205,5 +249,43 @@ class GroupFormDashedCirclePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant GroupFormDashedCirclePainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
+class GroupFormDashedRectPainter extends CustomPainter {
+  final Color color;
+  GroupFormDashedRectPainter({required this.color});
+
+  static const double _dashLength = 5;
+  static const double _gapLength = 4;
+  static const double _radius = CliinAppConstants.radiusMedium;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.6
+      ..style = PaintingStyle.stroke;
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      const Radius.circular(_radius),
+    );
+    final path = Path()..addRRect(rrect);
+    final metrics = path.computeMetrics();
+    for (final metric in metrics) {
+      var distance = 0.0;
+      while (distance < metric.length) {
+        final next = distance + _dashLength;
+        canvas.drawPath(
+          metric.extractPath(distance, next.clamp(0, metric.length)),
+          paint,
+        );
+        distance = next + _gapLength;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant GroupFormDashedRectPainter oldDelegate) =>
       oldDelegate.color != color;
 }

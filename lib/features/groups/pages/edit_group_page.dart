@@ -33,6 +33,7 @@ class _EditGroupPageState extends State<EditGroupPage> {
   final _descController = TextEditingController();
 
   String? _photoPath;
+  String? _bannerPath;
   GroupType _selectedType = GroupType.ong;
   bool _isSubmitting = false;
   bool _isDetectingZone = false;
@@ -58,6 +59,7 @@ class _EditGroupPageState extends State<EditGroupPage> {
       _zoneController.text = group.zone;
       _descController.text = group.description;
       _photoPath = group.photoPath;
+      _bannerPath = group.bannerPath;
       _selectedType = group.type;
       _latitude = group.latitude;
       _longitude = group.longitude;
@@ -132,6 +134,27 @@ class _EditGroupPageState extends State<EditGroupPage> {
     }
   }
 
+  Future<void> _pickBanner() async {
+    try {
+      final path = await Navigator.push<String>(
+        context,
+        fastFadeRoute<String>(
+          const ReportCameraPage(replaceMode: true, isAvatarMode: true),
+        ),
+      );
+      if (path != null && mounted) setState(() => _bannerPath = path);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Impossible d\'accéder à la caméra.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _submit() async {
     if (!_canSubmit) return;
     setState(() => _isSubmitting = true);
@@ -143,6 +166,7 @@ class _EditGroupPageState extends State<EditGroupPage> {
         widget.groupId,
         nom: _nomController.text.trim(),
         photoPath: _photoPath,
+        bannerPath: _bannerPath,
         description: _descController.text.trim(),
         type: _selectedType,
         zone: _zoneController.text.trim(),
@@ -202,6 +226,14 @@ class _EditGroupPageState extends State<EditGroupPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: CliinAppConstants.spacingM),
+                    buildGroupFormLabeledField(
+                      label: 'Photo de bannière',
+                      helper: 'Facultative — visible en arrière-plan partout '
+                          'où le groupe apparaît.',
+                      child: buildGroupFormBannerPicker(
+                          bannerPath: _bannerPath, onTap: _pickBanner),
+                    ),
+                    const SizedBox(height: CliinAppConstants.spacingL),
                     buildGroupFormPhotoPicker(
                         photoPath: _photoPath, onTap: _pickPhoto),
                     const SizedBox(height: CliinAppConstants.spacingXL),

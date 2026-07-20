@@ -12,6 +12,7 @@ import '../../../shared/store/group_store.dart';
 import '../../../shared/store/report_store.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/widgets/group_badge_chip.dart';
+import '../../../shared/widgets/report_card.dart' show buildReportImage;
 import '../../auth/auth_guard.dart';
 import '../../reports/pages/report_camera_page.dart';
 import '../models/group_model.dart';
@@ -220,7 +221,8 @@ class _GroupProfilePageState extends State<GroupProfilePage> {
             top: 0,
             left: 0,
             right: 0,
-            child: SizedBox(height: coverHeight, child: _buildCoverBackground()),
+            child: SizedBox(
+                height: coverHeight, child: _buildCoverBackground(group)),
           ),
           Positioned(
             top: MediaQuery.of(context).padding.top + 12,
@@ -249,9 +251,19 @@ class _GroupProfilePageState extends State<GroupProfilePage> {
     );
   }
 
-  Widget _buildCoverBackground() {
-    // Cover toujours en dégradé — le modèle ne porte qu'une seule image
-    // (photoPath), utilisée pour l'avatar rond (même choix que GroupCard).
+  Widget _buildCoverBackground(GroupModel group) {
+    final bannerPath = group.bannerPath;
+    if (bannerPath != null) {
+      return buildReportImage(
+        bannerPath,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => _coverFallback(),
+      );
+    }
+    return _coverFallback();
+  }
+
+  Widget _coverFallback() {
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -300,7 +312,7 @@ class _GroupProfilePageState extends State<GroupProfilePage> {
       ),
       child: group.photoPath != null
           ? ClipOval(
-              child: Image.asset(
+              child: buildReportImage(
                 group.photoPath!,
                 fit: BoxFit.cover,
                 errorBuilder: (_, _, _) => _avatarInitials(group.nom),

@@ -23,6 +23,7 @@ class MockGroupRepository implements GroupRepository {
       required String id,
       required String nom,
       String? photoPath,
+      String? bannerPath,
       required String description,
       required GroupType type,
       required String zone,
@@ -39,6 +40,7 @@ class MockGroupRepository implements GroupRepository {
         id: id,
         nom: nom,
         photoPath: photoPath,
+        bannerPath: bannerPath,
         description: description,
         type: type,
         zone: zone,
@@ -65,10 +67,10 @@ class MockGroupRepository implements GroupRepository {
       group(
         id: 'grp_clean_riviera',
         nom: 'Clean Riviera',
-        // Réutilise une image déjà présente dans les assets du module
-        // Groupes (aucune nouvelle image créée) — donne un aperçu vivant à
-        // ce groupe factice sur l'accueil (correction cartes factices).
-        photoPath: 'assets/images/group_banner1.jpg',
+        // Logo (cercle) et bannière (rectangle) — images dédiées déjà
+        // présentes dans les assets du module Groupes.
+        photoPath: 'assets/images/cleanriviera.png',
+        bannerPath: 'assets/images/group_banner1.jpg',
         description:
             'Collectif de riverains mobilisé pour la propreté de Riviera 2 : '
             'nettoyage hebdomadaire des rues et sensibilisation au tri sélectif.',
@@ -86,7 +88,8 @@ class MockGroupRepository implements GroupRepository {
       group(
         id: 'grp_green_city',
         nom: 'Green City',
-        photoPath: 'assets/images/group_banner2.jpg',
+        photoPath: 'assets/images/greencity.png',
+        bannerPath: 'assets/images/group_banner2.jpg',
         description:
             'Association pour un cadre de vie plus vert au Plateau : '
             'reboisement urbain, compostage communautaire et propreté des espaces publics.',
@@ -104,7 +107,8 @@ class MockGroupRepository implements GroupRepository {
       group(
         id: 'grp_eco_jeunes',
         nom: 'Eco Jeunes',
-        photoPath: 'assets/images/group_banner3.jpg',
+        photoPath: 'assets/images/ecojeunes.png',
+        bannerPath: 'assets/images/group_banner3.jpg',
         description:
             'Mobilisation des jeunes de Yopougon autour des enjeux environnementaux '
             'locaux : ateliers de sensibilisation et actions terrain.',
@@ -172,60 +176,107 @@ class MockGroupRepository implements GroupRepository {
     ]);
 
     _members.addAll({
+      // Groupes factices "Groupes actifs" (accueil) : exactement 5
+      // avatars d'équipe dirigeante, tous avatar.png (donnée factice —
+      // répétition à l'identique acceptée). Logique pour les vraies
+      // données futures (voir GroupStore.leaderAvatars) : le 1er membre
+      // correspond au créateur/président du groupe, les suivants aux
+      // membres du bureau exécutif ajoutés depuis l'Espace gestion, dans
+      // leur ordre d'ajout, jusqu'à 5 max affichés (mécanisme "+N" au-delà).
       'grp_clean_riviera': const [
         GroupMemberModel(
             id: 'mbr_cr_1',
             nom: 'Aïcha Koné',
+            avatarPath: 'assets/images/avatar.png',
             role: 'Présidente',
             estBureauExecutif: true),
         GroupMemberModel(
             id: 'mbr_cr_2',
             nom: 'Yannick Bamba',
+            avatarPath: 'assets/images/avatar.png',
             role: 'Trésorier',
             estBureauExecutif: true),
         GroupMemberModel(
             id: 'mbr_cr_3',
             nom: 'Fatou Diarra',
+            avatarPath: 'assets/images/avatar.png',
             role: 'Secrétaire générale',
             estBureauExecutif: true),
         GroupMemberModel(
             id: 'mbr_cr_4',
             nom: 'Serge Kouadio',
+            avatarPath: 'assets/images/avatar.png',
             role: 'Chargé des opérations',
+            estBureauExecutif: true),
+        GroupMemberModel(
+            id: 'mbr_cr_5',
+            nom: 'Nina Assouan',
+            avatarPath: 'assets/images/avatar.png',
+            role: 'Chargée de communication',
             estBureauExecutif: true),
       ],
       'grp_green_city': const [
         GroupMemberModel(
             id: 'mbr_gc_1',
             nom: 'Marc Adou',
+            avatarPath: 'assets/images/avatar.png',
             role: 'Président',
             estBureauExecutif: true),
         GroupMemberModel(
             id: 'mbr_gc_2',
             nom: 'Diane Yao',
+            avatarPath: 'assets/images/avatar.png',
             role: 'Vice-présidente',
             estBureauExecutif: true),
         GroupMemberModel(
             id: 'mbr_gc_3',
             nom: 'Paul N\'Guessan',
-            estAdmin: true,
-            estBureauExecutif: false),
+            avatarPath: 'assets/images/avatar.png',
+            role: 'Secrétaire général',
+            estBureauExecutif: true),
+        GroupMemberModel(
+            id: 'mbr_gc_4',
+            nom: 'Sarah Kouamé',
+            avatarPath: 'assets/images/avatar.png',
+            role: 'Trésorière',
+            estBureauExecutif: true),
+        GroupMemberModel(
+            id: 'mbr_gc_5',
+            nom: 'Éric Bailly',
+            avatarPath: 'assets/images/avatar.png',
+            role: 'Chargé des opérations',
+            estBureauExecutif: true),
       ],
       'grp_eco_jeunes': const [
         GroupMemberModel(
             id: 'mbr_ej_1',
             nom: 'Grace Tanoh',
+            avatarPath: 'assets/images/avatar.png',
             role: 'Présidente',
             estBureauExecutif: true),
         GroupMemberModel(
             id: 'mbr_ej_2',
             nom: 'Ibrahim Traoré',
+            avatarPath: 'assets/images/avatar.png',
             role: 'Trésorier',
             estBureauExecutif: true),
         GroupMemberModel(
             id: 'mbr_ej_3',
             nom: 'Nadège Assi',
+            avatarPath: 'assets/images/avatar.png',
             role: 'Chargée des opérations',
+            estBureauExecutif: true),
+        GroupMemberModel(
+            id: 'mbr_ej_4',
+            nom: 'Junior Kacou',
+            avatarPath: 'assets/images/avatar.png',
+            role: 'Secrétaire général',
+            estBureauExecutif: true),
+        GroupMemberModel(
+            id: 'mbr_ej_5',
+            nom: 'Aminata Cissé',
+            avatarPath: 'assets/images/avatar.png',
+            role: 'Chargée de communication',
             estBureauExecutif: true),
       ],
       'grp_quartier_propre': const [

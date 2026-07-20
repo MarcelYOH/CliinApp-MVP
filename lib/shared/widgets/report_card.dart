@@ -489,6 +489,13 @@ class _IdBadge extends StatelessWidget {
       );
 }
 
+// Cartes factices "accroche" (accueil, id préfixé 'demo_') : distance
+// figée et plausible plutôt que calculée en direct — une donnée de
+// démonstration ne doit jamais afficher "Imprécis"/"..." selon l'état GPS
+// réel de l'appareil qui teste l'app, ce qui donnerait l'impression d'un
+// bug plutôt que d'un aperçu engageant.
+bool _isFakeReport(HomeReportModel r) => r.id.startsWith('demo_');
+
 class _DistanceTimeBadge extends StatelessWidget {
   final HomeReportModel data;
   const _DistanceTimeBadge({required this.data});
@@ -503,12 +510,16 @@ class _DistanceTimeBadge extends StatelessWidget {
           const Icon(Icons.location_on_rounded,
               color: CliinAppColors.textWhite, size: 12),
           const SizedBox(width: 4),
-          DynamicDistanceLabel(
-            latitude: data.latitude,
-            longitude: data.longitude,
-            style: CliinAppTextStyles.badge
-                .copyWith(color: CliinAppColors.textWhite),
-          ),
+          _isFakeReport(data)
+              ? Text(data.distance,
+                  style: CliinAppTextStyles.badge
+                      .copyWith(color: CliinAppColors.textWhite))
+              : DynamicDistanceLabel(
+                  latitude: data.latitude,
+                  longitude: data.longitude,
+                  style: CliinAppTextStyles.badge
+                      .copyWith(color: CliinAppColors.textWhite),
+                ),
           Container(
               margin: const EdgeInsets.symmetric(horizontal: 6),
               width: 1,

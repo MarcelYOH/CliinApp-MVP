@@ -117,6 +117,7 @@ class GroupStore extends ChangeNotifier {
     double? latitude,
     double? longitude,
     String? photoPath,
+    String? bannerPath,
     required String createurId,
     String createurNom = 'Vous',
     String? createurAvatarPath,
@@ -127,6 +128,7 @@ class GroupStore extends ChangeNotifier {
         id: '',
         nom: nom,
         photoPath: photoPath,
+        bannerPath: bannerPath,
         description: description,
         type: type,
         zone: zone,
@@ -167,6 +169,7 @@ class GroupStore extends ChangeNotifier {
     String groupId, {
     String? nom,
     String? photoPath,
+    String? bannerPath,
     String? description,
     GroupType? type,
     String? zone,
@@ -185,6 +188,7 @@ class GroupStore extends ChangeNotifier {
     final updated = current.copyWith(
       nom: nom,
       photoPath: photoPath,
+      bannerPath: bannerPath,
       description: description,
       type: type,
       zone: zone,

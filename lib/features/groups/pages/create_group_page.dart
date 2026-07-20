@@ -29,6 +29,7 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
   final _descController = TextEditingController();
 
   String? _photoPath;
+  String? _bannerPath;
   GroupType _selectedType = GroupType.ong;
   bool _isDetectingZone = false;
   bool _isSubmitting = false;
@@ -109,6 +110,27 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
     }
   }
 
+  Future<void> _pickBanner() async {
+    try {
+      final path = await Navigator.push<String>(
+        context,
+        fastFadeRoute<String>(
+          const ReportCameraPage(replaceMode: true, isAvatarMode: true),
+        ),
+      );
+      if (path != null && mounted) setState(() => _bannerPath = path);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Impossible d\'accéder à la caméra.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _submit() async {
     if (!_canSubmit) return;
     setState(() => _isSubmitting = true);
@@ -122,6 +144,7 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
         latitude: _latitude,
         longitude: _longitude,
         photoPath: _photoPath,
+        bannerPath: _bannerPath,
         createurId: user.id,
         createurNom: user.username,
         createurAvatarPath: user.avatarPath,
@@ -163,6 +186,14 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: CliinAppConstants.spacingM),
+                    buildGroupFormLabeledField(
+                      label: 'Photo de bannière',
+                      helper: 'Facultative — visible en arrière-plan partout '
+                          'où le groupe apparaît.',
+                      child: buildGroupFormBannerPicker(
+                          bannerPath: _bannerPath, onTap: _pickBanner),
+                    ),
+                    const SizedBox(height: CliinAppConstants.spacingL),
                     buildGroupFormPhotoPicker(
                         photoPath: _photoPath, onTap: _pickPhoto),
                     const SizedBox(height: CliinAppConstants.spacingXL),

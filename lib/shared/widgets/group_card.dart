@@ -16,6 +16,7 @@ import '../navigation/fast_page_route.dart';
 import '../store/auth_store.dart';
 import '../store/group_store.dart';
 import 'group_badge_chip.dart';
+import 'report_card.dart' show buildReportImage;
 
 class GroupCard extends StatefulWidget {
   final GroupModel data;
@@ -104,9 +105,10 @@ class _GroupCardState extends State<GroupCard> {
     );
   }
 
-  // ── Photo de couverture — toujours le dégradé de repli : le modèle ne
-  // porte qu'une seule image (photoPath), utilisée pour l'avatar rond ─────
+  // ── Photo de couverture — vraie bannière (data.bannerPath) quand
+  // renseignée, dégradé de repli sinon (groupes sans bannière) ────────────
   Widget _buildCover() {
+    final bannerPath = widget.data.bannerPath;
     return SizedBox(
       height: _coverHeight,
       child: ClipRRect(
@@ -116,24 +118,33 @@ class _GroupCardState extends State<GroupCard> {
         ),
         child: Stack(children: [
           Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [CliinAppColors.primary, CliinAppColors.primaryDark],
-                ),
-              ),
-              child: Center(
-                child: Icon(Icons.groups_rounded,
-                    color: CliinAppColors.textWhite.withValues(alpha: 0.25),
-                    size: 34),
-              ),
-            ),
+            child: bannerPath != null
+                ? buildReportImage(
+                    bannerPath,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => _buildCoverFallback(),
+                  )
+                : _buildCoverFallback(),
           ),
           if (widget.data.estActif)
             Positioned(top: 8, right: 10, child: _buildActifBadge()),
         ]),
+      ),
+    );
+  }
+
+  Widget _buildCoverFallback() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [CliinAppColors.primary, CliinAppColors.primaryDark],
+        ),
+      ),
+      child: Center(
+        child: Icon(Icons.groups_rounded,
+            color: CliinAppColors.textWhite.withValues(alpha: 0.25), size: 34),
       ),
     );
   }
@@ -173,7 +184,7 @@ class _GroupCardState extends State<GroupCard> {
       ),
       child: photoPath != null
           ? ClipOval(
-              child: Image.asset(
+              child: buildReportImage(
                 photoPath,
                 fit: BoxFit.cover,
                 errorBuilder: (_, _, _) => _buildAvatarFallback(),
