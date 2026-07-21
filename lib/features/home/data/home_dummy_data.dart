@@ -80,7 +80,7 @@ class HomeDummyData {
         HomeReportModel(
           id: 'demo_nearby_1',
           reference: '#CLN-DEMO',
-          title: 'Dépôt sauvage de déchets',
+          title: 'Dépôts sauvages',
           location: 'Quartier Bardot, San-Pedro',
           description:
               'Amas de déchets ménagers abandonnés sur le trottoir, attire '
@@ -101,7 +101,7 @@ class HomeDummyData {
         HomeReportModel(
           id: 'demo_nearby_2',
           reference: '#CLN-DEMO',
-          title: 'Caniveau bouché et débordant',
+          title: 'Caniveaux bouchés',
           location: 'Zone Lac, San-Pedro',
           description:
               'Eaux stagnantes bloquées par des déchets, risque sanitaire '
@@ -125,7 +125,7 @@ class HomeDummyData {
         HomeReportModel(
           id: 'demo_recent_1',
           reference: '#CLN-DEMO',
-          title: 'Dépôt sauvage près du marché',
+          title: 'Dépôts sauvages',
           location: 'Cité, San-Pedro',
           description:
               'Déchets entassés en bordure de route depuis plusieurs jours, '

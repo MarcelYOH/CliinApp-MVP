@@ -14,7 +14,7 @@ class ReportCardTestPage extends StatelessWidget {
   static const _disponible = HomeReportModel(
     id: '1',
     reference: '#CLN-9021',
-    title: 'Dépôt sauvage',
+    title: 'Dépôts sauvages',
     location: 'Yopougon, Sicogi',
     description: "Accumulation importante d'ordures ménagères non collectées.",
     severity: ReportSeverity.critique,
@@ -31,7 +31,7 @@ class ReportCardTestPage extends StatelessWidget {
   static const _enCours = HomeReportModel(
     id: '2',
     reference: '#CLN-9022',
-    title: 'Dépôt sauvage',
+    title: 'Dépôts sauvages',
     location: 'Yopougon, Sicogi',
     description: "Accumulation importante d'ordures ménagères non collectées.",
     severity: ReportSeverity.critique,
@@ -53,7 +53,7 @@ class ReportCardTestPage extends StatelessWidget {
   static const _traite = HomeReportModel(
     id: '3',
     reference: '#CLN-9023',
-    title: 'Dépôt sauvage',
+    title: 'Dépôts sauvages',
     location: 'Yopougon, Sicogi',
     description: "Accumulation importante d'ordures ménagères non collectées.",
     severity: ReportSeverity.critique,
