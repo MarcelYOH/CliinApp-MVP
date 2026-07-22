@@ -10,6 +10,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../features/auth/auth_guard.dart';
+import '../../features/groups/data/groups_dummy_data.dart';
 import '../../features/groups/models/group_model.dart';
 import '../../features/groups/pages/group_profile_page.dart';
 import '../navigation/fast_page_route.dart';
@@ -38,7 +39,27 @@ class _GroupCardState extends State<GroupCard> {
   static const double _coverHeight = 70;
   static const double _avatarSize = 40;
 
+  // Carte factice "accroche" (voir GroupsDummyData) : jamais de vraie
+  // navigation ni de vraie action de suivi, un tap affiche simplement un
+  // message explicatif — même principe que les faux signalements de
+  // l'accueil (aucune trace de donnée factice ne doit interférer avec une
+  // vraie donnée créée par un utilisateur, règle 3.5).
+  void _showFakeGroupNotice() {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text(
+        'Ceci est un exemple. Soyez le premier à créer un groupe réel '
+        'dans votre zone !',
+      ),
+      behavior: SnackBarBehavior.floating,
+      duration: Duration(seconds: 3),
+    ));
+  }
+
   Future<void> _toggleFollow() async {
+    if (GroupsDummyData.isFakeGroup(widget.data)) {
+      _showFakeGroupNotice();
+      return;
+    }
     if (!await requireAuth(context)) return;
     if (!mounted) return;
     final userId = AuthStore.instance.currentUser!.id;
@@ -53,6 +74,10 @@ class _GroupCardState extends State<GroupCard> {
   }
 
   void _openProfile() {
+    if (GroupsDummyData.isFakeGroup(widget.data)) {
+      _showFakeGroupNotice();
+      return;
+    }
     Navigator.push(
       context,
       fastFadeRoute<void>(GroupProfilePage(groupId: widget.data.id)),

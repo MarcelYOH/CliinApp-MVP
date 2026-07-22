@@ -77,7 +77,6 @@ class GroupModel {
   // Sous-ensemble de ["engage", "impact", "officiel"] — calculé
   // automatiquement par GroupStore.recalculerBadges(), jamais saisi.
   final List<String> badges;
-  final bool estActif;
   final DateTime createdAt;
   final String createurId;
 
@@ -99,6 +98,11 @@ class GroupModel {
   // Le créateur compte comme premier membre dès la création.
   final int sympathisantsCount;
 
+  // "Actif" = AU MOINS 2 badges (Engagé+Impact, ou les 3 simultanément) —
+  // un groupe à 0 ou 1 badge n'est jamais actif. Calculé à partir de
+  // [badges], jamais stocké/saisi séparément.
+  bool get estActif => badges.length >= 2;
+
   const GroupModel({
     required this.id,
     required this.nom,
@@ -112,7 +116,6 @@ class GroupModel {
     this.latitude,
     this.longitude,
     this.badges = const [],
-    this.estActif = false,
     required this.createdAt,
     required this.createurId,
     this.missionTexte,
@@ -141,7 +144,6 @@ class GroupModel {
     double? latitude,
     double? longitude,
     List<String>? badges,
-    bool? estActif,
     DateTime? createdAt,
     String? createurId,
     String? missionTexte,
@@ -169,7 +171,6 @@ class GroupModel {
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       badges: badges ?? this.badges,
-      estActif: estActif ?? this.estActif,
       createdAt: createdAt ?? this.createdAt,
       createurId: createurId ?? this.createurId,
       missionTexte: missionTexte ?? this.missionTexte,
@@ -199,7 +200,6 @@ class GroupModel {
         'latitude': latitude,
         'longitude': longitude,
         'badges': badges,
-        'estActif': estActif,
         'createdAt': createdAt.toIso8601String(),
         'createurId': createurId,
         'missionTexte': missionTexte,
@@ -228,7 +228,6 @@ class GroupModel {
         latitude: json['latitude']?.toDouble(),
         longitude: json['longitude']?.toDouble(),
         badges: (json['badges'] as List).cast<String>(),
-        estActif: json['estActif'] as bool,
         createdAt: DateTime.parse(json['createdAt'] as String),
         createurId: json['createurId'] as String,
         missionTexte: json['missionTexte'] as String?,

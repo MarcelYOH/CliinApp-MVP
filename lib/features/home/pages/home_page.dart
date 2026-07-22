@@ -32,31 +32,10 @@ import '../../reports/widgets/take_charge_flow.dart';
 import '../../map/pages/map_page.dart';
 import '../../map/models/map_filter_model.dart';
 import '../../groups/pages/groups_page.dart';
+import '../../groups/pages/group_search_page.dart';
+import '../../groups/data/groups_dummy_data.dart';
 import '../../auth/auth_guard.dart';
 import '../../profile/pages/profile_page.dart';
-
-// Aperçu "Groupes actifs" de l'accueil : section très sélective, réservée
-// aux groupes ayant validé les 3 badges à la fois (Engagé + Impact +
-// Officiel) — preuve d'un impact terrain complet. Si moins de 3 groupes
-// remplissent cette condition, on affiche uniquement ceux-là : jamais un
-// groupe à 1 ou 2 badges en remplacement.
-//
-// Cartes factices : les groupes de démonstration seedés (createurId
-// préfixé 'seed_', voir mock_group_repository.dart) jouent le même rôle
-// d'accroche que les cartes factices "signalements" — plafonné à 3 au
-// total, avec priorité systématique aux vrais groupes créés par des
-// utilisateurs dès qu'ils atteignent les 3 badges (remplacement individuel,
-// jamais ajoutés à côté).
-List<GroupModel> _selectFeaturedGroups(List<GroupModel> groups) {
-  const requiredBadges = ['engage', 'impact', 'officiel'];
-  final qualifying =
-      groups.where((g) => requiredBadges.every(g.badges.contains)).toList();
-  final real =
-      qualifying.where((g) => !g.createurId.startsWith('seed_')).toList();
-  final demo =
-      qualifying.where((g) => g.createurId.startsWith('seed_')).toList();
-  return [...real, ...demo].take(3).toList();
-}
 
 // Salutation selon l'heure du téléphone :
 // 00h-11h59 -> Bonjour · 12h-17h59 -> Bon après-midi · 18h-23h59 -> Bonsoir
@@ -140,6 +119,25 @@ class _HomePageState extends State<HomePage> {
 
   void _goToGroups() {
     Navigator.push(context, fastFadeRoute<void>(const GroupsPage()));
+  }
+
+  // "Voir tout" de la section "Groupes actifs" de l'accueil : mène
+  // DIRECTEMENT à la page dédiée, sans passer par l'accueil du module
+  // Groupes (règle de navigation de la correction 1.1).
+  void _goToGroupesActifs() {
+    Navigator.push(
+      context,
+      fastFadeRoute<void>(const GroupSearchPage(origine: 'actifs')),
+    );
+  }
+
+  // Section "Groupes actifs" de l'accueil : priorité systématique aux
+  // vrais groupes à 3 badges simultanément (GroupStore) ; cartes factices
+  // "accroche" (GroupsDummyData) uniquement tant qu'aucun n'existe encore
+  // — jamais les deux mélangés (correction 3).
+  List<GroupModel> _groupsActifsVitrine() {
+    final real = GroupStore.instance.getGroupsActifsVitrine();
+    return real.isEmpty ? GroupsDummyData.forSection('actifs') : real;
   }
 
   void _goToMap({
@@ -321,8 +319,8 @@ class _HomePageState extends State<HomePage> {
       ),
       HomeActionBanner(data: HomeDummyData.actionBanner, onTap: () {}),
       HomeGroups(
-        groups: _selectFeaturedGroups(GroupStore.instance.getGroupsActifs()),
-        onVoirTout: () {},
+        groups: _groupsActifsVitrine(),
+        onVoirTout: _goToGroupesActifs,
       ),
       HomeCategories(
         categories: categoriesWithCounts,

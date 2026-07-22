@@ -29,7 +29,6 @@ class MockGroupRepository implements GroupRepository {
       required String zone,
       double? latitude,
       double? longitude,
-      required bool estActif,
       required int casSignales,
       required int casTraites,
       required int actions,
@@ -51,7 +50,6 @@ class MockGroupRepository implements GroupRepository {
           casTraitesCount: casTraites,
           actionsCount: actions,
         ),
-        estActif: estActif,
         createdAt: createdAt,
         createurId: 'seed_$id',
         casSignalesCount: casSignales,
@@ -78,7 +76,6 @@ class MockGroupRepository implements GroupRepository {
         zone: 'Riviera 2, Cocody',
         latitude: 5.3700,
         longitude: -3.9800,
-        estActif: true,
         casSignales: 250,
         casTraites: 120,
         actions: 25,
@@ -97,7 +94,6 @@ class MockGroupRepository implements GroupRepository {
         zone: 'Plateau, Abidjan',
         latitude: 5.3197,
         longitude: -4.0201,
-        estActif: true,
         casSignales: 220,
         casTraites: 110,
         actions: 22,
@@ -116,7 +112,6 @@ class MockGroupRepository implements GroupRepository {
         zone: 'Yopougon, Abidjan',
         latitude: 5.3450,
         longitude: -4.0854,
-        estActif: true,
         casSignales: 210,
         casTraites: 105,
         actions: 21,
@@ -133,7 +128,6 @@ class MockGroupRepository implements GroupRepository {
         zone: 'Marcory, Abidjan',
         latitude: 5.2846,
         longitude: -3.9836,
-        estActif: true,
         casSignales: 65,
         casTraites: 38,
         actions: 7,
@@ -150,7 +144,6 @@ class MockGroupRepository implements GroupRepository {
         zone: 'Koumassi, Abidjan',
         latitude: 5.2926,
         longitude: -3.9435,
-        estActif: false,
         casSignales: 18,
         casTraites: 7,
         actions: 1,
@@ -166,7 +159,6 @@ class MockGroupRepository implements GroupRepository {
         zone: 'Cocody, Abidjan',
         latitude: 5.3599,
         longitude: -3.9646,
-        estActif: false,
         casSignales: 1,
         casTraites: 0,
         actions: 0,
@@ -176,10 +168,12 @@ class MockGroupRepository implements GroupRepository {
     ]);
 
     _members.addAll({
-      // Groupes factices "Groupes actifs" (accueil) : exactement 5
-      // avatars d'équipe dirigeante, tous avatar.png (donnée factice —
-      // répétition à l'identique acceptée). Logique pour les vraies
-      // données futures (voir GroupStore.leaderAvatars) : le 1er membre
+      // Groupes de démo "seed_*" (vrais groupes suivables/cliquables,
+      // distincts des cartes factices non-interactives de
+      // GroupsDummyData) : exactement 5 avatars d'équipe dirigeante, tous
+      // avatar.png (donnée factice — répétition à l'identique acceptée).
+      // Logique pour les vraies données futures (voir
+      // GroupStore.leaderAvatars) : le 1er membre
       // correspond au créateur/président du groupe, les suivants aux
       // membres du bureau exécutif ajoutés depuis l'Espace gestion, dans
       // leur ordre d'ajout, jusqu'à 5 max affichés (mécanisme "+N" au-delà).

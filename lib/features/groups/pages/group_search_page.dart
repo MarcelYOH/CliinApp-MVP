@@ -2,24 +2,28 @@
 //
 // Page UNIQUE de recherche de groupes — réutilisée peu importe l'origine du
 // clic ("Groupes actifs" Voir tout, "Mes groupes" Voir plus, "Découvrir"
-// Voir plus) : seul le titre du header change selon [origine].
+// Voir plus) : le titre du header ET la liste de base (filtrée par
+// origine) changent selon [origine], seuls les filtres Type/recherche
+// texte s'appliquent ensuite de la même façon partout.
 
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/utils/user_location_service.dart';
+import '../../../shared/store/auth_store.dart';
 import '../../../shared/store/group_store.dart';
-import '../../../shared/widgets/group_badge_chip.dart';
 import '../../../shared/widgets/group_card.dart';
+import '../data/groups_dummy_data.dart';
 import '../models/group_model.dart';
 
-enum _SortOption { actifs, recents, proches }
+enum _SortOption { proches, recents }
 
 class GroupSearchPage extends StatefulWidget {
-  // "actifs" | "mesgroupes" | "decouvrir" — détermine uniquement le titre
-  // affiché dans le header ; la recherche/les filtres portent toujours sur
-  // l'ensemble des groupes (GroupStore.rechercherGroupes()).
+  // "actifs" | "mesgroupes" | "decouvrir" | "recherche" — détermine le
+  // titre affiché dans le header ET la liste de base interrogée (voir
+  // _baseGroups) ; la recherche texte/le filtre Type s'appliquent ensuite
+  // de la même façon quelle que soit l'origine.
   final String origine;
 
   const GroupSearchPage({super.key, required this.origine});
@@ -29,26 +33,64 @@ class GroupSearchPage extends StatefulWidget {
 }
 
 class _GroupSearchPageState extends State<GroupSearchPage> {
+  static const int _pageSize = 10;
+
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   String _searchQuery = '';
   GroupType? _selectedType;
-  String? _selectedNiveau;
+  int? _selectedBadgeCount;
   _SortOption? _selectedSort;
+  int _visibleCount = _pageSize;
 
   @override
   void initState() {
     super.initState();
+    // "Découvrir" priorise par défaut les groupes les plus proches (5.2) —
+    // les autres origines n'ont pas de tri par défaut imposé.
+    if (widget.origine == 'decouvrir') {
+      _selectedSort = _SortOption.proches;
+    }
     // Rafraîchit/amorce l'ancre de position partagée — même motif que
     // map_page.dart (aucun listener dédié : la position se stabilise pour
     // les tris ultérieurs sans bloquer l'affichage initial).
     UserLocationService.instance.getCurrentPosition();
+    _scrollController.addListener(_onScroll);
+    // Synchronisation immédiate (4.2) : si l'utilisateur suit/ne suit plus
+    // un groupe pendant qu'il consulte cette liste, elle se met à jour
+    // sans avoir besoin de revenir en arrière.
+    GroupStore.instance.addListener(_onStoreUpdate);
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    GroupStore.instance.removeListener(_onStoreUpdate);
     super.dispose();
   }
+
+  void _onStoreUpdate() {
+    if (mounted) setState(() {});
+  }
+
+  // Scroll infini : révèle un lot de plus dès qu'on approche du bas de la
+  // liste — jamais un chargement complet d'un coup, jamais de pagination
+  // à numéros de page (correction 6).
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final threshold = _scrollController.position.maxScrollExtent - 300;
+    if (_scrollController.position.pixels >= threshold) {
+      final total = _results.length;
+      if (_visibleCount < total) {
+        setState(() => _visibleCount =
+            (_visibleCount + _pageSize).clamp(0, total));
+      }
+    }
+  }
+
+  void _resetVisibleCount() => _visibleCount = _pageSize;
 
   String get _headerTitle => switch (widget.origine) {
         'actifs' => 'Groupes actifs',
@@ -57,30 +99,59 @@ class _GroupSearchPageState extends State<GroupSearchPage> {
         _ => 'Tous les groupes',
       };
 
-  int _badgeRank(GroupModel g) {
-    if (g.badges.contains('officiel')) return 3;
-    if (g.badges.contains('impact')) return 2;
-    if (g.badges.contains('engage')) return 1;
-    return 0;
+  // Chips "Niveau d'impact" : nombre de badges exact, différent selon
+  // l'origine (correction 2 pour "actifs", 4.4/5.4 pour les autres).
+  List<int> get _badgeCountOptions =>
+      widget.origine == 'actifs' ? const [3, 2] : const [0, 1, 2, 3];
+
+  String _badgeCountLabel(int count) =>
+      count <= 1 ? '$count badge' : '$count badges';
+
+  // Liste de base selon l'origine, AVANT recherche texte/filtre Type — sert
+  // aussi à détecter l'absence de vraie donnée (bascule vers les cartes
+  // factices, correction 3/7).
+  List<GroupModel> get _baseGroups {
+    final userId = AuthStore.instance.currentUser?.id;
+    switch (widget.origine) {
+      case 'actifs':
+        // Page dédiée : TOUS les groupes actifs au sens large (2 OU 3
+        // badges), déjà triés 3 badges d'abord puis 2 badges (1.2).
+        return GroupStore.instance.getGroupsActifs();
+      case 'mesgroupes':
+        // Uniquement les groupes suivis, peu importe leur nombre de
+        // badges (4.1).
+        return userId != null
+            ? GroupStore.instance.getMesGroupes(userId)
+            : const <GroupModel>[];
+      case 'decouvrir':
+        // Tous les groupes NON suivis, peu importe leur nombre de badges
+        // (5.1).
+        return userId != null
+            ? GroupStore.instance.getGroupesADecouvrir(userId)
+            : GroupStore.instance.allGroups;
+      default:
+        return GroupStore.instance.allGroups;
+    }
   }
 
   List<GroupModel> get _results {
-    final base = GroupStore.instance.rechercherGroupes(
-      _searchQuery,
-      type: _selectedType,
-      niveauImpact: _selectedNiveau,
-    );
-    final sorted = List<GroupModel>.from(base);
+    final base = _baseGroups;
+    // Aucune vraie donnée pour cette section -> cartes factices "accroche"
+    // (exactement 3, jamais mélangées à de vraies données, correction 3).
+    if (base.isEmpty) return GroupsDummyData.forSection(widget.origine);
+
+    final normalizedQuery = _searchQuery.trim().toLowerCase();
+    final filtered = base.where((g) {
+      final matchesQuery = normalizedQuery.isEmpty ||
+          g.nom.toLowerCase().contains(normalizedQuery);
+      final matchesType = _selectedType == null || g.type == _selectedType;
+      final matchesBadges = _selectedBadgeCount == null ||
+          g.badges.length == _selectedBadgeCount;
+      return matchesQuery && matchesType && matchesBadges;
+    }).toList();
+
+    final sorted = List<GroupModel>.from(filtered);
     switch (_selectedSort) {
-      case _SortOption.actifs:
-        sorted.sort((a, b) {
-          if (a.estActif != b.estActif) {
-            return a.estActif ? -1 : 1;
-          }
-          final rankCompare = _badgeRank(b).compareTo(_badgeRank(a));
-          if (rankCompare != 0) return rankCompare;
-          return b.actionsCount.compareTo(a.actionsCount);
-        });
       case _SortOption.recents:
         sorted.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       case _SortOption.proches:
@@ -102,6 +173,7 @@ class _GroupSearchPageState extends State<GroupSearchPage> {
   @override
   Widget build(BuildContext context) {
     final results = _results;
+    final visibleResults = results.take(_visibleCount).toList();
     return Scaffold(
       backgroundColor: CliinAppColors.background,
       body: SafeArea(
@@ -120,22 +192,26 @@ class _GroupSearchPageState extends State<GroupSearchPage> {
                   label: t.label,
                   selected: selected,
                   activeColor: CliinAppColors.primary,
-                  onTap: () => setState(
-                      () => _selectedType = selected ? null : t),
+                  onTap: () => setState(() {
+                    _selectedType = selected ? null : t;
+                    _resetVisibleCount();
+                  }),
                 );
               }).toList(),
             ),
             const SizedBox(height: CliinAppConstants.spacingM),
             _buildFilterRow(
               label: 'Niveau d\'impact',
-              children: kGroupBadgeOrder.map((badge) {
-                final selected = _selectedNiveau == badge;
+              children: _badgeCountOptions.map((count) {
+                final selected = _selectedBadgeCount == count;
                 return _buildPill(
-                  label: groupBadgeLabel(badge),
+                  label: _badgeCountLabel(count),
                   selected: selected,
-                  activeColor: groupBadgeColor(badge),
-                  onTap: () => setState(
-                      () => _selectedNiveau = selected ? null : badge),
+                  activeColor: CliinAppColors.primary,
+                  onTap: () => setState(() {
+                    _selectedBadgeCount = selected ? null : count;
+                    _resetVisibleCount();
+                  }),
                 );
               }).toList(),
             ),
@@ -144,27 +220,23 @@ class _GroupSearchPageState extends State<GroupSearchPage> {
               label: 'Trier par',
               children: [
                 _buildSortPill(
-                  label: 'Plus actifs',
-                  icon: Icons.bolt_rounded,
-                  option: _SortOption.actifs,
+                  label: 'Plus proches',
+                  icon: Icons.near_me_rounded,
+                  option: _SortOption.proches,
                 ),
                 _buildSortPill(
                   label: 'Plus récents',
                   icon: Icons.access_time_rounded,
                   option: _SortOption.recents,
                 ),
-                _buildSortPill(
-                  label: 'Plus proches',
-                  icon: Icons.near_me_rounded,
-                  option: _SortOption.proches,
-                ),
               ],
             ),
             const SizedBox(height: CliinAppConstants.spacingL),
             Expanded(
-              child: results.isEmpty
+              child: visibleResults.isEmpty
                   ? _buildEmptyState()
                   : ListView.separated(
+                      controller: _scrollController,
                       padding: EdgeInsets.fromLTRB(
                         CliinAppConstants.pagePadding,
                         0,
@@ -172,11 +244,13 @@ class _GroupSearchPageState extends State<GroupSearchPage> {
                         MediaQuery.of(context).padding.bottom +
                             CliinAppConstants.spacingXL,
                       ),
-                      itemCount: results.length,
+                      itemCount: visibleResults.length,
                       separatorBuilder: (_, _) =>
                           const SizedBox(height: CliinAppConstants.spacingM),
-                      itemBuilder: (_, i) =>
-                          Center(child: GroupCard(data: results[i])),
+                      itemBuilder: (_, i) => GroupCard(
+                        data: visibleResults[i],
+                        width: double.infinity,
+                      ),
                     ),
             ),
           ],
@@ -227,7 +301,10 @@ class _GroupSearchPageState extends State<GroupSearchPage> {
             Expanded(
               child: TextField(
                 controller: _searchController,
-                onChanged: (v) => setState(() => _searchQuery = v),
+                onChanged: (v) => setState(() {
+                  _searchQuery = v;
+                  _resetVisibleCount();
+                }),
                 style: CliinAppTextStyles.bodyMedium.copyWith(fontSize: 13),
                 decoration: InputDecoration(
                   hintText: 'Rechercher un groupe...',
@@ -243,6 +320,7 @@ class _GroupSearchPageState extends State<GroupSearchPage> {
                 onTap: () => setState(() {
                   _searchController.clear();
                   _searchQuery = '';
+                  _resetVisibleCount();
                 }),
                 child: const Icon(Icons.close_rounded,
                     color: CliinAppColors.textSecondary, size: 18),
@@ -288,8 +366,7 @@ class _GroupSearchPageState extends State<GroupSearchPage> {
     );
   }
 
-  // Forme de pilule commune aux 3 rangées de filtres — seule la couleur
-  // change selon la sélection (Type/Niveau d'impact).
+  // Forme de pilule commune aux 3 rangées de filtres.
   Widget _buildPill({
     required String label,
     required bool selected,
@@ -325,8 +402,10 @@ class _GroupSearchPageState extends State<GroupSearchPage> {
   }) {
     final selected = _selectedSort == option;
     return GestureDetector(
-      onTap: () =>
-          setState(() => _selectedSort = selected ? null : option),
+      onTap: () => setState(() {
+        _selectedSort = selected ? null : option;
+        _resetVisibleCount();
+      }),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(

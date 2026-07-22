@@ -11,6 +11,7 @@ import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/navigation/tab_navigation.dart';
 import '../../../shared/navigation/fast_page_route.dart';
 import '../../reports/pages/report_camera_page.dart';
+import '../../groups/pages/group_search_page.dart';
 import '../widgets/edit_profile_sheet.dart';
 import 'public_profile_page.dart';
 import 'mes_cas_signales_page.dart';
@@ -454,7 +455,12 @@ class _ProfilePageState extends State<ProfilePage> {
             iconColor: const Color(0xFF9C27B0),
             title: 'Mes groupes',
             subtitle: 'Vos groupes et communautés',
-            onTap: () => _showComingSoon(context),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const GroupSearchPage(origine: 'mesgroupes'),
+              ),
+            ),
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),
           _buildMenuItem(

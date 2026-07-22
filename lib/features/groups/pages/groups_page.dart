@@ -13,6 +13,7 @@ import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/widgets/group_card.dart';
 import '../../auth/auth_guard.dart';
 import '../../reports/pages/report_camera_page.dart';
+import '../data/groups_dummy_data.dart';
 import '../models/group_model.dart';
 import 'create_group_page.dart';
 import 'group_search_page.dart';
@@ -77,11 +78,27 @@ class _GroupsPageState extends State<GroupsPage> {
     final store = GroupStore.instance;
     final userId = AuthStore.instance.currentUser?.id;
 
-    final groupesActifs = store.getGroupsActifs();
-    final mesGroupes =
+    // Chaque section : priorité systématique aux vraies données, cartes
+    // factices "accroche" (GroupsDummyData) uniquement tant qu'aucune
+    // vraie donnée équivalente n'existe — jamais les deux mélangés
+    // (correction 3, bascule totale).
+    final groupesActifsReal = store.getGroupsActifsVitrine();
+    final groupesActifs = groupesActifsReal.isEmpty
+        ? GroupsDummyData.forSection('actifs')
+        : groupesActifsReal;
+
+    final mesGroupesReal =
         userId != null ? store.getMesGroupes(userId) : const <GroupModel>[];
-    final decouvrir =
+    final mesGroupes = mesGroupesReal.isEmpty
+        ? GroupsDummyData.forSection('mesgroupes')
+        : mesGroupesReal;
+
+    final decouvrirReal =
         userId != null ? store.getGroupesADecouvrir(userId) : store.allGroups;
+    final decouvrir = decouvrirReal.isEmpty
+        ? GroupsDummyData.forSection('decouvrir')
+        : decouvrirReal;
+
     final tabGroups =
         (_selectedTab == 0 ? mesGroupes : decouvrir).take(3).toList();
 
@@ -335,7 +352,17 @@ class _GroupsPageState extends State<GroupsPage> {
   }
 
   // ── Helpers communs ────────────────────────────────────────────
+  // 1 seule carte -> pleine largeur (même comportement que "Cas récents"
+  // sur l'accueil de l'application, correction 3.4) ; sinon scroll
+  // horizontal habituel.
   Widget _buildHorizontalList(List<GroupModel> groups) {
+    if (groups.length == 1) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(
+            horizontal: CliinAppConstants.pagePadding),
+        child: GroupCard(data: groups.first, width: double.infinity),
+      );
+    }
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding:

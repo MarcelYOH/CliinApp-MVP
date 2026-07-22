@@ -155,7 +155,6 @@ class GroupStore extends ChangeNotifier {
         zone: zone,
         latitude: latitude,
         longitude: longitude,
-        estActif: false,
         createdAt: DateTime.now(),
         createurId: createurId,
         sympathisantsCount: 1,
@@ -326,10 +325,24 @@ class GroupStore extends ChangeNotifier {
     return 0;
   }
 
+  // Page dédiée "Groupes actifs" (1.2) — TOUS les groupes actifs au sens
+  // large (au moins 2 badges, donc 2 OU 3), triés 3 badges d'abord puis 2
+  // badges (ordre par défaut de la page, pas besoin d'un filtre séparé).
   List<GroupModel> getGroupsActifs() {
     final actifs = _groups.where((g) => g.estActif).toList()
       ..sort((a, b) => _badgeRank(b).compareTo(_badgeRank(a)));
     return actifs;
+  }
+
+  // Vitrine "Groupes actifs" (1.1) — accueil de l'application ET accueil
+  // du module Groupes : réservée EXCLUSIVEMENT aux groupes ayant les 3
+  // badges SIMULTANÉMENT (le "top du top"), jamais un groupe à 2 badges.
+  List<GroupModel> getGroupsActifsVitrine() {
+    const requiredBadges = ['engage', 'impact', 'officiel'];
+    return _groups
+        .where((g) => requiredBadges.every(g.badges.contains))
+        .take(3)
+        .toList();
   }
 
   List<GroupModel> getMesGroupes(String userId) {
