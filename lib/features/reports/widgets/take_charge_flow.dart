@@ -35,6 +35,7 @@ Future<void> showTakeChargeFlow({
   required HomeReportModel report,
   required void Function(HomeReportModel updated) onSuccess,
 }) async {
+  debugPrint('[ATTRIBUTION-DEBUG] showTakeChargeFlow: entrée dans la fonction pour report ${report.id}');
   await showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -372,6 +373,7 @@ class _Step1Sheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('[ATTRIBUTION-DEBUG] _Step1Sheet.build: rendu à l\'écran, groups.length=${groups.length}, isSelf=$isSelf');
     return _SheetWrapper(
       child: Column(
         mainAxisSize: MainAxisSize.min,

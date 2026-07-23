@@ -28,10 +28,17 @@ enum _AttributionChoice { self, group, anonymous }
 
 Future<ReportAttribution> showAttributionChoiceSheet(
     BuildContext context) async {
-  final user = AuthStore.instance.currentUser!;
+  debugPrint('[ATTRIBUTION-DEBUG] showAttributionChoiceSheet: entrée dans la fonction');
+  final user = AuthStore.instance.currentUser;
+  debugPrint('[ATTRIBUTION-DEBUG] showAttributionChoiceSheet: currentUser=${user?.id}');
+  if (user == null) {
+    debugPrint('[ATTRIBUTION-DEBUG] showAttributionChoiceSheet: currentUser NULL — retour anticipé sans afficher la feuille');
+    return const ReportAttribution(signaleParNom: 'Vous', signaleParId: '');
+  }
   // Vrais groupes dont l'utilisateur connecté est administrateur — jamais
   // une liste factice déconnectée (voir GroupStore.adminGroups).
   final myGroups = GroupStore.instance.adminGroups(user.id);
+  debugPrint('[ATTRIBUTION-DEBUG] showAttributionChoiceSheet: myGroups.length=${myGroups.length}, appel showModalBottomSheet');
   final result = await showModalBottomSheet<ReportAttribution>(
     context: context,
     isScrollControlled: true,
@@ -44,6 +51,7 @@ Future<ReportAttribution> showAttributionChoiceSheet(
       myGroups: myGroups,
     ),
   );
+  debugPrint('[ATTRIBUTION-DEBUG] showAttributionChoiceSheet: showModalBottomSheet a rendu, result=${result == null ? "null (fermé sans choix)" : "choix confirmé"}');
   return result ??
       ReportAttribution(signaleParNom: user.username, signaleParId: user.id);
 }
@@ -96,6 +104,7 @@ class _AttributionSheetState extends State<_AttributionSheet> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('[ATTRIBUTION-DEBUG] _AttributionSheet.build: la feuille est en cours de rendu à l\'écran');
     return Container(
       decoration: const BoxDecoration(
         color: CliinAppColors.cardWhite,

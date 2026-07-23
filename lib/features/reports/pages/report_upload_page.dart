@@ -80,9 +80,14 @@ class _ReportUploadPageState extends State<ReportUploadPage>
     );
 
     await Future.delayed(const Duration(milliseconds: 500));
+    debugPrint('[ATTRIBUTION-DEBUG] creation: après délai, mounted=$mounted');
     if (!mounted) return;
 
+    debugPrint('[ATTRIBUTION-DEBUG] creation: appel showAttributionChoiceSheet');
     final attribution = await showAttributionChoiceSheet(context);
+    debugPrint('[ATTRIBUTION-DEBUG] creation: résultat reçu = '
+        'nom=${attribution.signaleParNom} groupId=${attribution.groupId} '
+        'anonyme=${attribution.isAnonyme}, mounted=$mounted');
     if (!mounted) return;
 
     final attributedReport = publishedReport.copyWith(
