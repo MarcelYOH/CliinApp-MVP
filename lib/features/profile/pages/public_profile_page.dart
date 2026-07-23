@@ -11,6 +11,7 @@ import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/navigation/tab_navigation.dart';
 import '../../reports/pages/report_camera_page.dart';
 import '../../../shared/navigation/fast_page_route.dart';
+import '../../../shared/widgets/circle_icon_button.dart';
 
 class PublicProfilePage extends StatelessWidget {
   const PublicProfilePage({super.key});
@@ -98,22 +99,7 @@ class PublicProfilePage extends StatelessWidget {
                   16, MediaQuery.of(context).padding.top + 12, 16, 12),
               child: Row(
                 children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: const BoxDecoration(
-                        color: CliinAppColors.primaryLight,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.arrow_back_rounded,
-                        color: CliinAppColors.primary,
-                        size: 20,
-                      ),
-                    ),
-                  ),
+                  CircleIconButton.back(onTap: () => Navigator.pop(context)),
                   Expanded(
                     child: Text(
                       'Profil public',
@@ -121,19 +107,7 @@ class PublicProfilePage extends StatelessWidget {
                       style: CliinAppTextStyles.headingSmall.copyWith(fontSize: 16),
                     ),
                   ),
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: const BoxDecoration(
-                      color: CliinAppColors.primaryLight,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.share_outlined,
-                      color: CliinAppColors.primary,
-                      size: 20,
-                    ),
-                  ),
+                  const CircleIconButton.share(onTap: null),
                 ],
               ),
             ),

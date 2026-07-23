@@ -12,6 +12,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/navigation/fast_page_route.dart';
 import '../../../shared/store/group_store.dart';
+import '../../../shared/widgets/circle_icon_button.dart';
 import '../../reports/pages/report_camera_page.dart';
 import '../models/group_model.dart';
 import '../widgets/group_form_fields.dart';
@@ -355,11 +356,7 @@ class _EditGroupPageState extends State<EditGroupPage> {
         12,
       ),
       child: Row(children: [
-        GestureDetector(
-          onTap: () => Navigator.pop(context),
-          child: const Icon(Icons.arrow_back_rounded,
-              color: CliinAppColors.textDark, size: 24),
-        ),
+        CircleIconButton.back(onTap: () => Navigator.pop(context)),
         const SizedBox(width: CliinAppConstants.spacingM),
         Text('Modifier le groupe', style: CliinAppTextStyles.headingMedium),
       ]),

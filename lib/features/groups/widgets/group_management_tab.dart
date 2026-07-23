@@ -222,74 +222,97 @@ class GroupManagementTab extends StatelessWidget {
     );
   }
 
+  // Affichage plafonné à 5 avatars (empilés avec léger chevauchement, même
+  // principe que GroupCard._buildLeaderAvatars mais en un peu plus grand),
+  // badge "+N" au-delà — le NOMBRE total d'administrateurs n'est lui jamais
+  // limité (bouton "+" toujours actif), voir correction 2.
+  static const double _avatarSize = 38;
+  static const double _avatarOverlap = 24;
+
   Widget _buildAdminsRow(BuildContext context, List<GroupMemberModel> admins) {
     final visible = admins.take(5).toList();
     final overflow = admins.length - visible.length;
+    final overflowSlot = overflow > 0 ? 1 : 0;
+    final addLeft = (visible.length + overflowSlot) * _avatarOverlap;
+
     return SizedBox(
       height: 52,
-      child: Row(children: [
-        for (final m in visible)
-          Padding(
-            padding: const EdgeInsets.only(right: 10),
-            child: Builder(builder: (_) {
-              final avatarPath = GroupStore.instance.effectiveAvatarPath(m);
-              final initials = CircleAvatar(
-                radius: 24,
-                backgroundColor: CliinAppColors.primaryDark,
-                child: Text(
-                  m.nom.trim().isEmpty ? '?' : m.nom.trim()[0].toUpperCase(),
-                  style: const TextStyle(
-                      color: CliinAppColors.textWhite,
-                      fontWeight: FontWeight.bold),
-                ),
-              );
-              if (avatarPath == null) return initials;
-              return CircleAvatar(
-                radius: 24,
-                backgroundColor: CliinAppColors.primaryDark,
-                child: ClipOval(
-                  child: SizedBox(
-                    width: 48,
-                    height: 48,
-                    child: buildReportImage(
-                      avatarPath,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => initials,
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ),
+      child: Stack(children: [
+        ...List.generate(visible.length, (i) {
+          final m = visible[i];
+          return Positioned(
+            left: i * _avatarOverlap,
+            child: _buildAdminAvatar(m),
+          );
+        }),
         if (overflow > 0)
-          Padding(
-            padding: const EdgeInsets.only(right: 10),
+          Positioned(
+            left: visible.length * _avatarOverlap,
             child: GestureDetector(
               onTap: () => _showAllAdmins(context, admins),
-              child: CircleAvatar(
-                radius: 24,
-                backgroundColor: CliinAppColors.background,
-                child: Text('+$overflow',
-                    style: CliinAppTextStyles.bodySmall
-                        .copyWith(fontWeight: FontWeight.w700)),
+              child: Container(
+                width: _avatarSize,
+                height: _avatarSize,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: CliinAppColors.background,
+                  border: Border.all(color: CliinAppColors.cardWhite, width: 2),
+                ),
+                child: Center(
+                  child: Text('+$overflow',
+                      style: CliinAppTextStyles.bodySmall.copyWith(
+                          fontSize: 11, fontWeight: FontWeight.w700)),
+                ),
               ),
             ),
           ),
-        GestureDetector(
-          onTap: () => showAddAdminSheet(context, groupId: group.id),
-          child: CustomPaint(
-            painter:
-                const GroupFormDashedCirclePainter(color: CliinAppColors.primary),
-            size: const Size(48, 48),
-            child: const SizedBox(
-              width: 48,
-              height: 48,
-              child: Icon(Icons.add_rounded,
-                  color: CliinAppColors.primary, size: 22),
+        Positioned(
+          left: addLeft,
+          child: GestureDetector(
+            onTap: () => showAddAdminSheet(context, groupId: group.id),
+            child: CustomPaint(
+              painter: const GroupFormDashedCirclePainter(
+                  color: CliinAppColors.primary),
+              size: const Size(_avatarSize, _avatarSize),
+              child: const SizedBox(
+                width: _avatarSize,
+                height: _avatarSize,
+                child: Icon(Icons.add_rounded,
+                    color: CliinAppColors.primary, size: 20),
+              ),
             ),
           ),
         ),
       ]),
+    );
+  }
+
+  Widget _buildAdminAvatar(GroupMemberModel m) {
+    final avatarPath = GroupStore.instance.effectiveAvatarPath(m);
+    final initials = Center(
+      child: Text(
+        m.nom.trim().isEmpty ? '?' : m.nom.trim()[0].toUpperCase(),
+        style: const TextStyle(
+            color: CliinAppColors.textWhite, fontWeight: FontWeight.bold),
+      ),
+    );
+    return Container(
+      width: _avatarSize,
+      height: _avatarSize,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: CliinAppColors.primaryDark,
+        border: Border.all(color: CliinAppColors.cardWhite, width: 2),
+      ),
+      child: avatarPath == null
+          ? initials
+          : ClipOval(
+              child: buildReportImage(
+                avatarPath,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => initials,
+              ),
+            ),
     );
   }
 

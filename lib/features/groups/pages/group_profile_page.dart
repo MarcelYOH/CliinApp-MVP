@@ -26,17 +26,45 @@ import 'edit_group_page.dart';
 
 class GroupProfilePage extends StatefulWidget {
   final String groupId;
+  // true UNIQUEMENT en arrivant depuis "Mes groupes" du Profil (groupes où
+  // l'utilisateur est administrateur) — seul ce point d'entrée donne accès
+  // au bouton Paramètres (modifier/supprimer). Partout ailleurs, même pour
+  // un administrateur, cette possibilité reste masquée (correction 4).
+  final bool allowEdit;
 
-  const GroupProfilePage({super.key, required this.groupId});
+  const GroupProfilePage({
+    super.key,
+    required this.groupId,
+    this.allowEdit = false,
+  });
 
   @override
   State<GroupProfilePage> createState() => _GroupProfilePageState();
 }
 
-class _GroupProfilePageState extends State<GroupProfilePage> {
+class _GroupProfilePageState extends State<GroupProfilePage>
+    with SingleTickerProviderStateMixin {
   static const _tabLabels = ['À propos', 'Activités', 'Espace gestion', 'Chat'];
 
   int _selectedTab = 0;
+
+  // ── Panneau extensible/rétractable (correction 5) ──────────────────
+  // Le contenu de l'onglet actif peut être étendu vers le haut pour
+  // recouvrir progressivement la bannière/l'identité, puis rétracté : PAS
+  // jusqu'en bas de l'écran (il n'y a rien en dessous), mais exactement à
+  // son niveau habituel (sous la bannière/l'identité, hauteur mesurée en
+  // temps réel — jamais une taille de bannière/identité réduite pour
+  // gagner de la place). Même mécanique de glisser-déposer que
+  // reports_bottom_sheet.dart (page Map), transposée en position "top"
+  // plutôt qu'en hauteur puisqu'ici le panneau va jusqu'au bas de l'écran.
+  final GlobalKey _headerKey = GlobalKey();
+  double _headerHeight = 340; // estimation avant la 1re mesure réelle
+  late double _panelTop = _headerHeight;
+  double _dragStartTop = 0;
+  double _dragStartY = 0;
+  late final AnimationController _panelAnimController;
+  double _animFrom = 0;
+  double _animTo = 0;
 
   @override
   void initState() {
@@ -47,6 +75,20 @@ class _GroupProfilePageState extends State<GroupProfilePage> {
     // ReportStore (casPrisEnChargeCountForGroup) — doit se rafraîchir dès
     // qu'une attribution change, sans attendre une réouverture de la page.
     ReportStore.instance.addListener(_onStoreUpdate);
+    _panelAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 260),
+    );
+    _panelAnimController.addListener(() {
+      setState(() {
+        _panelTop = _animFrom +
+            (_animTo - _animFrom) *
+                CurvedAnimation(
+                        parent: _panelAnimController, curve: Curves.easeOut)
+                    .value;
+      });
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _measureHeader());
   }
 
   @override
@@ -54,11 +96,69 @@ class _GroupProfilePageState extends State<GroupProfilePage> {
     GroupStore.instance.removeListener(_onStoreUpdate);
     AuthStore.instance.removeListener(_onStoreUpdate);
     ReportStore.instance.removeListener(_onStoreUpdate);
+    _panelAnimController.dispose();
     super.dispose();
   }
 
   void _onStoreUpdate() {
     if (mounted) setState(() {});
+    WidgetsBinding.instance.addPostFrameCallback((_) => _measureHeader());
+  }
+
+  // Mesure la hauteur réelle de la bannière + identité + boutons — jamais
+  // une valeur fixe devinée, puisque l'identité varie (badges qui passent
+  // à la ligne, etc.). Ne recale le panneau que s'il était à son niveau
+  // "rétracté" (jamais pendant un glissement en cours ou en position
+  // étendue, pour ne pas faire sauter le contenu sous les yeux).
+  void _measureHeader() {
+    final box = _headerKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return;
+    final h = box.size.height;
+    if ((h - _headerHeight).abs() < 0.5) return;
+    final wasCollapsed = _panelTop >= _headerHeight - 1;
+    setState(() {
+      _headerHeight = h;
+      if (wasCollapsed) _panelTop = h;
+    });
+  }
+
+  // top le plus petit (le plus haut à l'écran) = position ÉTENDUE.
+  double get _panelMinTop => MediaQuery.of(context).padding.top;
+  // top le plus grand = position RÉTRACTÉE = exactement sous la bannière
+  // et l'identité, jamais plus bas (rien à afficher en dessous).
+  double get _panelMaxTop => _headerHeight;
+
+  void _snapPanelTo(double target) {
+    _panelAnimController.stop();
+    _animFrom = _panelTop;
+    _animTo = target.clamp(_panelMinTop, _panelMaxTop);
+    _panelAnimController.forward(from: 0);
+  }
+
+  void _onPanelDragStart(DragStartDetails details) {
+    _panelAnimController.stop();
+    _dragStartY = details.globalPosition.dy;
+    _dragStartTop = _panelTop;
+  }
+
+  void _onPanelDragUpdate(DragUpdateDetails details) {
+    final dy = details.globalPosition.dy - _dragStartY;
+    setState(() => _panelTop =
+        (_dragStartTop + dy).clamp(_panelMinTop, _panelMaxTop));
+  }
+
+  void _onPanelDragEnd(DragEndDetails details) {
+    final velocityDy = details.velocity.pixelsPerSecond.dy;
+    if (velocityDy < -300) {
+      _snapPanelTo(_panelMinTop); // geste rapide vers le haut -> étendre
+      return;
+    }
+    if (velocityDy > 300) {
+      _snapPanelTo(_panelMaxTop); // geste rapide vers le bas -> rétracter
+      return;
+    }
+    final mid = (_panelMinTop + _panelMaxTop) / 2;
+    _snapPanelTo(_panelTop < mid ? _panelMinTop : _panelMaxTop);
   }
 
   Future<void> _toggleFollow(GroupModel group) async {
@@ -147,22 +247,82 @@ class _GroupProfilePageState extends State<GroupProfilePage> {
       body: SafeArea(
         top: false,
         bottom: false,
-        child: Column(
+        child: Stack(
           children: [
-            _buildCoverAndAvatar(context, group),
-            _buildIdentityBlock(group),
-            _buildActionButtons(group, isAdmin, isFollowing),
-            _buildTabBar(),
-            const SizedBox(height: CliinAppConstants.spacingS),
-            Expanded(child: _buildTabContent(group, isAdmin)),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Column(
+                key: _headerKey,
+                children: [
+                  _buildCoverAndAvatar(context, group),
+                  _buildIdentityBlock(group),
+                  _buildActionButtons(group, isAdmin, isFollowing),
+                ],
+              ),
+            ),
+            Positioned(
+              top: _panelTop,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _buildPanel(group, isAdmin),
+            ),
           ],
         ),
       ),
       bottomNavigationBar: AppBottomNav(
-        currentIndex: -1,
+        // 3 = "Groupes" — reste vert sur toute sous-page du module, peu
+        // importe la profondeur de navigation (correction 6).
+        currentIndex: 3,
         onTap: (index) =>
-            navigateToTab(context, currentIndex: -1, targetIndex: index),
+            navigateToTab(context, currentIndex: 3, targetIndex: index),
         onSignalerTap: _openCamera,
+      ),
+    );
+  }
+
+  // Panneau glissant (onglets + contenu) — poignée au niveau de la barre
+  // d'onglets, cohérent avec reports_bottom_sheet.dart (page Map).
+  Widget _buildPanel(GroupModel group, bool isAdmin) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: CliinAppColors.background,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(CliinAppConstants.radiusLarge),
+          topRight: Radius.circular(CliinAppConstants.radiusLarge),
+        ),
+      ),
+      child: Column(
+        children: [
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onVerticalDragStart: _onPanelDragStart,
+            onVerticalDragUpdate: _onPanelDragUpdate,
+            onVerticalDragEnd: _onPanelDragEnd,
+            child: Column(
+              children: [
+                const SizedBox(height: CliinAppConstants.spacingXS),
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.only(
+                        bottom: CliinAppConstants.spacingXS),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: CliinAppColors.divider,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                _buildTabBar(),
+                const SizedBox(height: CliinAppConstants.spacingS),
+              ],
+            ),
+          ),
+          Expanded(child: _buildTabContent(group, isAdmin)),
+        ],
       ),
     );
   }
@@ -429,7 +589,7 @@ class _GroupProfilePageState extends State<GroupProfilePage> {
       ),
       child: Row(children: [
         Expanded(child: _buildFollowButton(group, isFollowing)),
-        if (isAdmin) ...[
+        if (isAdmin && widget.allowEdit) ...[
           const SizedBox(width: CliinAppConstants.spacingM),
           _buildSettingsButton(group),
         ],

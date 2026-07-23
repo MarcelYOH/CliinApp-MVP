@@ -11,11 +11,19 @@ import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/navigation/fast_page_route.dart';
 import '../../../shared/store/auth_store.dart';
 import '../../../shared/store/group_store.dart';
+import '../../../shared/widgets/circle_icon_button.dart';
 import '../../reports/pages/report_camera_page.dart';
 import '../models/group_model.dart';
+import '../widgets/add_admin_sheet.dart' show kGroupAdminRoles;
 import '../widgets/group_form_fields.dart';
 import 'group_photo_adjust_page.dart';
 import 'group_profile_page.dart';
+
+// Postes proposés au créateur — les 5 premiers de kGroupAdminRoles, jamais
+// "Administrateur (sans poste officiel)" (6e option, réservée aux
+// administrateurs délégués ajoutés après coup) : le créateur occupe
+// toujours un poste officiel dans le bureau exécutif (correction 3).
+final List<String> kFounderPosteOptions = kGroupAdminRoles.sublist(0, 5);
 
 class CreateGroupPage extends StatefulWidget {
   const CreateGroupPage({super.key});
@@ -34,6 +42,7 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
   double _photoAlignY = 0.0;
   double _bannerAlignY = 0.0;
   GroupType _selectedType = GroupType.ong;
+  String? _selectedPoste;
   bool _isDetectingZone = false;
   bool _isSubmitting = false;
 
@@ -45,7 +54,8 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
   bool get _canSubmit =>
       !_isSubmitting &&
       _nomController.text.trim().isNotEmpty &&
-      _descController.text.trim().isNotEmpty;
+      _descController.text.trim().isNotEmpty &&
+      _selectedPoste != null;
 
   @override
   void initState() {
@@ -179,6 +189,7 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
         createurId: user.id,
         createurNom: user.username,
         createurAvatarPath: user.avatarPath,
+        createurPoste: _selectedPoste!,
       );
       if (mounted) {
         Navigator.pushReplacement(
@@ -276,6 +287,13 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
                         onChanged: (_) => setState(() {}),
                       ),
                     ),
+                    const SizedBox(height: CliinAppConstants.spacingL),
+                    buildGroupFormLabeledField(
+                      label: 'Votre poste dans le groupe',
+                      helper: 'Le poste que vous occupez réellement — pas '
+                          'forcément Président.',
+                      child: _buildPosteSelector(),
+                    ),
                     const SizedBox(height: CliinAppConstants.spacingXL),
                   ],
                 ),
@@ -301,6 +319,53 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
     );
   }
 
+  Widget _buildPosteSelector() {
+    return Column(
+      children: kFounderPosteOptions.map((poste) {
+        final selected = _selectedPoste == poste;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: GestureDetector(
+            onTap: () => setState(() => _selectedPoste = poste),
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: selected
+                    ? CliinAppColors.primaryLight
+                    : CliinAppColors.cardWhite,
+                borderRadius:
+                    BorderRadius.circular(CliinAppConstants.radiusMedium),
+                border: Border.all(
+                  color:
+                      selected ? CliinAppColors.primary : CliinAppColors.divider,
+                  width: selected ? 1.5 : 1,
+                ),
+              ),
+              child: Row(children: [
+                Expanded(
+                  child: Text(poste,
+                      style: CliinAppTextStyles.bodyMedium.copyWith(
+                          color: CliinAppColors.textDark,
+                          fontWeight: FontWeight.w600)),
+                ),
+                Icon(
+                  selected
+                      ? Icons.radio_button_checked_rounded
+                      : Icons.radio_button_off_rounded,
+                  color: selected
+                      ? CliinAppColors.primary
+                      : CliinAppColors.textSecondary,
+                  size: 20,
+                ),
+              ]),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
   Widget _buildHeader(BuildContext context) {
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -310,11 +375,7 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
         12,
       ),
       child: Row(children: [
-        GestureDetector(
-          onTap: () => Navigator.pop(context),
-          child: const Icon(Icons.arrow_back_rounded,
-              color: CliinAppColors.textDark, size: 24),
-        ),
+        CircleIconButton.back(onTap: () => Navigator.pop(context)),
         const SizedBox(width: CliinAppConstants.spacingM),
         Text('Créer un groupe', style: CliinAppTextStyles.headingMedium),
       ]),

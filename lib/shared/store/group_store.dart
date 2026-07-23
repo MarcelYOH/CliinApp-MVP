@@ -124,8 +124,10 @@ class GroupStore extends ChangeNotifier {
   }
 
   // ── Création ────────────────────────────────────────────────────
-  // Le créateur devient automatiquement le premier administrateur (poste
-  // "Président") ET le premier membre (sympathisantsCount = 1).
+  // Le créateur devient automatiquement le premier administrateur ET le
+  // premier membre (sympathisantsCount = 1) — mais choisit lui-même son
+  // poste (createurPoste), jamais assigné d'office à "Président"
+  // (correction 3).
   Future<GroupModel> createGroup({
     required String nom,
     required String description,
@@ -140,6 +142,7 @@ class GroupStore extends ChangeNotifier {
     required String createurId,
     String createurNom = 'Vous',
     String? createurAvatarPath,
+    required String createurPoste,
   }) async {
     _setLoading(true);
     try {
@@ -163,7 +166,7 @@ class GroupStore extends ChangeNotifier {
         id: createurId,
         nom: createurNom,
         avatarPath: createurAvatarPath,
-        role: 'Président',
+        role: createurPoste,
         estAdmin: true,
         estBureauExecutif: true,
       );

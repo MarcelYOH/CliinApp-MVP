@@ -124,6 +124,7 @@ Widget buildGroupFormTextField({
     maxLines: maxLines,
     minLines: minLines,
     onChanged: onChanged,
+    textCapitalization: TextCapitalization.sentences,
     style: CliinAppTextStyles.bodyMedium.copyWith(color: CliinAppColors.textDark),
     decoration: InputDecoration(
       hintText: hint,

@@ -26,8 +26,17 @@ class GroupCard extends StatefulWidget {
   // ReportCard qui propose déjà ce même mécanisme. null = largeur fixe
   // habituelle (cardWidth), inchangée partout ailleurs.
   final double? width;
+  // true UNIQUEMENT depuis "Mes groupes" du Profil (groupes administrés) —
+  // partout ailleurs, même pour un administrateur, le tap mène toujours à
+  // la vue publique/standard sans possibilité de modifier (correction 4).
+  final bool allowEdit;
 
-  const GroupCard({super.key, required this.data, this.width});
+  const GroupCard({
+    super.key,
+    required this.data,
+    this.width,
+    this.allowEdit = false,
+  });
 
   static const double cardWidth = 260;
 
@@ -80,7 +89,9 @@ class _GroupCardState extends State<GroupCard> {
     }
     Navigator.push(
       context,
-      fastFadeRoute<void>(GroupProfilePage(groupId: widget.data.id)),
+      fastFadeRoute<void>(
+        GroupProfilePage(groupId: widget.data.id, allowEdit: widget.allowEdit),
+      ),
     );
   }
 

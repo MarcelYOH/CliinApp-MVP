@@ -168,6 +168,7 @@ class _GroupEditableInfoSectionState extends State<GroupEditableInfoSection> {
             maxLines: null,
             minLines: 3,
             autofocus: true,
+            textCapitalization: TextCapitalization.sentences,
             style: CliinAppTextStyles.bodyMedium
                 .copyWith(color: CliinAppColors.textDark),
             decoration: InputDecoration(

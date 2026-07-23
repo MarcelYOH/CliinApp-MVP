@@ -454,11 +454,11 @@ class _ProfilePageState extends State<ProfilePage> {
             icon: Icons.group_outlined,
             iconColor: const Color(0xFF9C27B0),
             title: 'Mes groupes',
-            subtitle: 'Vos groupes et communautés',
+            subtitle: 'Groupes que vous administrez',
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => const GroupSearchPage(origine: 'mesgroupes'),
+                builder: (_) => const GroupSearchPage(origine: 'espacegestion'),
               ),
             ),
           ),

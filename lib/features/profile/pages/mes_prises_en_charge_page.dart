@@ -11,6 +11,7 @@ import '../../reports/pages/report_camera_page.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/navigation/tab_navigation.dart';
 import '../../../shared/navigation/fast_page_route.dart';
+import '../../../shared/widgets/circle_icon_button.dart';
 import '../../../shared/widgets/report_card.dart' show buildReportImage;
 import '../../../shared/utils/report_search.dart';
 import '../../../core/constants/app_constants.dart';
@@ -232,17 +233,10 @@ class _MesPrisesEnChargePageState extends State<MesPrisesEnChargePage> {
           16, MediaQuery.of(context).padding.top + 16, 16, 12),
       child: Row(
         children: [
-          GestureDetector(
+          CircleIconButton.back(
             onTap: () => Navigator.pop(context),
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: const BoxDecoration(
-                color: CliinAppColors.primaryLight,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.arrow_back_rounded, color: CliinAppColors.primary, size: 18),
-            ),
+            size: 36,
+            iconSize: 18,
           ),
           const SizedBox(width: 12),
           Expanded(

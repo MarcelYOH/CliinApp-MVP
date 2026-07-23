@@ -12,6 +12,7 @@ import '../../../../core/utils/user_location_service.dart';
 import '../../../../shared/store/auth_store.dart';
 import '../../reports/pages/report_camera_page.dart';
 import '../../../../shared/navigation/fast_page_route.dart';
+import '../../../../shared/widgets/circle_icon_button.dart';
 import '../widgets/auth_stepper.dart';
 
 class ProfileSetupPage extends StatefulWidget {
@@ -173,11 +174,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                   CliinAppConstants.pagePadding,
                   12),
               child: Row(children: [
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: const Icon(Icons.arrow_back_rounded,
-                      color: CliinAppColors.textDark, size: 24),
-                ),
+                CircleIconButton.back(onTap: () => Navigator.pop(context)),
                 const Spacer(),
                 Container(
                   padding: const EdgeInsets.symmetric(

@@ -17,6 +17,7 @@ import '../../../shared/widgets/report_stats_comments.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/navigation/tab_navigation.dart';
 import '../../../shared/navigation/fast_page_route.dart';
+import '../../../shared/widgets/circle_icon_button.dart';
 import 'intervenant_detail_page.dart';
 import 'report_form_page.dart';
 import 'report_camera_page.dart';
@@ -283,21 +284,10 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
       ),
       child: Row(
         children: [
-          GestureDetector(
+          CircleIconButton.back(
             onTap: () => Navigator.pop(context),
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: const BoxDecoration(
-                color: CliinAppColors.primaryLight,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.arrow_back_rounded,
-                color: CliinAppColors.primary,
-                size: 20,
-              ),
-            ),
+            size: 38,
+            iconSize: 20,
           ),
           Expanded(
             child: Text(
@@ -312,21 +302,11 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          GestureDetector(
+          CircleIconButton(
+            icon: Icons.ios_share_rounded,
             onTap: _onShare,
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: const BoxDecoration(
-                color: CliinAppColors.primaryLight,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.ios_share_rounded,
-                color: CliinAppColors.primary,
-                size: 18,
-              ),
-            ),
+            size: 38,
+            iconSize: 18,
           ),
         ],
       ),

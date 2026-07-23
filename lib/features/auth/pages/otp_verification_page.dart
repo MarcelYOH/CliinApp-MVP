@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../shared/store/auth_store.dart';
+import '../../../../shared/widgets/circle_icon_button.dart';
 import '../widgets/auth_stepper.dart';
 import 'profile_setup_page.dart';
 
@@ -168,11 +169,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
                   CliinAppConstants.pagePadding,
                   12),
               child: Row(children: [
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: const Icon(Icons.arrow_back_rounded,
-                      color: CliinAppColors.textDark, size: 24),
-                ),
+                CircleIconButton.back(onTap: () => Navigator.pop(context)),
                 const Spacer(),
                 Container(
                   padding: const EdgeInsets.symmetric(

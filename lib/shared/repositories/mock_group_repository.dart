@@ -328,6 +328,11 @@ class MockGroupRepository implements GroupRepository {
   // inexistant dans ce mock — l'app ne connaît qu'un seul utilisateur
   // courant) — permet de faire fonctionner la recherche "Ajouter un
   // administrateur" (Lot 3) en attendant un vrai annuaire Firebase.
+  //
+  // Volontairement large (40 noms, pas 5-6) : un pool trop petit épuise
+  // la recherche après quelques ajouts et donne l'impression trompeuse
+  // d'une limite au nombre d'administrateurs — alors qu'il n'y en a
+  // aucune côté métier (correction 2).
   static const List<String> _sympathisantNames = [
     'Aline Kouassi',
     'Bakary Sanogo',
@@ -335,6 +340,40 @@ class MockGroupRepository implements GroupRepository {
     'David Kra',
     'Estelle N\'Dri',
     'Franck Ehouman',
+    'Georgette Aka',
+    'Hamed Touré',
+    'Irène Coulibaly',
+    'Jean-Marc Brou',
+    'Karidja Fofana',
+    'Lassina Ouédraogo',
+    'Mireille Adjoua',
+    'Narcisse Yapi',
+    'Odette Kacou',
+    'Prosper Gnamien',
+    'Quentin Silué',
+    'Raïssa Amani',
+    'Sekou Diabaté',
+    'Tanoh Affoué',
+    'Ursule Bamba',
+    'Valentin Kouamé',
+    'Wilfried Zadi',
+    'Yolande Dosso',
+    'Zié Camara',
+    'Abou Diallo',
+    'Béatrice Kouame',
+    'Constant Yao',
+    'Delphine Konan',
+    'Émile Gbagbo',
+    'Fatoumata Cissé',
+    'Gustave N\'Guessan',
+    'Henriette Assi',
+    'Ismaël Traoré',
+    'Josiane Amoin',
+    'Kouassi Marcel',
+    'Léonie Tapé',
+    'Moussa Sangaré',
+    'Nadia Dabié',
+    'Olivier Kragbé',
   ];
 
   @override

@@ -13,6 +13,7 @@ import '../../../core/constants/app_text_styles.dart';
 import '../../../core/utils/user_location_service.dart';
 import '../../../shared/store/auth_store.dart';
 import '../../../shared/store/group_store.dart';
+import '../../../shared/widgets/circle_icon_button.dart';
 import '../../../shared/widgets/group_card.dart';
 import '../data/groups_dummy_data.dart';
 import '../models/group_model.dart';
@@ -96,6 +97,7 @@ class _GroupSearchPageState extends State<GroupSearchPage> {
         'actifs' => 'Groupes actifs',
         'mesgroupes' => 'Mes groupes',
         'decouvrir' => 'Découvrir des groupes',
+        'espacegestion' => 'Mes groupes',
         _ => 'Tous les groupes',
       };
 
@@ -129,6 +131,13 @@ class _GroupSearchPageState extends State<GroupSearchPage> {
         return userId != null
             ? GroupStore.instance.getGroupesADecouvrir(userId)
             : GroupStore.instance.allGroups;
+      case 'espacegestion':
+        // "Mes groupes" du Profil — UNIQUEMENT les groupes où l'utilisateur
+        // est administrateur (Espace gestion), seul point d'entrée où la
+        // modification devient accessible (correction 4).
+        return userId != null
+            ? GroupStore.instance.adminGroups(userId)
+            : const <GroupModel>[];
       default:
         return GroupStore.instance.allGroups;
     }
@@ -136,6 +145,12 @@ class _GroupSearchPageState extends State<GroupSearchPage> {
 
   List<GroupModel> get _results {
     final base = _baseGroups;
+    // "Mes groupes" du Profil (administration) : jamais de cartes factices
+    // — ce n'est pas une section de découverte, en afficher ici suggérerait
+    // à tort que l'utilisateur administre des groupes fictifs.
+    if (base.isEmpty && widget.origine == 'espacegestion') {
+      return const <GroupModel>[];
+    }
     // Aucune vraie donnée pour cette section -> cartes factices "accroche"
     // (exactement 3, jamais mélangées à de vraies données, correction 3).
     if (base.isEmpty) return GroupsDummyData.forSection(widget.origine);
@@ -250,6 +265,7 @@ class _GroupSearchPageState extends State<GroupSearchPage> {
                       itemBuilder: (_, i) => GroupCard(
                         data: visibleResults[i],
                         width: double.infinity,
+                        allowEdit: widget.origine == 'espacegestion',
                       ),
                     ),
             ),
@@ -269,11 +285,7 @@ class _GroupSearchPageState extends State<GroupSearchPage> {
       ),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: const Icon(Icons.arrow_back_rounded,
-                color: CliinAppColors.textDark, size: 24),
-          ),
+          CircleIconButton.back(onTap: () => Navigator.pop(context)),
           const SizedBox(width: CliinAppConstants.spacingM),
           Text(_headerTitle, style: CliinAppTextStyles.headingSmall),
         ],
@@ -436,6 +448,12 @@ class _GroupSearchPageState extends State<GroupSearchPage> {
   }
 
   Widget _buildEmptyState() {
+    // "Mes groupes" du Profil sans aucune vraie donnée : message dédié
+    // (pas de cartes factices ici, voir _results) plutôt que le message
+    // générique "aucun résultat de recherche".
+    final message = (widget.origine == 'espacegestion' && _baseGroups.isEmpty)
+        ? 'Vous n\'administrez aucun groupe pour l\'instant.'
+        : 'Aucun groupe ne correspond à votre recherche.';
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(CliinAppConstants.pagePadding),
@@ -446,7 +464,7 @@ class _GroupSearchPageState extends State<GroupSearchPage> {
                 color: CliinAppColors.textSecondary, size: 40),
             const SizedBox(height: CliinAppConstants.spacingM),
             Text(
-              'Aucun groupe ne correspond à votre recherche.',
+              message,
               style: CliinAppTextStyles.bodyMedium,
               textAlign: TextAlign.center,
             ),
