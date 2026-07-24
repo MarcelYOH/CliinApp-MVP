@@ -26,16 +26,10 @@ import 'edit_group_page.dart';
 
 class GroupProfilePage extends StatefulWidget {
   final String groupId;
-  // true UNIQUEMENT en arrivant depuis "Mes groupes" du Profil (groupes où
-  // l'utilisateur est administrateur) — seul ce point d'entrée donne accès
-  // au bouton Paramètres (modifier/supprimer). Partout ailleurs, même pour
-  // un administrateur, cette possibilité reste masquée (correction 4).
-  final bool allowEdit;
 
   const GroupProfilePage({
     super.key,
     required this.groupId,
-    this.allowEdit = false,
   });
 
   @override
@@ -47,6 +41,11 @@ class _GroupProfilePageState extends State<GroupProfilePage>
   static const _tabLabels = ['À propos', 'Activités', 'Espace gestion', 'Chat'];
 
   int _selectedTab = 0;
+
+  // "Aperçu public" (correction 1) — un administrateur peut masquer
+  // temporairement ses propres contrôles pour voir exactement le rendu
+  // qu'a un visiteur externe, sans quitter la page ni changer de rôle réel.
+  bool _previewingAsPublic = false;
 
   // ── Panneau extensible/rétractable (correction 5) ──────────────────
   // Le contenu de l'onglet actif peut être étendu vers le haut pour
@@ -185,6 +184,11 @@ class _GroupProfilePageState extends State<GroupProfilePage>
       return;
     }
 
+    if (action == GroupSettingsAction.preview) {
+      setState(() => _previewingAsPublic = true);
+      return;
+    }
+
     // Suppression — confirmation obligatoire, action irréversible.
     final confirmed = await showDialog<bool>(
       context: context,
@@ -241,6 +245,9 @@ class _GroupProfilePageState extends State<GroupProfilePage>
         userId != null && GroupStore.instance.isAdmin(group.id, userId);
     final isFollowing =
         userId != null && GroupStore.instance.isFollowing(group.id, userId);
+    // Contrôles d'administration effectivement affichés — masqués pendant
+    // l'aperçu public même si l'utilisateur reste réellement administrateur.
+    final showAdminControls = isAdmin && !_previewingAsPublic;
 
     return Scaffold(
       backgroundColor: CliinAppColors.background,
@@ -258,7 +265,7 @@ class _GroupProfilePageState extends State<GroupProfilePage>
                 children: [
                   _buildCoverAndAvatar(context, group),
                   _buildIdentityBlock(group),
-                  _buildActionButtons(group, isAdmin, isFollowing),
+                  _buildActionButtons(group, showAdminControls, isFollowing),
                 ],
               ),
             ),
@@ -267,8 +274,10 @@ class _GroupProfilePageState extends State<GroupProfilePage>
               left: 0,
               right: 0,
               bottom: 0,
-              child: _buildPanel(group, isAdmin),
+              child: _buildPanel(group, showAdminControls),
             ),
+            if (isAdmin && _previewingAsPublic)
+              _buildPreviewBanner(context),
           ],
         ),
       ),
@@ -279,6 +288,48 @@ class _GroupProfilePageState extends State<GroupProfilePage>
         onTap: (index) =>
             navigateToTab(context, currentIndex: 3, targetIndex: index),
         onSignalerTap: _openCamera,
+      ),
+    );
+  }
+
+  // Bandeau "Aperçu public" — visible uniquement par l'administrateur qui a
+  // activé l'aperçu, permet de revenir à la vue avec contrôles en un tap.
+  Widget _buildPreviewBanner(BuildContext context) {
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: SafeArea(
+        top: false,
+        child: Container(
+          margin: const EdgeInsets.all(CliinAppConstants.spacingM),
+          padding: const EdgeInsets.symmetric(
+            horizontal: CliinAppConstants.spacingM,
+            vertical: CliinAppConstants.spacingS,
+          ),
+          decoration: BoxDecoration(
+            color: CliinAppColors.primaryDark,
+            borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.visibility_outlined,
+                  color: CliinAppColors.textWhite, size: 18),
+              const SizedBox(width: CliinAppConstants.spacingS),
+              Expanded(
+                child: Text('Aperçu public',
+                    style: CliinAppTextStyles.bodyMedium
+                        .copyWith(color: CliinAppColors.textWhite)),
+              ),
+              GestureDetector(
+                onTap: () => setState(() => _previewingAsPublic = false),
+                child: Text('Revenir',
+                    style: CliinAppTextStyles.button
+                        .copyWith(color: CliinAppColors.textWhite)),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -589,7 +640,7 @@ class _GroupProfilePageState extends State<GroupProfilePage>
       ),
       child: Row(children: [
         Expanded(child: _buildFollowButton(group, isFollowing)),
-        if (isAdmin && widget.allowEdit) ...[
+        if (isAdmin) ...[
           const SizedBox(width: CliinAppConstants.spacingM),
           _buildSettingsButton(group),
         ],

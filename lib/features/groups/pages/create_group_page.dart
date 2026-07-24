@@ -14,16 +14,19 @@ import '../../../shared/store/group_store.dart';
 import '../../../shared/widgets/circle_icon_button.dart';
 import '../../reports/pages/report_camera_page.dart';
 import '../models/group_model.dart';
-import '../widgets/add_admin_sheet.dart' show kGroupAdminRoles;
+import '../widgets/add_admin_sheet.dart'
+    show kGroupClassicPostes, kAutrePosteOption;
 import '../widgets/group_form_fields.dart';
 import 'group_photo_adjust_page.dart';
 import 'group_profile_page.dart';
 
-// Postes proposés au créateur — les 5 premiers de kGroupAdminRoles, jamais
-// "Administrateur (sans poste officiel)" (6e option, réservée aux
-// administrateurs délégués ajoutés après coup) : le créateur occupe
-// toujours un poste officiel dans le bureau exécutif (correction 3).
-final List<String> kFounderPosteOptions = kGroupAdminRoles.sublist(0, 5);
+// Postes proposés au créateur — les postes classiques + "Autre..." (saisie
+// libre), jamais "Administrateur (sans poste officiel)" : le créateur
+// occupe toujours un poste officiel dans le bureau exécutif (correction 3).
+const List<String> kFounderPosteOptions = [
+  ...kGroupClassicPostes,
+  kAutrePosteOption,
+];
 
 class CreateGroupPage extends StatefulWidget {
   const CreateGroupPage({super.key});
@@ -36,6 +39,7 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
   final _nomController = TextEditingController();
   final _zoneController = TextEditingController();
   final _descController = TextEditingController();
+  final _customPosteController = TextEditingController();
 
   String? _photoPath;
   String? _bannerPath;
@@ -55,7 +59,9 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
       !_isSubmitting &&
       _nomController.text.trim().isNotEmpty &&
       _descController.text.trim().isNotEmpty &&
-      _selectedPoste != null;
+      _selectedPoste != null &&
+      (_selectedPoste != kAutrePosteOption ||
+          _customPosteController.text.trim().isNotEmpty);
 
   @override
   void initState() {
@@ -68,6 +74,7 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
     _nomController.dispose();
     _zoneController.dispose();
     _descController.dispose();
+    _customPosteController.dispose();
     super.dispose();
   }
 
@@ -189,7 +196,9 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
         createurId: user.id,
         createurNom: user.username,
         createurAvatarPath: user.avatarPath,
-        createurPoste: _selectedPoste!,
+        createurPoste: _selectedPoste == kAutrePosteOption
+            ? _customPosteController.text.trim()
+            : _selectedPoste!,
       );
       if (mounted) {
         Navigator.pushReplacement(
@@ -234,8 +243,11 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
                           bannerPath: _bannerPath, onTap: _pickBanner),
                     ),
                     const SizedBox(height: CliinAppConstants.spacingL),
-                    buildGroupFormPhotoPicker(
-                        photoPath: _photoPath, onTap: _pickPhoto),
+                    buildGroupFormLabeledField(
+                      label: 'Photo de profil',
+                      child: buildGroupFormPhotoPicker(
+                          photoPath: _photoPath, onTap: _pickPhoto),
+                    ),
                     const SizedBox(height: CliinAppConstants.spacingXL),
                     buildGroupFormLabeledField(
                       label: 'Nom du groupe',
@@ -321,48 +333,58 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
 
   Widget _buildPosteSelector() {
     return Column(
-      children: kFounderPosteOptions.map((poste) {
-        final selected = _selectedPoste == poste;
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: GestureDetector(
-            onTap: () => setState(() => _selectedPoste = poste),
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: selected
-                    ? CliinAppColors.primaryLight
-                    : CliinAppColors.cardWhite,
-                borderRadius:
-                    BorderRadius.circular(CliinAppConstants.radiusMedium),
-                border: Border.all(
-                  color:
-                      selected ? CliinAppColors.primary : CliinAppColors.divider,
-                  width: selected ? 1.5 : 1,
-                ),
-              ),
-              child: Row(children: [
-                Expanded(
-                  child: Text(poste,
-                      style: CliinAppTextStyles.bodyMedium.copyWith(
-                          color: CliinAppColors.textDark,
-                          fontWeight: FontWeight.w600)),
-                ),
-                Icon(
-                  selected
-                      ? Icons.radio_button_checked_rounded
-                      : Icons.radio_button_off_rounded,
-                  color: selected
-                      ? CliinAppColors.primary
-                      : CliinAppColors.textSecondary,
-                  size: 20,
-                ),
-              ]),
+      children: [
+        ...kFounderPosteOptions.map(_buildPosteOption),
+        if (_selectedPoste == kAutrePosteOption) ...[
+          const SizedBox(height: 4),
+          buildGroupFormTextField(
+            controller: _customPosteController,
+            hint: 'Ex : Responsable logistique',
+            onChanged: (_) => setState(() {}),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildPosteOption(String poste) {
+    final selected = _selectedPoste == poste;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedPoste = poste),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: selected
+                ? CliinAppColors.primaryLight
+                : CliinAppColors.cardWhite,
+            borderRadius:
+                BorderRadius.circular(CliinAppConstants.radiusMedium),
+            border: Border.all(
+              color: selected ? CliinAppColors.primary : CliinAppColors.divider,
+              width: selected ? 1.5 : 1,
             ),
           ),
-        );
-      }).toList(),
+          child: Row(children: [
+            Expanded(
+              child: Text(poste,
+                  style: CliinAppTextStyles.bodyMedium.copyWith(
+                      color: CliinAppColors.textDark,
+                      fontWeight: FontWeight.w600)),
+            ),
+            Icon(
+              selected
+                  ? Icons.radio_button_checked_rounded
+                  : Icons.radio_button_off_rounded,
+              color: selected
+                  ? CliinAppColors.primary
+                  : CliinAppColors.textSecondary,
+              size: 20,
+            ),
+          ]),
+        ),
+      ),
     );
   }
 

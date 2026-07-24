@@ -8,7 +8,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
 
-enum GroupSettingsAction { edit, delete }
+enum GroupSettingsAction { edit, delete, preview }
 
 Future<GroupSettingsAction?> showGroupSettingsSheet(BuildContext context) {
   return showModalBottomSheet<GroupSettingsAction>(
@@ -62,6 +62,15 @@ class _GroupSettingsSheet extends StatelessWidget {
                   style: CliinAppTextStyles.bodyMedium
                       .copyWith(color: CliinAppColors.textDark)),
               onTap: () => Navigator.pop(context, GroupSettingsAction.edit),
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.visibility_outlined,
+                  color: CliinAppColors.primary),
+              title: Text('Aperçu public',
+                  style: CliinAppTextStyles.bodyMedium
+                      .copyWith(color: CliinAppColors.textDark)),
+              onTap: () => Navigator.pop(context, GroupSettingsAction.preview),
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,

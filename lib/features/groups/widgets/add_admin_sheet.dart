@@ -1,7 +1,8 @@
 // lib/features/groups/widgets/add_admin_sheet.dart
 // Sheet "Ajouter un administrateur" — Espace gestion du profil groupe.
 // Étape 1 : recherche parmi les membres déjà existants du groupe.
-// Étape 2 : choix du rôle parmi 6 options.
+// Étape 2 : choix du rôle — 6 postes classiques, "Autre..." (saisie libre)
+// ou "Administrateur (sans poste officiel)".
 
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
@@ -9,15 +10,28 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/store/group_store.dart';
 import '../models/group_model.dart';
+import 'group_form_fields.dart';
 
-const List<String> kGroupAdminRoles = [
+// Postes "classiques" du bureau exécutif — élargis de 4 à 6 (correction 4).
+// Un même poste ne peut avoir qu'un seul titulaire par groupe à la fois
+// (correction 3, voir GroupStore.takenPostes) : ne jamais dupliquer cette
+// liste, elle est la source unique pour la création ET l'ajout d'admin.
+const List<String> kGroupClassicPostes = [
   'Président',
   'Vice-président(e)',
   'Secrétaire général(e)',
   'Trésorier(ère)',
-  'Chargé(e) des opérations',
-  'Administrateur (sans poste officiel)',
+  'Chargé(e) des programmes et opérations',
+  'Chargé(e) de communication',
 ];
+
+// Saisie libre — soumise à la même règle d'unicité (insensible à la casse)
+// que les postes classiques une fois le texte validé.
+const String kAutrePosteOption = 'Autre...';
+
+// Réservée à l'ajout d'un administrateur délégué (jamais au créateur, qui
+// occupe toujours un poste officiel — voir kFounderPosteOptions).
+const String kAdminSansPosteOption = 'Administrateur (sans poste officiel)';
 
 Future<void> showAddAdminSheet(BuildContext context, {required String groupId}) {
   return showModalBottomSheet<void>(
@@ -43,9 +57,11 @@ class _AddAdminSheet extends StatefulWidget {
 class _AddAdminSheetState extends State<_AddAdminSheet> {
   int _step = 1;
   final _searchController = TextEditingController();
+  final _customPosteController = TextEditingController();
   List<GroupMemberModel> _results = const [];
   GroupMemberModel? _selectedMember;
   String? _selectedRole;
+  String? _posteError;
   bool _isSubmitting = false;
 
   @override
@@ -57,7 +73,22 @@ class _AddAdminSheetState extends State<_AddAdminSheet> {
   @override
   void dispose() {
     _searchController.dispose();
+    _customPosteController.dispose();
     super.dispose();
+  }
+
+  // Postes classiques déjà attribués dans ce groupe — jamais reproposés
+  // (correction 3). "Autre..." et "Administrateur sans poste officiel" ne
+  // sont jamais filtrés : le premier ouvre une saisie libre validée à part,
+  // le second n'attribue aucun poste donc ne peut jamais entrer en conflit.
+  List<String> get _availableClassicPostes {
+    final taken = GroupStore.instance
+        .takenPostes(widget.groupId)
+        .map((p) => p.toLowerCase())
+        .toSet();
+    return kGroupClassicPostes
+        .where((p) => !taken.contains(p.toLowerCase()))
+        .toList();
   }
 
   Future<void> _search(String query) async {
@@ -74,11 +105,40 @@ class _AddAdminSheetState extends State<_AddAdminSheet> {
     });
   }
 
+  bool get _canConfirm {
+    if (_selectedRole == null) return false;
+    if (_selectedRole == kAutrePosteOption) {
+      return _customPosteController.text.trim().isNotEmpty;
+    }
+    return true;
+  }
+
   Future<void> _confirm() async {
     final member = _selectedMember;
-    if (member == null || _selectedRole == null) return;
-    setState(() => _isSubmitting = true);
-    final poste = _selectedRole == kGroupAdminRoles.last ? null : _selectedRole;
+    if (member == null || !_canConfirm) return;
+
+    String? poste;
+    if (_selectedRole == kAdminSansPosteOption) {
+      poste = null;
+    } else if (_selectedRole == kAutrePosteOption) {
+      poste = _customPosteController.text.trim();
+      final taken = GroupStore.instance
+          .takenPostes(widget.groupId)
+          .map((p) => p.toLowerCase())
+          .toSet();
+      if (taken.contains(poste.toLowerCase())) {
+        setState(() =>
+            _posteError = 'Ce poste est déjà attribué à quelqu\'un d\'autre.');
+        return;
+      }
+    } else {
+      poste = _selectedRole;
+    }
+
+    setState(() {
+      _posteError = null;
+      _isSubmitting = true;
+    });
     await GroupStore.instance.addAdmin(widget.groupId, member, poste: poste);
     if (mounted) Navigator.pop(context);
   }
@@ -247,12 +307,16 @@ class _AddAdminSheetState extends State<_AddAdminSheet> {
           ]),
         ),
         const SizedBox(height: CliinAppConstants.spacingM),
-        ...kGroupAdminRoles.map((role) {
+        ...[..._availableClassicPostes, kAutrePosteOption, kAdminSansPosteOption]
+            .map((role) {
           final selected = _selectedRole == role;
           return Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: GestureDetector(
-              onTap: () => setState(() => _selectedRole = role),
+              onTap: () => setState(() {
+                _selectedRole = role;
+                _posteError = null;
+              }),
               child: Container(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 14, vertical: 12),
@@ -290,11 +354,25 @@ class _AddAdminSheetState extends State<_AddAdminSheet> {
             ),
           );
         }),
+        if (_selectedRole == kAutrePosteOption) ...[
+          const SizedBox(height: 4),
+          buildGroupFormTextField(
+            controller: _customPosteController,
+            hint: 'Ex : Responsable logistique',
+            onChanged: (_) => setState(() => _posteError = null),
+          ),
+          if (_posteError != null) ...[
+            const SizedBox(height: 4),
+            Text(_posteError!,
+                style: CliinAppTextStyles.bodySmall
+                    .copyWith(color: CliinAppColors.alertRed)),
+          ],
+        ],
         const SizedBox(height: CliinAppConstants.spacingS),
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: (_selectedRole != null && !_isSubmitting) ? _confirm : null,
+            onPressed: (_canConfirm && !_isSubmitting) ? _confirm : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: CliinAppColors.primary,
               disabledBackgroundColor: CliinAppColors.divider,

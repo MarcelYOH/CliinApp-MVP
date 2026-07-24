@@ -54,6 +54,10 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
+      # ── 5bis. Génération des icônes (assets/icon/app_icon.png → mipmaps) ─
+      - name: Generate launcher icons
+        run: dart run flutter_launcher_icons
+
       # ── 6. Analyse statique (non bloquante pour le MVP) ──────────────────
       - name: Flutter analyze
         run: flutter analyze --no-fatal-infos --no-fatal-warnings

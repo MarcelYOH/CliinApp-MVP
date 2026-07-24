@@ -265,7 +265,6 @@ class _GroupSearchPageState extends State<GroupSearchPage> {
                       itemBuilder: (_, i) => GroupCard(
                         data: visibleResults[i],
                         width: double.infinity,
-                        allowEdit: widget.origine == 'espacegestion',
                       ),
                     ),
             ),

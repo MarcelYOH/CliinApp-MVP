@@ -108,6 +108,17 @@ class GroupStore extends ChangeNotifier {
   bool isAdmin(String groupId, String userId) =>
       cachedMembers(groupId).any((m) => m.id == userId && m.estAdmin);
 
+  // Postes du bureau exécutif déjà attribués dans ce groupe — un poste ne
+  // peut avoir qu'un seul titulaire à la fois (correction 3). Recalculé à
+  // chaque appel depuis le cache des membres : dès qu'un administrateur est
+  // retiré ou change de poste, son ancien poste redevient disponible sans
+  // action supplémentaire. Comparaison des doublons laissée à l'appelant
+  // (insensible à la casse pour les postes en saisie libre).
+  List<String> takenPostes(String groupId) => cachedMembers(groupId)
+      .where((m) => m.estBureauExecutif && m.role != null)
+      .map((m) => m.role!)
+      .toList();
+
   // Membres du groupe pouvant être promus administrateurs — exclut
   // ceux déjà administrateurs. Filtre par nom uniquement (voir
   // fetchSympathisants : pas d'annuaire téléphone réel dans ce mock).
