@@ -33,24 +33,16 @@ class MesCasSignalesPage extends StatefulWidget {
   State<MesCasSignalesPage> createState() => _MesCasSignalesPageState();
 }
 
-// Statut affiché dans "Mes cas signalés" — distinct de ReportStatus car un
-// cas Abandonné/Rejeté redevient "Disponible" publiquement (cf.
-// mock_report_repository), mais l'auteur doit pouvoir retrouver ce résidu
-// privé dans son propre filtre plutôt que le voir se fondre dans
-// "Disponibles".
-enum _CaseFilterStatus { disponible, enCours, traite, abandonne, rejete }
+// Statut affiché dans "Mes cas signalés" — reflète le statut réel du cas.
+// Un cas Abandonné/Rejeté redevient automatiquement "Disponible"
+// publiquement (cf. mock_report_repository) ; l'auteur en est informé par
+// notification, jamais par un filtre ou une carte affichant un état
+// intermédiaire qui n'existe plus réellement.
+enum _CaseFilterStatus { disponible, enCours, traite }
 
 _CaseFilterStatus _caseFilterStatusOf(HomeReportModel r) {
   if (r.status == ReportStatus.enCours) return _CaseFilterStatus.enCours;
   if (r.status == ReportStatus.traite) return _CaseFilterStatus.traite;
-  final outcome = r.intervenant?.outcome;
-  if (outcome == InterventionOutcome.abandoned ||
-      outcome == InterventionOutcome.abandonedVoluntary) {
-    return _CaseFilterStatus.abandonne;
-  }
-  if (outcome == InterventionOutcome.rejected) {
-    return _CaseFilterStatus.rejete;
-  }
   return _CaseFilterStatus.disponible;
 }
 
@@ -118,10 +110,6 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
             'En cours (${_count(myCas, _CaseFilterStatus.enCours)})'),
         _FilterOption(_CaseFilterStatus.traite,
             'Traités (${_count(myCas, _CaseFilterStatus.traite)})'),
-        _FilterOption(_CaseFilterStatus.abandonne,
-            'Abandonnés (${_count(myCas, _CaseFilterStatus.abandonne)})'),
-        _FilterOption(_CaseFilterStatus.rejete,
-            'Rejetés (${_count(myCas, _CaseFilterStatus.rejete)})'),
       ];
 
   String _formatDate(DateTime? date) {
@@ -298,10 +286,17 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
   }
 
   Widget _buildCard(BuildContext context, HomeReportModel report) {
+    // Correction 3 — seul le statut Disponible donne accès au détail
+    // privé/auteur (modification/suppression). En cours et Traité mènent
+    // toujours directement au détail public, quel que soit le gestionnaire
+    // du cas.
+    final isAuthorDetail = report.status == ReportStatus.disponible;
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
-        fastFadeRoute<void>(ReportDetailPage(data: report, isAuthor: true)),
+        fastFadeRoute<void>(
+          ReportDetailPage(data: report, isAuthor: isAuthorDetail),
+        ),
       ),
       child: SizedBox(
         height: _kCardHeight,
@@ -364,26 +359,6 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
                           _buildStatusBadge(_caseFilterStatusOf(report)),
                         ],
                       ),
-                      if (_caseFilterStatusOf(report) ==
-                              _CaseFilterStatus.abandonne ||
-                          _caseFilterStatusOf(report) ==
-                              _CaseFilterStatus.rejete) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          _caseFilterStatusOf(report) ==
-                                  _CaseFilterStatus.abandonne
-                              ? 'Délai de 72h dépassé sans soumission de preuve'
-                              : 'Preuve non conforme — écart de position GPS '
-                                  'trop important',
-                          style: CliinAppTextStyles.bodySmall.copyWith(
-                            fontSize: 10,
-                            color: CliinAppColors.textSecondary,
-                            fontStyle: FontStyle.italic,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
                       const SizedBox(height: 4),
                       Row(
                         children: [
@@ -476,16 +451,6 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
           ReportStatus.traite.label,
           ReportStatus.traite.color,
           ReportStatus.traite.bgColor,
-        ),
-      _CaseFilterStatus.abandonne => (
-          'Abandonné',
-          const Color(0xFF6B7280),
-          const Color(0xFFF5F5F5),
-        ),
-      _CaseFilterStatus.rejete => (
-          'Rejeté',
-          const Color(0xFF9C27B0),
-          const Color(0xFFF3E5F5),
         ),
     };
     return Container(

@@ -621,19 +621,19 @@ class _ReportActionZoneState extends State<ReportActionZone> {
               height: _kBtnHeight,
               child: ElevatedButton.icon(
                 onPressed: () async {
-                  // La confirmation est une action PUBLIQUE — l'auteur du
-                  // cas ne peut pas confirmer sa propre résolution, quelle
-                  // que soit la vue par laquelle il y accède (privée via
-                  // isAuthor, ou publique/carte en tant qu'utilisateur
-                  // connecté qui se trouve être l'auteur).
+                  // La confirmation est une action PUBLIQUE — l'intervenant
+                  // qui a traité ce cas ne peut pas confirmer sa propre
+                  // résolution, quelle que soit la vue par laquelle il y
+                  // accède (son propre tableau de bord via "Mes prises en
+                  // charge" > bascule vue publique, ou la carte publique).
                   final currentUserId = AuthStore.instance.currentUser?.id;
                   if (currentUserId != null &&
-                      currentUserId == widget.data.signaleParId) {
+                      currentUserId == widget.data.intervenant?.id) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text(
                           'Vous ne pouvez pas confirmer la résolution de '
-                          'votre propre signalement.',
+                          'votre propre intervention.',
                         ),
                         behavior: SnackBarBehavior.floating,
                         duration: Duration(seconds: 3),
@@ -709,6 +709,23 @@ class _ReportActionZoneState extends State<ReportActionZone> {
           Center(
             child: GestureDetector(
               onTap: () async {
+                // Même règle que "Confirmer" — l'intervenant qui a traité
+                // ce cas ne peut pas juger son propre travail insatisfaisant.
+                final currentUserId = AuthStore.instance.currentUser?.id;
+                if (currentUserId != null &&
+                    currentUserId == widget.data.intervenant?.id) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Vous ne pouvez pas contester la résolution de '
+                        'votre propre intervention.',
+                      ),
+                      behavior: SnackBarBehavior.floating,
+                      duration: Duration(seconds: 3),
+                    ),
+                  );
+                  return;
+                }
                 if (await requireAuth(context)) {
                   setState(() => _showPersistPrompt = true);
                 }
