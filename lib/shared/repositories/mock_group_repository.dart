@@ -200,13 +200,13 @@ class MockGroupRepository implements GroupRepository {
             id: 'mbr_cr_4',
             nom: 'Serge Kouadio',
             avatarPath: 'assets/images/avatar.png',
-            role: 'Chargé des opérations',
+            role: 'Responsable des programmes et opérations',
             estBureauExecutif: true),
         GroupMemberModel(
             id: 'mbr_cr_5',
             nom: 'Nina Assouan',
             avatarPath: 'assets/images/avatar.png',
-            role: 'Chargée de communication',
+            role: 'Responsable de communication',
             estBureauExecutif: true),
       ],
       'grp_green_city': const [
@@ -238,7 +238,7 @@ class MockGroupRepository implements GroupRepository {
             id: 'mbr_gc_5',
             nom: 'Éric Bailly',
             avatarPath: 'assets/images/avatar.png',
-            role: 'Chargé des opérations',
+            role: 'Responsable des programmes et opérations',
             estBureauExecutif: true),
       ],
       'grp_eco_jeunes': const [
@@ -258,7 +258,7 @@ class MockGroupRepository implements GroupRepository {
             id: 'mbr_ej_3',
             nom: 'Nadège Assi',
             avatarPath: 'assets/images/avatar.png',
-            role: 'Chargée des opérations',
+            role: 'Responsable des programmes et opérations',
             estBureauExecutif: true),
         GroupMemberModel(
             id: 'mbr_ej_4',
@@ -270,7 +270,7 @@ class MockGroupRepository implements GroupRepository {
             id: 'mbr_ej_5',
             nom: 'Aminata Cissé',
             avatarPath: 'assets/images/avatar.png',
-            role: 'Chargée de communication',
+            role: 'Responsable de communication',
             estBureauExecutif: true),
       ],
       'grp_quartier_propre': const [

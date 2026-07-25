@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/utils/system_ui_helper.dart';
 import '../data/report_dummy_data.dart';
 import '../widgets/report_camera_header.dart';
 import '../widgets/report_camera_tip_banner.dart';
@@ -76,7 +77,7 @@ class _ReportCameraPageState extends State<ReportCameraPage>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    SystemUiHelper.restoreEdgeToEdge();
     _controller?.dispose();
     super.dispose();
   }

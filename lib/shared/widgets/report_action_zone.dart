@@ -47,16 +47,22 @@ class ReportIntervenantAvatar extends StatelessWidget {
         : _fallback(),
   );
 
-  Widget _fallback() => Center(
-    child: Text(
-      intervenant.name.isNotEmpty ? intervenant.name[0].toUpperCase() : '?',
-      style: TextStyle(
-        color: CliinAppColors.primary,
-        fontWeight: FontWeight.bold,
-        fontSize: size * 0.4,
+  Widget _fallback() {
+    // Correction 1.5 — l'initiale affichée reflète qui est réellement
+    // affiché (le groupe, pas l'individu, quand l'intervention est faite
+    // en son nom).
+    final displayName = intervenant.groupName ?? intervenant.name;
+    return Center(
+      child: Text(
+        displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
+        style: TextStyle(
+          color: CliinAppColors.primary,
+          fontWeight: FontWeight.bold,
+          fontSize: size * 0.4,
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -675,7 +681,8 @@ class _ReportActionZoneState extends State<ReportActionZone> {
               ),
             ),
             child: Text(
-              'Cas remis en cours — ${intervenant?.name ?? 'l\'intervenant'}'
+              'Cas remis en cours — '
+              '${intervenant?.groupName ?? intervenant?.name ?? 'l\'intervenant'}'
               ' a été notifié et doit fournir une nouvelle preuve',
               style: CliinAppTextStyles.bodySmall.copyWith(
                 fontSize: 11,
@@ -926,7 +933,9 @@ class _ResolutionBlock extends StatelessWidget {
                   GestureDetector(
                     onTap: onIntervenantTap,
                     child: Text(
-                      intervenant.name,
+                      // Correction 1.5 — le groupe, pas l'individu, quand
+                      // l'intervention a été faite en son nom.
+                      intervenant.groupName ?? intervenant.name,
                       style: CliinAppTextStyles.bodySmall.copyWith(
                         color: CliinAppColors.primary,
                         fontWeight: FontWeight.w700,

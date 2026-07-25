@@ -11,6 +11,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/utils/system_ui_helper.dart';
 import '../../../../core/utils/user_location_service.dart';
 import '../../../../features/home/models/home_report_model.dart';
 import '../widgets/report_camera_header.dart';
@@ -71,7 +72,7 @@ class _ProofCameraPageState extends State<ProofCameraPage>
   void dispose() {
     _stopLocationImprovement();
     WidgetsBinding.instance.removeObserver(this);
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    SystemUiHelper.restoreEdgeToEdge();
     _controller?.dispose();
     super.dispose();
   }

@@ -102,8 +102,45 @@ class GroupStore extends ChangeNotifier {
 
   // Équipe dirigeante complète (estBureauExecutif), non plafonnée — "Notre
   // équipe" du profil. Les administrateurs délégués n'y apparaissent jamais.
-  List<GroupMemberModel> bureauExecutifMembers(String groupId) =>
-      cachedMembers(groupId).where((m) => m.estBureauExecutif).toList();
+  // Triée par ordre de priorité fixe du poste (correction 3.1), pas par
+  // ordre chronologique d'ajout : Président, Vice-président, Trésorier,
+  // Secrétaire général, Responsable des programmes et opérations,
+  // Responsable de communication, puis les postes personnalisés ("Autre...")
+  // dans leur ordre d'ajout entre eux.
+  List<GroupMemberModel> bureauExecutifMembers(String groupId) {
+    final members =
+        cachedMembers(groupId).where((m) => m.estBureauExecutif).toList();
+    final indexed = members.asMap().entries.toList()
+      ..sort((a, b) {
+        final pa = _bureauPostePriority(a.value.role);
+        final pb = _bureauPostePriority(b.value.role);
+        if (pa != pb) return pa.compareTo(pb);
+        return a.key.compareTo(b.key);
+      });
+    return indexed.map((e) => e.value).toList();
+  }
+
+  // Priorité d'un poste pour le tri de "Notre équipe" — reconnaissance par
+  // mot-clé (insensible à la casse et au genre grammatical : "Présidente",
+  // "Trésorière", "Vice-président(e)" sont toutes reconnues) plutôt que par
+  // égalité stricte avec kGroupClassicPostes, pour rester robuste aux
+  // variantes de genre saisies librement. "vice-président" est testé avant
+  // "président" car il le contient. Les postes non reconnus (saisis via
+  // "Autre...") héritent tous de la même priorité et gardent alors leur
+  // ordre d'ajout d'origine (tri stable via l'index).
+  int _bureauPostePriority(String? rawRole) {
+    final role = (rawRole ?? '').trim().toLowerCase();
+    if (role.isEmpty) return 6;
+    if (role.contains('vice-président') || role.contains('vice président')) {
+      return 1;
+    }
+    if (role.contains('président')) return 0;
+    if (role.contains('trésor')) return 2;
+    if (role.contains('secrétaire')) return 3;
+    if (role.contains('programme') || role.contains('opération')) return 4;
+    if (role.contains('communication')) return 5;
+    return 6;
+  }
 
   bool isAdmin(String groupId, String userId) =>
       cachedMembers(groupId).any((m) => m.id == userId && m.estAdmin);

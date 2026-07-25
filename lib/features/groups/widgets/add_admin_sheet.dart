@@ -19,10 +19,10 @@ import 'group_form_fields.dart';
 const List<String> kGroupClassicPostes = [
   'Président',
   'Vice-président(e)',
-  'Secrétaire général(e)',
   'Trésorier(ère)',
-  'Chargé(e) des programmes et opérations',
-  'Chargé(e) de communication',
+  'Secrétaire général(e)',
+  'Responsable des programmes et opérations',
+  'Responsable de communication',
 ];
 
 // Saisie libre — soumise à la même règle d'unicité (insensible à la casse)
@@ -157,25 +157,27 @@ class _AddAdminSheetState extends State<_AddAdminSheet> {
           CliinAppConstants.pagePadding, 0, CliinAppConstants.pagePadding, 0),
       child: SafeArea(
         top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                margin: const EdgeInsets.only(top: CliinAppConstants.spacingM),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: CliinAppColors.divider,
-                  borderRadius: BorderRadius.circular(2),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: CliinAppConstants.spacingM),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: CliinAppColors.divider,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: CliinAppConstants.spacingL),
-            _step == 1 ? _buildStep1() : _buildStep2(),
-            SizedBox(height: MediaQuery.of(context).padding.bottom + 12),
-          ],
+              const SizedBox(height: CliinAppConstants.spacingL),
+              _step == 1 ? _buildStep1() : _buildStep2(),
+              SizedBox(height: MediaQuery.of(context).padding.bottom + 12),
+            ],
+          ),
         ),
       ),
     );

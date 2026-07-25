@@ -728,6 +728,11 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
       (_report.intervenant?.outcome ?? InterventionOutcome.none) ==
           InterventionOutcome.none;
 
+  // Correction 2 — une prise en charge déjà au nom d'un groupe ne peut pas
+  // changer d'attribution depuis l'espace privé intervenant ; seul
+  // l'abandon reste possible.
+  bool get _isGroupTakeover => _report.intervenant?.groupName != null;
+
   // ── Section visible (pas cachée derrière un menu) — corrections 1 & 2 ──
   // Affichée directement dans le corps de la page, juste sous le bloc
   // WhatsApp, pour garantir que l'intervenant la voie sans avoir à
@@ -751,31 +756,33 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
               color: CliinAppColors.textDark,
             ),
           ),
-          const SizedBox(height: CliinAppConstants.spacingM),
-          OutlinedButton.icon(
-            onPressed: _openChangeAttributionSheet,
-            icon: const Icon(
-              Icons.swap_horiz_rounded,
-              color: CliinAppColors.primary,
-              size: 18,
-            ),
-            label: Text(
-              'Modifier ma prise en charge',
-              style: GoogleFonts.poppins(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
+          if (!_isGroupTakeover) ...[
+            const SizedBox(height: CliinAppConstants.spacingM),
+            OutlinedButton.icon(
+              onPressed: _openChangeAttributionSheet,
+              icon: const Icon(
+                Icons.swap_horiz_rounded,
                 color: CliinAppColors.primary,
+                size: 18,
+              ),
+              label: Text(
+                'Modifier ma prise en charge',
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: CliinAppColors.primary,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: CliinAppColors.primary),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius:
+                      BorderRadius.circular(CliinAppConstants.radiusMedium),
+                ),
               ),
             ),
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: CliinAppColors.primary),
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius:
-                    BorderRadius.circular(CliinAppConstants.radiusMedium),
-              ),
-            ),
-          ),
+          ],
           const SizedBox(height: CliinAppConstants.spacingS),
           OutlinedButton.icon(
             onPressed: _confirmAbandon,
@@ -1741,9 +1748,29 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
     );
   }
 
+  // Correction 1.4 — confidentialité de l'historique : si un précédent
+  // intervenant a abandonné/été rejeté puis que le cas a été repris par
+  // quelqu'un d'autre, ce dernier ne doit jamais voir les entrées privées
+  // de l'épisode précédent (statut abandonné, tentatives passées). Chaque
+  // "épisode" démarre à sa propre entrée prisEnCharge ; seule l'entrée de
+  // création du signalement (information publique, pas propre à un
+  // intervenant) est conservée en plus de l'épisode courant.
+  List<ReportHistoryEntry> get _privateHistory {
+    final full = _report.history;
+    final lastTakeoverIndex =
+        full.lastIndexWhere((e) => e.type == HistoryEventType.prisEnCharge);
+    if (lastTakeoverIndex <= 0) return full;
+    final hasCreationEntry =
+        full.first.type == HistoryEventType.signalementCree;
+    return [
+      if (hasCreationEntry) full.first,
+      ...full.sublist(lastTakeoverIndex),
+    ];
+  }
+
   Widget _buildInfoAndHistory() {
     final createdAt = _report.createdAt;
-    final history = _report.history;
+    final history = _privateHistory;
 
     return Container(
       decoration: BoxDecoration(

@@ -28,6 +28,13 @@ class MockReportRepository implements ReportRepository {
     return '#CLN-$n';
   }
 
+  // Correction 1.5 — nom affiché dans l'historique pour une action
+  // d'intervention : le groupe si l'intervention a été faite en son nom,
+  // jamais le nom de l'individu qui a physiquement effectué l'action dans
+  // ce cas.
+  String? _interventionActorName(IntervenantModel? intervenant) =>
+      intervenant?.groupName ?? intervenant?.name;
+
   double _distanceMeters(double lat1, double lon1, double lat2, double lon2) {
     const r = 6371000.0;
     final dLat = _toRad(lat2 - lat1);
@@ -116,7 +123,7 @@ class MockReportRepository implements ReportRepository {
       ..add(ReportHistoryEntry(
         type: HistoryEventType.prisEnCharge,
         dateTime: now,
-        actorName: intervenant.name,
+        actorName: groupName ?? intervenant.name,
       ));
 
     final updated = report.copyWith(
@@ -146,8 +153,10 @@ class MockReportRepository implements ReportRepository {
         takenAgo: report.intervenant!.takenAgo,
         takenAt: report.intervenant!.takenAt,
         treatedAt: report.intervenant!.treatedAt,
+        groupName: report.intervenant!.groupName,
         whatsAppNumber: report.intervenant!.whatsAppNumber,
         whatsAppVisible: visible, // allowContact
+        outcome: report.intervenant!.outcome,
       ),
     );
     _updateReport(updated);
@@ -204,7 +213,7 @@ class MockReportRepository implements ReportRepository {
         ..add(ReportHistoryEntry(
           type: HistoryEventType.abandonneVolontairement,
           dateTime: now,
-          actorName: report.intervenant?.name,
+          actorName: _interventionActorName(report.intervenant),
         )),
     );
     _updateReport(updated);
@@ -231,8 +240,10 @@ class MockReportRepository implements ReportRepository {
         takenAgo: report.intervenant!.takenAgo,
         takenAt: report.intervenant!.takenAt,
         treatedAt: report.intervenant!.treatedAt,
+        groupName: report.intervenant!.groupName,
         whatsAppNumber: number,
         whatsAppVisible: visible,
+        outcome: report.intervenant!.outcome,
       ),
     );
     _updateReport(updated);
@@ -362,7 +373,7 @@ class MockReportRepository implements ReportRepository {
           ..add(ReportHistoryEntry(
             type: HistoryEventType.rejete,
             dateTime: rejectedNow,
-            actorName: report.intervenant?.name,
+            actorName: _interventionActorName(report.intervenant),
           )),
       );
       _updateReport(reverted);
@@ -384,6 +395,7 @@ class MockReportRepository implements ReportRepository {
             takenAgo: report.intervenant!.takenAgo,
             takenAt: report.intervenant!.takenAt,
             treatedAt: now,
+            groupName: report.intervenant!.groupName,
             whatsAppNumber: report.intervenant!.whatsAppNumber,
             whatsAppVisible: report.intervenant!.whatsAppVisible,
           )
@@ -397,7 +409,7 @@ class MockReportRepository implements ReportRepository {
       ..add(ReportHistoryEntry(
         type: HistoryEventType.traite,
         dateTime: now,
-        actorName: report.intervenant?.name,
+        actorName: _interventionActorName(report.intervenant),
       ));
 
     final updated = report.copyWith(
@@ -461,7 +473,7 @@ class MockReportRepository implements ReportRepository {
           ..add(ReportHistoryEntry(
             type: HistoryEventType.abandonne,
             dateTime: now,
-            actorName: r.intervenant?.name,
+            actorName: _interventionActorName(r.intervenant),
           )),
       );
       _reports[i] = updated;

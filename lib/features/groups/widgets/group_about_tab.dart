@@ -95,12 +95,23 @@ class GroupAboutTab extends StatelessWidget {
             members.isEmpty
                 ? Text('Aucun membre du bureau exécutif renseigné pour l\'instant.',
                     style: CliinAppTextStyles.bodySmall)
-                : Column(children: [
-                    for (var i = 0; i < members.length; i++) ...[
-                      if (i > 0) const SizedBox(height: CliinAppConstants.spacingM),
-                      _buildTeamMemberRow(members[i]),
-                    ],
-                  ]),
+                : Builder(builder: (context) {
+                    // Correction 3.2 — 6 membres affichés au maximum, le
+                    // reste indiqué via un badge "+N" (même mécanisme que
+                    // l'Espace gestion).
+                    final visible = members.take(6).toList();
+                    final overflow = members.length - visible.length;
+                    return Column(children: [
+                      for (var i = 0; i < visible.length; i++) ...[
+                        if (i > 0) const SizedBox(height: CliinAppConstants.spacingM),
+                        _buildTeamMemberRow(visible[i]),
+                      ],
+                      if (overflow > 0) ...[
+                        const SizedBox(height: CliinAppConstants.spacingM),
+                        _buildTeamOverflowRow(overflow),
+                      ],
+                    ]);
+                  }),
             const SizedBox(height: CliinAppConstants.spacingL),
             Text('Nos membres',
                 style: CliinAppTextStyles.headingSmall.copyWith(fontSize: 13.5)),
@@ -240,6 +251,35 @@ class GroupAboutTab extends StatelessWidget {
               Text(member.role!,
                   style: CliinAppTextStyles.bodySmall.copyWith(fontSize: 11)),
           ],
+        ),
+      ),
+    ]);
+  }
+
+  Widget _buildTeamOverflowRow(int overflow) {
+    return Row(children: [
+      Container(
+        width: 40,
+        height: 40,
+        decoration: const BoxDecoration(
+          color: CliinAppColors.background,
+          shape: BoxShape.circle,
+          border: Border.fromBorderSide(
+              BorderSide(color: CliinAppColors.divider)),
+        ),
+        child: Center(
+          child: Text('+$overflow',
+              style: CliinAppTextStyles.bodySmall.copyWith(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: CliinAppColors.textSecondary)),
+        ),
+      ),
+      const SizedBox(width: CliinAppConstants.spacingM),
+      Expanded(
+        child: Text(
+          overflow == 1 ? 'autre membre du bureau' : 'autres membres du bureau',
+          style: CliinAppTextStyles.bodySmall.copyWith(fontSize: 11),
         ),
       ),
     ]);

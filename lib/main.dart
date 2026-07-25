@@ -1,9 +1,9 @@
 // lib/main.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'core/constants/app_colors.dart';
+import 'core/utils/system_ui_helper.dart';
 import 'shared/store/report_store.dart';
 import 'shared/store/auth_store.dart';
 import 'shared/store/group_store.dart';
@@ -13,14 +13,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Affichage plein écran : l'app s'étend derrière la status bar et la nav bar
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.dark,
-    systemNavigationBarColor: Colors.transparent,
-    systemNavigationBarDividerColor: Colors.transparent,
-    systemNavigationBarIconBrightness: Brightness.dark,
-  ));
+  SystemUiHelper.restoreEdgeToEdge();
 
   GoogleFonts.config.allowRuntimeFetching = false;
 

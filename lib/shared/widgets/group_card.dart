@@ -40,8 +40,12 @@ class GroupCard extends StatefulWidget {
 }
 
 class _GroupCardState extends State<GroupCard> {
-  static const double _coverHeight = 70;
-  static const double _avatarSize = 40;
+  // Correction 4 — bannière et logo agrandis pour une meilleure lisibilité
+  // et un plus fort impact visuel (élément clé de captation/rétention),
+  // appliqué aux deux variantes (pleine largeur et réduite/scroll horizontal)
+  // puisque les deux partagent ce même widget.
+  static const double _coverHeight = 112;
+  static const double _avatarSize = 64;
 
   // Carte factice "accroche" (voir GroupsDummyData) : jamais de vraie
   // navigation ni de vraie action de suivi, un tap affiche simplement un
@@ -251,7 +255,7 @@ class _GroupCardState extends State<GroupCard> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         CliinAppConstants.spacingL,
-        26,
+        38,
         CliinAppConstants.spacingS,
         CliinAppConstants.spacingS,
       ),

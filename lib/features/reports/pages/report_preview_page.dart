@@ -405,11 +405,11 @@ class _ReportPreviewPageState extends State<ReportPreviewPage> {
   Widget _buildBottomSection(BuildContext context) {
     return Container(
       color: CliinAppColors.background,
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
         CliinAppConstants.pagePadding,
         CliinAppConstants.spacingM,
         CliinAppConstants.pagePadding,
-        CliinAppConstants.spacingL,
+        CliinAppConstants.spacingL + MediaQuery.of(context).padding.bottom,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

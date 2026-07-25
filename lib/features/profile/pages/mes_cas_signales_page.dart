@@ -83,8 +83,11 @@ class _MesCasSignalesPageState extends State<MesCasSignalesPage> {
     }
     final userId = AuthStore.instance.currentUser?.id;
     if (userId == null) return const [];
+    // Correction 1 — un cas signalé au nom d'un groupe (r.groupId != null)
+    // n'apparaît jamais dans le Profil personnel, uniquement dans l'Espace
+    // gestion du groupe concerné (filterOverride ci-dessus).
     return ReportStore.instance.reports
-        .where((r) => r.signaleParId == userId)
+        .where((r) => r.signaleParId == userId && r.groupId == null)
         .toList();
   }
 

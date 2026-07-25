@@ -113,8 +113,12 @@ class ReportStore extends ChangeNotifier {
 
   // ── Statistiques profil — source unique pour "Cas publiés" /
   // "Pris en charge" / "Cas traités" (profile_page.dart, public_profile_page.dart) ──
-  int casPubliesCount(String userId) =>
-      _reports.where((r) => r.signaleParId == userId).length;
+  // Correction 1 — un cas publié au nom d'un groupe (groupId != null) ne
+  // compte jamais dans les statistiques personnelles, comme
+  // prisEnChargeCount/casTraitesCount ci-dessous.
+  int casPubliesCount(String userId) => _reports
+      .where((r) => r.signaleParId == userId && r.groupId == null)
+      .length;
 
   // Nombre de cas ACTUELLEMENT en cours parmi ceux pris en charge par
   // l'utilisateur EN SON NOM PERSONNEL — pas un cumul historique : un cas

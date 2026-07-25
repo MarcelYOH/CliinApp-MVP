@@ -16,6 +16,7 @@ import '../widgets/edit_profile_sheet.dart';
 import 'public_profile_page.dart';
 import 'mes_cas_signales_page.dart';
 import 'mes_prises_en_charge_page.dart';
+import 'mes_contributions_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -446,6 +447,18 @@ class _ProfilePageState extends State<ProfilePage> {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const MesPrisesEnChargePage()),
+            ),
+          ),
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          _buildMenuItem(
+            context: context,
+            icon: Icons.bar_chart_rounded,
+            iconColor: const Color(0xFF1E88E5),
+            title: 'Mes contributions',
+            subtitle: 'Vos statistiques de contribution par groupe',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MesContributionsPage()),
             ),
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),

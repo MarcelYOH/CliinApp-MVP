@@ -105,8 +105,13 @@ class _MesPrisesEnChargePageState extends State<MesPrisesEnChargePage> {
     }
     final userId = AuthStore.instance.currentUser?.id;
     if (userId == null) return const [];
+    // Correction 1 — une prise en charge faite au nom d'un groupe
+    // (intervenant.groupName != null) n'apparaît jamais dans le Profil
+    // personnel, uniquement dans l'Espace gestion du groupe concerné
+    // (filterOverride ci-dessus).
     return ReportStore.instance.reports
-        .where((r) => r.intervenant?.id == userId)
+        .where((r) =>
+            r.intervenant?.id == userId && r.intervenant?.groupName == null)
         .toList();
   }
 
