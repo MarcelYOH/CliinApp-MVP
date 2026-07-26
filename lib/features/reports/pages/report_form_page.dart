@@ -18,6 +18,7 @@ import '../data/report_dummy_data.dart';
 import '../widgets/report_stepper.dart';
 import 'report_camera_page.dart';
 import '../../../../shared/navigation/fast_page_route.dart';
+import '../../../../shared/widgets/gps_retry_button.dart';
 import 'report_upload_page.dart';
 
 String _generateReportCode() {
@@ -561,29 +562,10 @@ class _ReportFormPageState extends State<ReportFormPage> {
                       ),
                     ],
                     const SizedBox(height: 6),
-                    GestureDetector(
-                      onTap: _isRefreshingLocation ? null : _refreshLocation,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _isRefreshingLocation
-                              ? const SizedBox(
-                                  width: 12,
-                                  height: 12,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: CliinAppColors.primary),
-                                )
-                              : const Icon(Icons.refresh,
-                                  color: CliinAppColors.primary, size: 12),
-                          const SizedBox(width: 3),
-                          Text('Actualiser GPS',
-                              style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: CliinAppColors.primary)),
-                        ],
-                      ),
+                    GpsRetryButton(
+                      isLoading: _isRefreshingLocation,
+                      onPressed: _refreshLocation,
+                      label: 'Actualiser GPS',
                     ),
                   ],
                 ),

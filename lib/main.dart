@@ -12,8 +12,13 @@ import 'features/home/pages/home_page.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Affichage plein écran : l'app s'étend derrière la status bar et la nav bar
-  SystemUiHelper.restoreEdgeToEdge();
+  // Affichage plein écran : l'app s'étend derrière la status bar et la nav
+  // bar. Attendu (pas fire-and-forget) — Correction 6.2 : sans await, le
+  // tout premier frame pouvait être peint avant que l'OS n'applique le mode
+  // edge-to-edge/la barre système transparente, laissant un bandeau noir
+  // résiduel sous la bottom bar jusqu'à ce qu'un rebuild ultérieur (ex. une
+  // action de l'utilisateur) coïncide avec l'application effective du style.
+  await SystemUiHelper.restoreEdgeToEdge();
 
   GoogleFonts.config.allowRuntimeFetching = false;
 

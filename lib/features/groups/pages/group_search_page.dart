@@ -11,10 +11,15 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/utils/user_location_service.dart';
+import '../../../shared/navigation/fast_page_route.dart';
+import '../../../shared/navigation/tab_navigation.dart';
 import '../../../shared/store/auth_store.dart';
 import '../../../shared/store/group_store.dart';
+import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/widgets/circle_icon_button.dart';
 import '../../../shared/widgets/group_card.dart';
+import '../../auth/auth_guard.dart';
+import '../../reports/pages/report_camera_page.dart';
 import '../data/groups_dummy_data.dart';
 import '../models/group_model.dart';
 
@@ -271,7 +276,20 @@ class _GroupSearchPageState extends State<GroupSearchPage> {
           ],
         ),
       ),
+      bottomNavigationBar: AppBottomNav(
+        currentIndex: -1,
+        onTap: (index) =>
+            navigateToTab(context, currentIndex: -1, targetIndex: index),
+        onSignalerTap: _openCamera,
+      ),
     );
+  }
+
+  Future<void> _openCamera() async {
+    if (await requireAuth(context)) {
+      if (!mounted) return;
+      Navigator.push(context, fastFadeRoute<void>(const ReportCameraPage()));
+    }
   }
 
   Widget _buildHeader(BuildContext context) {

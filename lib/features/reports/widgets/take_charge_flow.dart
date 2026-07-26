@@ -8,27 +8,7 @@ import '../../../../shared/store/report_store.dart';
 import '../../../../shared/store/auth_store.dart';
 import '../../../../shared/store/group_store.dart';
 import '../../../../features/home/models/home_report_model.dart';
-
-// ── Modèle indicatif téléphonique — extensible ───────────────────
-class _CountryCode {
-  final String flag;
-  final String name;
-  final String code;
-  const _CountryCode({required this.flag, required this.name, required this.code});
-}
-
-const List<_CountryCode> _kCountryCodes = [
-  _CountryCode(flag: '🇨🇮', name: 'Côte d\'Ivoire', code: '+225'),
-  _CountryCode(flag: '🇸🇳', name: 'Sénégal',        code: '+221'),
-  _CountryCode(flag: '🇧🇫', name: 'Burkina Faso',   code: '+226'),
-  _CountryCode(flag: '🇲🇱', name: 'Mali',           code: '+223'),
-  _CountryCode(flag: '🇬🇳', name: 'Guinée',         code: '+224'),
-  _CountryCode(flag: '🇬🇭', name: 'Ghana',          code: '+233'),
-  _CountryCode(flag: '🇧🇯', name: 'Bénin',          code: '+229'),
-  _CountryCode(flag: '🇹🇬', name: 'Togo',           code: '+228'),
-  _CountryCode(flag: '🇳🇬', name: 'Nigeria',        code: '+234'),
-  _CountryCode(flag: '🇫🇷', name: 'France',         code: '+33'),
-];
+import '../../../../shared/widgets/phone_country_field.dart';
 
 Future<void> showTakeChargeFlow({
   required BuildContext context,
@@ -75,7 +55,7 @@ class _TakeChargeSheetState extends State<_TakeChargeSheet> {
   String? _errorMessage;
   HomeReportModel? _updatedReport;
 
-  _CountryCode _selectedCountry = _kCountryCodes.first;
+  String _dialCode = '+225';
 
   // Vrais groupes dont l'utilisateur connecté est administrateur — jamais
   // une liste factice (voir GroupStore.adminGroups).
@@ -114,11 +94,10 @@ class _TakeChargeSheetState extends State<_TakeChargeSheet> {
     const removeTrunkZero = {'+33', '+32', '+44', '+31', '+39', '+34'};
 
     final shouldRemoveZero =
-        local.startsWith('0') &&
-        removeTrunkZero.contains(_selectedCountry.code);
+        local.startsWith('0') && removeTrunkZero.contains(_dialCode);
 
     final cleaned = shouldRemoveZero ? local.substring(1) : local;
-    return '${_selectedCountry.code}$cleaned';
+    return '$_dialCode$cleaned';
   }
 
   Future<void> _submit() async {
@@ -182,113 +161,6 @@ class _TakeChargeSheetState extends State<_TakeChargeSheet> {
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
-  void _showCountryPicker() {
-    showModalBottomSheet(
-      context: context,
-      // isScrollControlled pour que le sheet puisse prendre plus de hauteur
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-            top: Radius.circular(CliinAppConstants.radiusLarge)),
-      ),
-      builder: (_) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        minChildSize: 0.4,
-        maxChildSize: 0.85,
-        expand: false,
-        builder: (_, scrollController) => Column(
-          children: [
-            // Handle + titre — fixes
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                  CliinAppConstants.pagePadding,
-                  CliinAppConstants.spacingM,
-                  CliinAppConstants.pagePadding,
-                  CliinAppConstants.spacingM),
-              child: Column(children: [
-                Center(
-                  child: Container(
-                    width: 40, height: 4,
-                    decoration: BoxDecoration(
-                      color: CliinAppColors.divider,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: CliinAppConstants.spacingM),
-                Text('Sélectionner un pays',
-                    style: GoogleFonts.poppins(
-                        fontSize: 16, fontWeight: FontWeight.bold,
-                        color: CliinAppColors.textDark)),
-              ]),
-            ),
-            const Divider(height: 1, color: Color(0xFFEEEEEE)),
-            // Liste scrollable
-            Expanded(
-              child: ListView(
-                controller: scrollController,
-                children: _kCountryCodes.map((country) => ListTile(
-                  // Remplacement des emojis par des indicateurs colorés
-                  // pour éviter le délai de rendu Flutter Web
-                  leading: Container(
-                    width: 40, height: 28,
-                    decoration: BoxDecoration(
-                      color: _countryColor(country.code),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Center(
-                      child: Text(
-                        country.code.replaceAll('+', ''),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                  title: Text(country.name,
-                      style: GoogleFonts.inter(
-                          fontSize: 14, color: CliinAppColors.textDark)),
-                  trailing: Text(country.code,
-                      style: GoogleFonts.poppins(
-                          fontSize: 13, fontWeight: FontWeight.w600,
-                          color: _selectedCountry.code == country.code
-                              ? CliinAppColors.primary
-                              : CliinAppColors.textSecondary)),
-                  selected: _selectedCountry.code == country.code,
-                  selectedTileColor: CliinAppColors.primaryLight,
-                  onTap: () {
-                    setState(() => _selectedCountry = country);
-                    Navigator.pop(context);
-                  },
-                )).toList(),
-              ),
-            ),
-            SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Couleur associée à chaque indicatif — rendu immédiat sans emoji
-  Color _countryColor(String code) {
-    switch (code) {
-      case '+225': return const Color(0xFF009A44);  // Côte d'Ivoire — vert
-      case '+221': return const Color(0xFF00853F);  // Sénégal — vert
-      case '+226': return const Color(0xFFEF2B2D);  // Burkina — rouge
-      case '+223': return const Color(0xFF009A44);  // Mali — vert
-      case '+224': return const Color(0xFFCE1126);  // Guinée — rouge
-      case '+233': return const Color(0xFF006B3F);  // Ghana — vert
-      case '+229': return const Color(0xFF008751);  // Bénin — vert
-      case '+228': return const Color(0xFF006A4E);  // Togo — vert
-      case '+234': return const Color(0xFF008751);  // Nigeria — vert
-      case '+33':  return const Color(0xFF002395);  // France — bleu
-      default:     return CliinAppColors.primary;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     // Pas d'AnimatedSwitcher — la transition animée cause un flash noir
@@ -324,11 +196,11 @@ class _TakeChargeSheetState extends State<_TakeChargeSheet> {
         2 => _Step2Sheet(
             key: const ValueKey(2),
             phoneController: _phoneController,
-            selectedCountry: _selectedCountry,
+            dialCode: _dialCode,
             consent: _whatsAppConsent,
             isLoading: false, // jamais en loading — transition immédiate
             errorMessage: _errorMessage,
-            onCountryTap: _showCountryPicker,
+            onDialCodeChanged: (c) => setState(() => _dialCode = c),
             onConsentChanged: (v) => setState(() => _whatsAppConsent = v),
             onBack: _back,
             onContinue: _submit,
@@ -502,11 +374,11 @@ class _Step1Sheet extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────
 class _Step2Sheet extends StatelessWidget {
   final TextEditingController phoneController;
-  final _CountryCode selectedCountry;
+  final String dialCode;
   final bool consent;
   final bool isLoading;
   final String? errorMessage;
-  final VoidCallback onCountryTap;
+  final ValueChanged<String> onDialCodeChanged;
   final void Function(bool) onConsentChanged;
   final VoidCallback onBack;
   final VoidCallback onContinue;
@@ -514,11 +386,11 @@ class _Step2Sheet extends StatelessWidget {
   const _Step2Sheet({
     super.key,
     required this.phoneController,
-    required this.selectedCountry,
+    required this.dialCode,
     required this.consent,
     required this.isLoading,
     required this.errorMessage,
-    required this.onCountryTap,
+    required this.onDialCodeChanged,
     required this.onConsentChanged,
     required this.onBack,
     required this.onContinue,
@@ -589,63 +461,18 @@ class _Step2Sheet extends StatelessWidget {
                       color: CliinAppColors.textDark)),
               const SizedBox(height: CliinAppConstants.spacingS),
 
-              // CORRECTION POINT 1 : indicatif avec largeur fixe
-              // pour éviter la cassure au chargement du drapeau
               Container(
                 decoration: BoxDecoration(
                   color: CliinAppColors.cardWhite,
                   borderRadius: BorderRadius.circular(CliinAppConstants.radiusSmall),
                   border: Border.all(color: CliinAppColors.divider),
                 ),
-                child: Row(children: [
-                  // Bouton indicatif — largeur fixe pour stabilité
-                  GestureDetector(
-                    onTap: onCountryTap,
-                    child: Container(
-                      width: 80, // largeur fixe
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 14),
-                      decoration: BoxDecoration(
-                        color: CliinAppColors.background,
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(CliinAppConstants.radiusSmall),
-                          bottomLeft: Radius.circular(CliinAppConstants.radiusSmall),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Indicatif seul — pas d'emoji pour éviter
-                          // le délai de rendu Flutter Web
-                          Text(selectedCountry.code,
-                              style: GoogleFonts.poppins(
-                                  fontSize: 13, fontWeight: FontWeight.w600,
-                                  color: CliinAppColors.primary)),
-                          const Icon(Icons.keyboard_arrow_down_rounded,
-                              size: 14, color: CliinAppColors.textSecondary),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: TextField(
-                      controller: phoneController,
-                      keyboardType: TextInputType.phone,
-                      autofocus: true,
-                      style: GoogleFonts.inter(
-                          fontSize: 14, color: CliinAppColors.textDark),
-                      decoration: InputDecoration(
-                        hintText: '07 XX XX XX XX',
-                        hintStyle: GoogleFonts.inter(
-                            fontSize: 14,
-                            color: CliinAppColors.textSecondary),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 14),
-                      ),
-                    ),
-                  ),
-                ]),
+                child: PhoneCountryField(
+                  phoneController: phoneController,
+                  onDialCodeChanged: onDialCodeChanged,
+                  hintText: '07 XX XX XX XX',
+                  autofocus: true,
+                ),
               ),
 
               const SizedBox(height: CliinAppConstants.spacingS),
@@ -655,7 +482,7 @@ class _Step2Sheet extends StatelessWidget {
                 const SizedBox(width: 4),
                 Flexible(
                   child: Text(
-                    'Numéro complet : ${selectedCountry.code} ${phoneController.text.trim().isEmpty ? "XX XX XX XX XX" : phoneController.text.trim()}',
+                    'Numéro complet : $dialCode ${phoneController.text.trim().isEmpty ? "XX XX XX XX XX" : phoneController.text.trim()}',
                     style: GoogleFonts.inter(
                         fontSize: 11, color: CliinAppColors.textSecondary),
                   ),

@@ -6,7 +6,6 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/store/auth_store.dart';
 import '../../../shared/store/report_store.dart';
-import '../../../shared/models/auth_user_model.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/navigation/tab_navigation.dart';
 import '../../reports/pages/report_camera_page.dart';
@@ -14,7 +13,24 @@ import '../../../shared/navigation/fast_page_route.dart';
 import '../../../shared/widgets/circle_icon_button.dart';
 
 class PublicProfilePage extends StatelessWidget {
-  const PublicProfilePage({super.key});
+  // Correction 2 — userId/displayName/avatarPath permettent d'afficher le
+  // profil public de N'IMPORTE QUEL utilisateur (auteur/intervenant tapé
+  // ailleurs dans l'app), pas seulement l'utilisateur connecté. Omis (ou
+  // égal à l'utilisateur connecté) : comportement inchangé, aperçu de son
+  // propre profil tel que vu par les autres.
+  final String? userId;
+  final String? displayName;
+  final String? avatarPath;
+
+  const PublicProfilePage({
+    super.key,
+    this.userId,
+    this.displayName,
+    this.avatarPath,
+  });
+
+  bool get _isOwnProfile =>
+      userId == null || userId == AuthStore.instance.currentUser?.id;
 
   String _formatDate(DateTime date) {
     const months = [
@@ -24,21 +40,16 @@ class PublicProfilePage extends StatelessWidget {
     return '${months[date.month - 1]} ${date.year}';
   }
 
-  Widget _buildAvatarContent(AuthUser? user) {
-    if (user == null) {
-      return Container(
-        color: Colors.grey.shade200,
-        child: Icon(Icons.person_rounded, color: Colors.grey.shade500, size: 36),
-      );
-    }
-    if (user.avatarPath != null && user.avatarPath!.isNotEmpty) {
+  Widget _buildAvatarContent(String? path, String username) {
+    if (path != null && path.isNotEmpty) {
       return Image.file(
-        File(user.avatarPath!),
+        File(path),
         fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => _buildInitialsContent(user.username),
+        errorBuilder: (context, error, stackTrace) =>
+            _buildInitialsContent(username),
       );
     }
-    return _buildInitialsContent(user.username);
+    return _buildInitialsContent(username);
   }
 
   Widget _buildInitialsContent(String username) {
@@ -80,11 +91,24 @@ class PublicProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = AuthStore.instance.currentUser;
+    final own = _isOwnProfile;
+    final currentUser = AuthStore.instance.currentUser;
+    final effectiveUserId = own ? currentUser?.id : userId;
+    final effectiveUsername =
+        own ? (currentUser?.username ?? 'Utilisateur') : (displayName ?? 'Utilisateur');
+    final effectiveAvatarPath = own ? currentUser?.avatarPath : avatarPath;
+    final effectiveZone = own ? (currentUser?.zone ?? '—') : '—';
+    final joinedText = own && currentUser != null
+        ? 'Citoyen actif depuis ${_formatDate(currentUser.createdAt)}'
+        : null;
+
     final store = ReportStore.instance;
-    final casPublies = user != null ? store.casPubliesCount(user.id) : 0;
-    final prisEnCharge = user != null ? store.prisEnChargeCount(user.id) : 0;
-    final casTraites = user != null ? store.casTraitesCount(user.id) : 0;
+    final casPublies =
+        effectiveUserId != null ? store.casPubliesCount(effectiveUserId) : 0;
+    final prisEnCharge =
+        effectiveUserId != null ? store.prisEnChargeCount(effectiveUserId) : 0;
+    final casTraites =
+        effectiveUserId != null ? store.casTraitesCount(effectiveUserId) : 0;
 
     return Scaffold(
       backgroundColor: CliinAppColors.background,
@@ -126,7 +150,8 @@ class PublicProfilePage extends StatelessWidget {
                       child: SizedBox(
                         width: 84,
                         height: 84,
-                        child: _buildAvatarContent(user),
+                        child: _buildAvatarContent(
+                            effectiveAvatarPath, effectiveUsername),
                       ),
                     ),
                   ),
@@ -135,7 +160,7 @@ class PublicProfilePage extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        user?.username ?? 'Utilisateur',
+                        effectiveUsername,
                         style: CliinAppTextStyles.headingMedium,
                       ),
                       const SizedBox(width: 6),
@@ -148,52 +173,51 @@ class PublicProfilePage extends StatelessWidget {
                     children: [
                       const Icon(Icons.location_on_outlined, size: 14, color: CliinAppColors.textSecondary),
                       const SizedBox(width: 4),
-                      Text(user?.zone ?? '—', style: CliinAppTextStyles.bodyMedium),
+                      Text(effectiveZone, style: CliinAppTextStyles.bodyMedium),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.calendar_today_outlined, size: 14, color: CliinAppColors.textSecondary),
-                      const SizedBox(width: 4),
-                      Text(
-                        user != null
-                            ? 'Citoyen actif depuis ${_formatDate(user.createdAt)}'
-                            : '—',
-                        style: CliinAppTextStyles.bodyMedium,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: CliinAppColors.primaryLight,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  if (joinedText != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Padding(
-                          padding: EdgeInsets.only(top: 1),
-                          child: Icon(
-                            Icons.check_circle_outline_rounded,
-                            color: CliinAppColors.primary,
-                            size: 18,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Seules les statistiques sont publiques. Vos informations personnelles restent privées.',
-                            style: CliinAppTextStyles.bodySmall,
-                          ),
-                        ),
+                        const Icon(Icons.calendar_today_outlined, size: 14, color: CliinAppColors.textSecondary),
+                        const SizedBox(width: 4),
+                        Text(joinedText, style: CliinAppTextStyles.bodyMedium),
                       ],
                     ),
-                  ),
+                  ],
                   const SizedBox(height: 16),
+                  if (own) ...[
+                    Container(
+                      decoration: BoxDecoration(
+                        color: CliinAppColors.primaryLight,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.only(top: 1),
+                            child: Icon(
+                              Icons.check_circle_outline_rounded,
+                              color: CliinAppColors.primary,
+                              size: 18,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Seules les statistiques sont publiques. Vos informations personnelles restent privées.',
+                              style: CliinAppTextStyles.bodySmall,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -227,12 +251,14 @@ class PublicProfilePage extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Ceci est ce que les autres utilisateurs voient lorsqu\'ils consultent votre profil (par exemple depuis un cas signalé publié à votre nom).',
-                    style: CliinAppTextStyles.bodySmall,
-                    textAlign: TextAlign.center,
-                  ),
+                  if (own) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      'Ceci est ce que les autres utilisateurs voient lorsqu\'ils consultent votre profil (par exemple depuis un cas signalé publié à votre nom).',
+                      style: CliinAppTextStyles.bodySmall,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ],
               ),
             ),

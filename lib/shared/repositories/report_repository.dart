@@ -76,6 +76,22 @@ abstract class ReportRepository {
     required String commentId,
   });
 
+  // ── Vues / partages (Correction 7) ───────────────────────────────
+  // Anti-abus : n'incrémente `views` que si userId n'est pas déjà dans
+  // viewedByUserIds (jamais l'auteur — filtré par l'appelant avant even
+  // d'appeler cette méthode).
+  Future<HomeReportModel> recordView({
+    required String reportId,
+    required String userId,
+  });
+
+  // Pas d'anti-abus ici — le compteur s'incrémente à chaque partage,
+  // même répété par le même utilisateur (aucune vérification de l'envoi
+  // réel, cf. spec Correction 7).
+  Future<HomeReportModel> recordShare({
+    required String reportId,
+  });
+
   // Fait passer en Abandonné (statut Disponible, intervenant conservé avec
   // outcome=abandoned pour le résidu privé) tout cas "en cours" dont le
   // délai de 72h sans preuve est dépassé. Simule côté client ce qu'un vrai

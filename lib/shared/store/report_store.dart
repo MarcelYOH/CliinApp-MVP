@@ -153,6 +153,46 @@ class ReportStore extends ChangeNotifier {
           r.status == ReportStatus.enCours)
       .length;
 
+  // ── Statistiques groupe — "Notre impact" (À propos) ──────────────
+  // Totaux réels, cumulés sur toute la durée de vie du cas (pas seulement
+  // les cas actuellement actifs) — cohérents avec les totaux affichés dans
+  // "Nos cas signalés" / "Nos prises en charge" (Espace gestion).
+  int casSignalesCountForGroup(String groupId) =>
+      _reports.where((r) => r.groupId == groupId).length;
+
+  int casTraitesCountForGroup(String groupId) => _reports
+      .where((r) => r.groupId == groupId && r.status == ReportStatus.traite)
+      .length;
+
+  int prisEnChargeTotalCountForGroup(String groupName) =>
+      _reports.where((r) => r.intervenant?.groupName == groupName).length;
+
+  // ── Statistiques "Mes contributions" — par groupe ET tous groupes ────
+  // Un cas signalé/pris en charge au nom d'un groupe (jamais les
+  // signalements/prises en charge personnels, cf. Correction 1) — total
+  // cumulé sur toute la durée de vie du cas, peu importe l'appartenance
+  // actuelle de l'utilisateur au groupe.
+  int casSignalesCountForUserInGroup(String groupId, String userId) =>
+      _reports
+          .where((r) => r.groupId == groupId && r.signaleParId == userId)
+          .length;
+
+  int prisEnChargeCountForUserInGroup(String groupName, String userId) =>
+      _reports
+          .where((r) =>
+              r.intervenant?.groupName == groupName &&
+              r.intervenant?.id == userId)
+          .length;
+
+  int casSignalesTotalForUserAllGroups(String userId) => _reports
+      .where((r) => r.groupId != null && r.signaleParId == userId)
+      .length;
+
+  int prisEnChargeTotalForUserAllGroups(String userId) => _reports
+      .where((r) =>
+          r.intervenant?.groupName != null && r.intervenant?.id == userId)
+      .length;
+
   // ── Compteur par catégorie — section "Catégories" (accueil) ──────
   // Tous statuts confondus, zéro donnée de repli : si aucun cas n'existe
   // encore pour cette catégorie, retourne 0 (jamais une valeur inventée).
@@ -467,6 +507,35 @@ class ReportStore extends ChangeNotifier {
       );
       _replaceReport(updated);
       _error = null;
+      notifyListeners();
+      return updated;
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
+    }
+  }
+
+  // ── Vues / partages (Correction 7) ───────────────────────────────
+  Future<HomeReportModel> recordView({
+    required String reportId,
+    required String userId,
+  }) async {
+    try {
+      final updated =
+          await _repository.recordView(reportId: reportId, userId: userId);
+      _replaceReport(updated);
+      notifyListeners();
+      return updated;
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
+    }
+  }
+
+  Future<HomeReportModel> recordShare({required String reportId}) async {
+    try {
+      final updated = await _repository.recordShare(reportId: reportId);
+      _replaceReport(updated);
       notifyListeners();
       return updated;
     } catch (e) {

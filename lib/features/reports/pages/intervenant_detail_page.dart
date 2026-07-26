@@ -15,6 +15,7 @@ import '../../../../shared/widgets/public_view_link_button.dart';
 import '../../../../shared/widgets/report_card.dart'
     show buildReportImage, DynamicDistanceLabel, copyReportCode;
 import '../../../../shared/widgets/app_bottom_nav.dart';
+import '../../../../shared/widgets/phone_country_field.dart';
 import '../../../../shared/navigation/tab_navigation.dart';
 import '../../../../shared/navigation/fast_page_route.dart';
 import '../../../../features/home/models/home_report_model.dart';
@@ -174,51 +175,12 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
                   ),
                   border: Border.all(color: CliinAppColors.divider),
                 ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 14,
-                      ),
-                      child: Text(
-                        indicatif,
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: CliinAppColors.textDark,
-                        ),
-                      ),
-                    ),
-                    Container(
-                      width: 1,
-                      height: 24,
-                      color: CliinAppColors.divider,
-                    ),
-                    Expanded(
-                      child: TextField(
-                        controller: phoneController,
-                        keyboardType: TextInputType.phone,
-                        autofocus: true,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: CliinAppColors.textDark,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: '07 XX XX XX XX',
-                          hintStyle: GoogleFonts.inter(
-                            fontSize: 14,
-                            color: CliinAppColors.textSecondary,
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 14,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                child: PhoneCountryField(
+                  phoneController: phoneController,
+                  onDialCodeChanged: (code) =>
+                      setModal(() => indicatif = code),
+                  hintText: '07 XX XX XX XX',
+                  autofocus: true,
                 ),
               ),
 

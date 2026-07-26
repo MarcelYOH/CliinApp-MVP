@@ -14,6 +14,7 @@ import '../../../shared/navigation/fast_page_route.dart';
 import '../../../shared/store/auth_store.dart';
 import '../../../shared/store/group_store.dart';
 import '../../../shared/widgets/circle_icon_button.dart';
+import '../../../shared/widgets/gps_retry_button.dart';
 import '../../reports/pages/report_camera_page.dart';
 import '../models/group_model.dart';
 import '../widgets/add_admin_sheet.dart'
@@ -60,6 +61,7 @@ class _GroupFormPageState extends State<GroupFormPage> {
   GroupType _selectedType = GroupType.ong;
   String? _selectedPoste;
   bool _isDetectingZone = false;
+  bool _gpsFailed = false;
   bool _isSubmitting = false;
 
   // Coordonnées de la détection GPS — jamais devinées à partir du texte de
@@ -115,10 +117,15 @@ class _GroupFormPageState extends State<GroupFormPage> {
   }
 
   // Détection automatique à la création — ne remplit que si le champ est
-  // encore vide, échoue silencieusement (l'utilisateur saisit la zone
-  // manuellement).
+  // encore vide. Correction 4 — en cas d'échec, _gpsFailed déclenche
+  // l'affichage du bouton "Réessayer la détection GPS" (GpsRetryButton,
+  // même composant que la création de signalement) au lieu d'échouer
+  // silencieusement comme auparavant.
   Future<void> _autoDetectZone() async {
-    setState(() => _isDetectingZone = true);
+    setState(() {
+      _isDetectingZone = true;
+      _gpsFailed = false;
+    });
     try {
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
@@ -139,7 +146,7 @@ class _GroupFormPageState extends State<GroupFormPage> {
         }
       }
     } catch (_) {
-      // Détection indisponible — l'utilisateur saisit la zone manuellement.
+      if (mounted) setState(() => _gpsFailed = true);
     } finally {
       if (mounted) setState(() => _isDetectingZone = false);
     }
@@ -386,31 +393,45 @@ class _GroupFormPageState extends State<GroupFormPage> {
                       label: 'Zone principale',
                       helper: _isEditMode
                           ? 'Modifiable manuellement, ou relancez la détection GPS.'
-                          : 'Détectée automatiquement — modifiable si besoin.',
-                      child: buildGroupFormTextField(
-                        controller: _zoneController,
-                        hint: (!_isEditMode && _isDetectingZone)
-                            ? 'Détection en cours...'
-                            : 'Ex : Riviera 2, Cocody',
-                        suffixIcon: _isDetectingZone
-                            ? const Padding(
-                                padding: EdgeInsets.all(12),
-                                child: SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: CliinAppColors.primary),
-                                ),
-                              )
-                            : (_isEditMode
-                                ? IconButton(
-                                    icon: const Icon(Icons.my_location_rounded,
-                                        color: CliinAppColors.primary, size: 20),
-                                    onPressed: _manualRedetectZone,
-                                    tooltip: 'Redétecter ma position',
+                          : (_gpsFailed
+                              ? 'GPS indisponible — vérifiez/complétez la zone manuellement.'
+                              : 'Détectée automatiquement — modifiable si besoin.'),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          buildGroupFormTextField(
+                            controller: _zoneController,
+                            hint: (!_isEditMode && _isDetectingZone)
+                                ? 'Détection en cours...'
+                                : 'Ex : Riviera 2, Cocody',
+                            suffixIcon: _isDetectingZone
+                                ? const Padding(
+                                    padding: EdgeInsets.all(12),
+                                    child: SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: CliinAppColors.primary),
+                                    ),
                                   )
-                                : null),
+                                : (_isEditMode
+                                    ? IconButton(
+                                        icon: const Icon(Icons.my_location_rounded,
+                                            color: CliinAppColors.primary, size: 20),
+                                        onPressed: _manualRedetectZone,
+                                        tooltip: 'Redétecter ma position',
+                                      )
+                                    : null),
+                          ),
+                          if (!_isEditMode && _gpsFailed) ...[
+                            const SizedBox(height: 6),
+                            GpsRetryButton(
+                              isLoading: _isDetectingZone,
+                              onPressed: _autoDetectZone,
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                     const SizedBox(height: CliinAppConstants.spacingL),

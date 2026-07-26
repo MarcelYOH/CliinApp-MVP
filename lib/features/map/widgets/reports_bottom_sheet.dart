@@ -5,6 +5,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/widgets/report_card.dart';
+import '../../../shared/navigation/profile_navigation.dart';
 import '../../../features/home/models/home_report_model.dart';
 import 'status_filter_section.dart';
 
@@ -359,6 +360,8 @@ class _ReportsBottomSheetState extends State<ReportsBottomSheet>
                             onContact: widget.onContact != null
                                 ? () => widget.onContact!.call(report)
                                 : null,
+                            onIntervenantTap: () =>
+                                openIntervenantProfile(context, report),
                           );
                         },
                       ),

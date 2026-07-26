@@ -309,6 +309,33 @@ class MockReportRepository implements ReportRepository {
   }
 
   @override
+  Future<HomeReportModel> recordView({
+    required String reportId,
+    required String userId,
+  }) async {
+    final report = await fetchReportById(reportId);
+    if (report == null) throw Exception('Signalement introuvable');
+    if (report.viewedByUserIds.contains(userId)) return report;
+
+    final updated = report.copyWith(
+      views: report.views + 1,
+      viewedByUserIds: [...report.viewedByUserIds, userId],
+    );
+    _updateReport(updated);
+    return updated;
+  }
+
+  @override
+  Future<HomeReportModel> recordShare({required String reportId}) async {
+    final report = await fetchReportById(reportId);
+    if (report == null) throw Exception('Signalement introuvable');
+
+    final updated = report.copyWith(shares: report.shares + 1);
+    _updateReport(updated);
+    return updated;
+  }
+
+  @override
   Future<ProofVerificationResult> submitProof({
     required String reportId,
     required String imagePath,

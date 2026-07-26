@@ -191,20 +191,31 @@ class GroupAboutTab extends StatelessWidget {
   }
 
   Widget _buildImpactCarousel() {
-    // "Mobilisation moyenne/action" nécessite les participations réelles par
-    // action (module Actions Terrain, pas encore implémenté) — affichée en
-    // "—" plutôt qu'une valeur inventée, en attendant.
+    // Correction 1 — les 3 premières cartes sont désormais calculées en
+    // direct depuis ReportStore (mêmes prédicats que "Nos cas signalés" /
+    // "Nos prises en charge", group_management_tab.dart), plutôt que depuis
+    // les champs statiques GroupModel.casSignalesCount/casTraitesCount,
+    // jamais incrémentés par un événement réel.
+    // "Actions" et "Mobilisation moyenne/action" dépendent du module Actions
+    // Terrain, pas encore implémenté — chemin de branchement prêt, valeur
+    // "0"/"—" en attendant plutôt qu'une donnée inventée.
     final cards = [
-      (Icons.campaign_rounded, '${group.casSignalesCount}', 'Cas signalés'),
-      (Icons.task_alt_rounded, '${group.casTraitesCount}', 'Cas traités'),
-      // Calculé dynamiquement depuis les vraies prises en charge attribuées
-      // à ce groupe (intervenant.groupName) — jamais depuis le compteur
-      // statique casPrisEnChargeCount, qui n'est alimenté par aucun
-      // événement réel de l'application.
-      (Icons.volunteer_activism_rounded,
-          '${ReportStore.instance.casPrisEnChargeCountForGroup(group.nom)}',
-          'Pris en charge'),
-      (Icons.bolt_rounded, '${group.actionsCount}', 'Actions'),
+      (
+        Icons.campaign_rounded,
+        '${ReportStore.instance.casSignalesCountForGroup(group.id)}',
+        'Cas signalés',
+      ),
+      (
+        Icons.task_alt_rounded,
+        '${ReportStore.instance.casTraitesCountForGroup(group.id)}',
+        'Cas traités',
+      ),
+      (
+        Icons.volunteer_activism_rounded,
+        '${ReportStore.instance.prisEnChargeTotalCountForGroup(group.nom)}',
+        'Pris en charge',
+      ),
+      (Icons.bolt_rounded, '0', 'Actions'),
       (Icons.groups_rounded, '—', 'Mobilisation\nmoyenne/action'),
     ];
     return SizedBox(

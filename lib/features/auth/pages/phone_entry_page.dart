@@ -7,47 +7,10 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../shared/store/auth_store.dart';
 import '../../../../shared/widgets/circle_icon_button.dart';
+import '../../../../shared/widgets/phone_country_field.dart';
 import '../widgets/auth_stepper.dart';
 import 'otp_verification_page.dart';
 import 'email_entry_page.dart';
-
-// ── Liste indicatifs — réutilisée depuis take_charge_flow.dart ───────
-class _CountryCode {
-  final String flag;
-  final String name;
-  final String code;
-  const _CountryCode(
-      {required this.flag, required this.name, required this.code});
-}
-
-const _kCountryCodes = [
-  _CountryCode(flag: '🇨🇮', name: 'Côte d\'Ivoire', code: '+225'),
-  _CountryCode(flag: '🇸🇳', name: 'Sénégal', code: '+221'),
-  _CountryCode(flag: '🇧🇫', name: 'Burkina Faso', code: '+226'),
-  _CountryCode(flag: '🇲🇱', name: 'Mali', code: '+223'),
-  _CountryCode(flag: '🇬🇳', name: 'Guinée', code: '+224'),
-  _CountryCode(flag: '🇬🇭', name: 'Ghana', code: '+233'),
-  _CountryCode(flag: '🇧🇯', name: 'Bénin', code: '+229'),
-  _CountryCode(flag: '🇹🇬', name: 'Togo', code: '+228'),
-  _CountryCode(flag: '🇳🇬', name: 'Nigeria', code: '+234'),
-  _CountryCode(flag: '🇫🇷', name: 'France', code: '+33'),
-];
-
-Color _countryColor(String code) {
-  switch (code) {
-    case '+225': return const Color(0xFF009A44);
-    case '+221': return const Color(0xFF00853F);
-    case '+226': return const Color(0xFFEF2B2D);
-    case '+223': return const Color(0xFF009A44);
-    case '+224': return const Color(0xFFCE1126);
-    case '+233': return const Color(0xFF006B3F);
-    case '+229': return const Color(0xFF008751);
-    case '+228': return const Color(0xFF006A4E);
-    case '+234': return const Color(0xFF008751);
-    case '+33': return const Color(0xFF002395);
-    default: return CliinAppColors.primary;
-  }
-}
 
 class PhoneEntryPage extends StatefulWidget {
   final VoidCallback onAuthenticated;
@@ -59,7 +22,7 @@ class PhoneEntryPage extends StatefulWidget {
 }
 
 class _PhoneEntryPageState extends State<PhoneEntryPage> {
-  _CountryCode _selectedCountry = _kCountryCodes.first;
+  String _dialCode = '+225';
   final _phoneController = TextEditingController();
   bool _isLoading = false;
 
@@ -74,9 +37,9 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
     if (local.isEmpty) return '';
     const removeTrunk = {'+33', '+32', '+44', '+31', '+39', '+34'};
     final shouldRemove =
-        local.startsWith('0') && removeTrunk.contains(_selectedCountry.code);
+        local.startsWith('0') && removeTrunk.contains(_dialCode);
     final cleaned = shouldRemove ? local.substring(1) : local;
-    return '${_selectedCountry.code}$cleaned';
+    return '$_dialCode$cleaned';
   }
 
   bool get _canSubmit =>
@@ -123,89 +86,6 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  void _showCountryPicker() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-            top: Radius.circular(CliinAppConstants.radiusLarge)),
-      ),
-      builder: (_) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        minChildSize: 0.4,
-        maxChildSize: 0.85,
-        expand: false,
-        builder: (_, scrollController) => Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                  CliinAppConstants.pagePadding,
-                  CliinAppConstants.spacingM,
-                  CliinAppConstants.pagePadding,
-                  CliinAppConstants.spacingM),
-              child: Column(children: [
-                Center(
-                  child: Container(
-                    width: 40, height: 4,
-                    decoration: BoxDecoration(
-                      color: CliinAppColors.divider,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: CliinAppConstants.spacingM),
-                Text('Sélectionner un pays',
-                    style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: CliinAppColors.textDark)),
-              ]),
-            ),
-            const Divider(height: 1),
-            Expanded(
-              child: ListView(
-                controller: scrollController,
-                children: _kCountryCodes.map((c) => ListTile(
-                  leading: Container(
-                    width: 40, height: 28,
-                    decoration: BoxDecoration(
-                      color: _countryColor(c.code),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Center(
-                      child: Text(c.code.replaceAll('+', ''),
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700)),
-                    ),
-                  ),
-                  title: Text(c.name,
-                      style: GoogleFonts.inter(
-                          fontSize: 14, color: CliinAppColors.textDark)),
-                  trailing: Text(c.code,
-                      style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: _selectedCountry.code == c.code
-                              ? CliinAppColors.primary
-                              : CliinAppColors.textSecondary)),
-                  selected: _selectedCountry.code == c.code,
-                  selectedTileColor: CliinAppColors.primaryLight,
-                  onTap: () {
-                    setState(() => _selectedCountry = c);
-                    Navigator.pop(context);
-                  },
-                )).toList(),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   @override
@@ -292,62 +172,13 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
                             CliinAppConstants.radiusMedium),
                         border: Border.all(color: CliinAppColors.primary),
                       ),
-                      child: Row(children: [
-                        GestureDetector(
-                          onTap: _showCountryPicker,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 14),
-                            decoration: BoxDecoration(
-                              color: CliinAppColors.background,
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(
-                                    CliinAppConstants.radiusMedium),
-                                bottomLeft: Radius.circular(
-                                    CliinAppConstants.radiusMedium),
-                              ),
-                            ),
-                            child: Row(mainAxisSize: MainAxisSize.min, children: [
-                              Text(_selectedCountry.flag,
-                                  style: const TextStyle(fontSize: 18)),
-                              const SizedBox(width: 4),
-                              Text(_selectedCountry.code,
-                                  style: GoogleFonts.poppins(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: CliinAppColors.textDark)),
-                              const Icon(Icons.keyboard_arrow_down_rounded,
-                                  size: 16,
-                                  color: CliinAppColors.textSecondary),
-                            ]),
-                          ),
-                        ),
-                        Container(
-                            width: 1,
-                            height: 40,
-                            color: CliinAppColors.divider),
-                        Expanded(
-                          child: TextField(
-                            controller: _phoneController,
-                            keyboardType: TextInputType.phone,
-                            autofocus: true,
-                            onChanged: (_) => setState(() {}),
-                            style: GoogleFonts.inter(
-                                fontSize: 16,
-                                color: CliinAppColors.textDark),
-                            decoration: InputDecoration(
-                              hintText: '07 12 34 56 78',
-                              hintStyle: GoogleFonts.inter(
-                                  fontSize: 16,
-                                  color: CliinAppColors.textSecondary),
-                              border: InputBorder.none,
-                              contentPadding:
-                                  const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 14),
-                            ),
-                          ),
-                        ),
-                      ]),
+                      child: PhoneCountryField(
+                        phoneController: _phoneController,
+                        onDialCodeChanged: (code) =>
+                            setState(() => _dialCode = code),
+                        onPhoneChanged: (_) => setState(() {}),
+                        autofocus: true,
+                      ),
                     ),
                     const SizedBox(height: 16),
 

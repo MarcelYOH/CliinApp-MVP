@@ -65,6 +65,16 @@ class GroupStore extends ChangeNotifier {
     }
   }
 
+  // Correction 2 — résout un groupe à partir de son nom (intervenant.
+  // groupName ne stocke qu'une chaîne, jamais l'id du groupe).
+  GroupModel? groupByName(String nom) {
+    try {
+      return _groups.firstWhere((g) => g.nom == nom);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<List<GroupMemberModel>> membersOf(String groupId) {
     return _repository.fetchMembers(groupId);
   }

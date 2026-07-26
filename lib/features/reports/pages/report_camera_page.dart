@@ -290,6 +290,13 @@ class _ReportCameraPageState extends State<ReportCameraPage>
   }
 
   void _navigateToPreview(String imagePath) {
+    // Correction 6.1 — le contrôleur caméra reste monté (Navigator.push,
+    // pas replace) tout au long du flux (aperçu, formulaire, upload,
+    // succès) : dispose() ne s'exécute donc qu'à la toute fin du flux,
+    // laissant SystemUiMode.immersiveSticky actif (barre système noire)
+    // sur chaque écran intermédiaire si on ne réaffirme pas ici le mode
+    // edge-to-edge dès qu'on quitte réellement la vue caméra.
+    SystemUiHelper.restoreEdgeToEdge();
     Navigator.push<String>(
       context,
       MaterialPageRoute(

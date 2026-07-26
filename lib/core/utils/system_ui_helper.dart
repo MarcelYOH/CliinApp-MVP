@@ -17,8 +17,8 @@ class SystemUiHelper {
     systemNavigationBarIconBrightness: Brightness.dark,
   );
 
-  static void restoreEdgeToEdge() {
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  static Future<void> restoreEdgeToEdge() async {
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setSystemUIOverlayStyle(edgeToEdgeStyle);
   }
 }

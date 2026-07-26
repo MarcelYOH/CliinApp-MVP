@@ -84,6 +84,7 @@ class MockAuthRepository implements AuthRepository {
     String? username,
     String? zone,
     String? avatarPath,
+    bool? publicProfileEnabled,
   }) async {
     final current = _currentUser;
     if (current == null) {
@@ -93,6 +94,7 @@ class MockAuthRepository implements AuthRepository {
       username: username,
       zone: zone,
       avatarPath: avatarPath,
+      publicProfileEnabled: publicProfileEnabled,
     );
     _currentUser = updated;
     await _persistSession(updated);

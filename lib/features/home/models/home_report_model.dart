@@ -56,6 +56,10 @@ class HomeReportModel {
   final int views;
   final int comments;
   final int shares;
+  // Anti-abus "vues" — un utilisateur (autre que l'auteur) ne compte
+  // qu'une seule fois dans le compteur `views`, peu importe le nombre
+  // d'ouvertures du détail (Correction 7).
+  final List<String> viewedByUserIds;
   final List<ReportComment> commentsList;
   final List<ReportHistoryEntry> history;
   final String? signalePar;
@@ -90,6 +94,7 @@ class HomeReportModel {
     required this.views,
     required this.comments,
     required this.shares,
+    this.viewedByUserIds = const [],
     this.commentsList = const [],
     this.history = const [],
     this.signalePar,
@@ -125,6 +130,7 @@ class HomeReportModel {
     int? views,
     int? comments,
     int? shares,
+    List<String>? viewedByUserIds,
     List<ReportComment>? commentsList,
     List<ReportHistoryEntry>? history,
     String? signalePar,
@@ -157,6 +163,7 @@ class HomeReportModel {
       views: views ?? this.views,
       comments: comments ?? this.comments,
       shares: shares ?? this.shares,
+      viewedByUserIds: viewedByUserIds ?? this.viewedByUserIds,
       commentsList: commentsList ?? this.commentsList,
       history: history ?? this.history,
       signalePar: signalePar ?? this.signalePar,

@@ -163,6 +163,10 @@ class _ProofCameraPageState extends State<ProofCameraPage>
       }
       if (!mounted) return;
 
+      // Correction 6.1 — voir report_camera_page.dart._navigateToPreview :
+      // le contrôleur reste monté tout le flux, réaffirmer edge-to-edge
+      // dès la sortie réelle de la vue caméra plutôt qu'à dispose().
+      SystemUiHelper.restoreEdgeToEdge();
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -297,6 +301,10 @@ class _ProofCameraPageState extends State<ProofCameraPage>
       final XFile photo = await _controller!.takePicture();
       if (!mounted) return;
 
+      // Correction 6.1 — voir report_camera_page.dart._navigateToPreview :
+      // le contrôleur reste monté tout le flux, réaffirmer edge-to-edge
+      // dès la sortie réelle de la vue caméra plutôt qu'à dispose().
+      SystemUiHelper.restoreEdgeToEdge();
       Navigator.push(
         context,
         MaterialPageRoute(

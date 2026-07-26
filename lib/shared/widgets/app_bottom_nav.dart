@@ -66,48 +66,58 @@ class _AppBottomNavState extends State<AppBottomNav> {
           ),
         ],
       ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 80,
-          child: ValueListenableBuilder<bool>(
-            valueListenable: isMoreMenuOpen,
-            builder: (context, moreMenuOpen, _) => Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(
-                  index: 0,
-                  icon: Icons.home_outlined,
-                  activeIcon: Icons.home_rounded,
-                  label: 'Accueil',
-                  moreMenuOpen: moreMenuOpen,
-                ),
-                _buildNavItem(
-                  index: 1,
-                  icon: Icons.location_on_outlined,
-                  activeIcon: Icons.location_on_rounded,
-                  label: 'Carte',
-                  moreMenuOpen: moreMenuOpen,
-                ),
-                _buildSignalerButton(),
-                _buildNavItem(
-                  index: 3,
-                  icon: Icons.group_outlined,
-                  activeIcon: Icons.group_rounded,
-                  label: 'Groupes',
-                  moreMenuOpen: moreMenuOpen,
-                ),
-                _buildNavItem(
-                  index: 4,
-                  icon: Icons.more_horiz_rounded,
-                  activeIcon: Icons.more_horiz_rounded,
-                  label: 'Plus',
-                  moreMenuOpen: moreMenuOpen,
-                ),
-              ],
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            height: 80,
+            child: ValueListenableBuilder<bool>(
+              valueListenable: isMoreMenuOpen,
+              builder: (context, moreMenuOpen, _) => Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildNavItem(
+                    index: 0,
+                    icon: Icons.home_outlined,
+                    activeIcon: Icons.home_rounded,
+                    label: 'Accueil',
+                    moreMenuOpen: moreMenuOpen,
+                  ),
+                  _buildNavItem(
+                    index: 1,
+                    icon: Icons.location_on_outlined,
+                    activeIcon: Icons.location_on_rounded,
+                    label: 'Carte',
+                    moreMenuOpen: moreMenuOpen,
+                  ),
+                  _buildSignalerButton(),
+                  _buildNavItem(
+                    index: 3,
+                    icon: Icons.group_outlined,
+                    activeIcon: Icons.group_rounded,
+                    label: 'Groupes',
+                    moreMenuOpen: moreMenuOpen,
+                  ),
+                  _buildNavItem(
+                    index: 4,
+                    icon: Icons.more_horiz_rounded,
+                    activeIcon: Icons.more_horiz_rounded,
+                    label: 'Plus',
+                    moreMenuOpen: moreMenuOpen,
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
+          // Correction 6.4 — séparateur fin et discret entre la barre et la
+          // zone système Android (geste/navigation), pleine largeur. Le
+          // SizedBox ci-dessous (plutôt qu'un SafeArea englobant) permet
+          // d'insérer cette ligne exactement à la frontière entre la barre
+          // visible et l'inset système, tout en gardant le fond blanc du
+          // Container parent continu jusqu'au bord réel de l'écran.
+          const Divider(height: 1, thickness: 1, color: CliinAppColors.divider),
+          SizedBox(height: MediaQuery.of(context).padding.bottom),
+        ],
       ),
     );
   }

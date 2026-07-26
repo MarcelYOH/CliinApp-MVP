@@ -2,16 +2,18 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../features/home/models/home_report_model.dart';
-import '../../../features/profile/pages/public_profile_page.dart';
+import '../../../shared/navigation/profile_navigation.dart';
 import '../../../shared/widgets/report_card.dart'
     show buildReportImage, reportTimeAgoLabel, copyReportCode, DynamicDistanceLabel;
 import '../../../shared/widgets/report_action_zone.dart';
 import '../../../shared/widgets/public_view_link_button.dart';
+import '../../../shared/store/auth_store.dart';
 import '../../../shared/store/report_store.dart';
 import '../../../shared/widgets/report_stats_comments.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
@@ -49,6 +51,22 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
   HomeReportModel get _data =>
       ReportStore.instance.reportById(widget.data.id) ?? widget.data;
 
+  @override
+  void initState() {
+    super.initState();
+    // Correction 7 — une vue n'est comptée que pour un utilisateur AUTRE
+    // que l'auteur, une seule fois par utilisateur (viewedByUserIds gère
+    // l'anti-abus côté repository). Non connecté : pas de compteur
+    // fiable côté utilisateur, donc pas de vue enregistrée.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final currentUserId = AuthStore.instance.currentUser?.id;
+      if (currentUserId != null && currentUserId != _data.signaleParId) {
+        ReportStore.instance
+            .recordView(reportId: _data.id, userId: currentUserId);
+      }
+    });
+  }
+
   void _onTakeCharge() async {
     if (await requireAuth(context)) {
       if (!mounted) return;
@@ -71,15 +89,25 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
     openWhatsApp(context: context, intervenant: _data.intervenant);
   }
 
+  // Correction 2 — le nom de l'intervenant mène à son profil (individuel
+  // ou de groupe), jamais à sa page de gestion privée "Ma prise en
+  // charge" (réservée à l'intervenant lui-même, atteinte autrement).
   void _onIntervenantTap() {
-    Navigator.push(
-      context,
-      fastFadeRoute<void>(IntervenantDetailPage(report: _data)),
-    );
+    openIntervenantProfile(context, _data);
   }
 
-  void _onShare() {
-    copyReportCode(context, _data.reference);
+  // Correction 7 — menu de partage natif (share_plus). Le compteur
+  // s'incrémente dès l'ouverture du menu de partage, sans vérifier que
+  // l'envoi a réellement abouti (spec : "pas de vérification de l'envoi
+  // réel").
+  Future<void> _onShare() async {
+    await Share.share(
+      'Découvrez ce cas signalé sur CliinApp : ${_data.title} '
+      '(${_data.reference})\n'
+      'https://cliinapp.app/cas/${_data.reference}',
+      subject: _data.title,
+    );
+    ReportStore.instance.recordShare(reportId: _data.id);
   }
 
   void _onEdit() {
@@ -105,18 +133,12 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
 
   bool get _canTapAuthor => !_data.isAnonyme && _data.signaleParId != null;
 
+  // Correction 2 — mène au profil du groupe si le cas a été signalé au nom
+  // d'un groupe (module Groupes désormais implémenté), sinon au profil
+  // individuel de l'auteur (soumis à son réglage de confidentialité).
   void _onAuthorTap() {
     if (!_canTapAuthor) return;
-    if (_data.groupId != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Module Groupes bientôt disponible')),
-      );
-      return;
-    }
-    Navigator.push(
-      context,
-      fastFadeRoute<void>(const PublicProfilePage()),
-    );
+    openAuthorProfile(context, _data);
   }
 
   @override

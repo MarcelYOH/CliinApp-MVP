@@ -6,6 +6,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/widgets/report_card.dart';
 import '../../../shared/widgets/ghost_report_card.dart';
+import '../../../shared/navigation/profile_navigation.dart';
 import '../models/home_report_model.dart';
 
 class HomeRecentReports extends StatelessWidget {
@@ -94,6 +95,8 @@ class HomeRecentReports extends StatelessWidget {
                     : null,
                 onContact:
                     onContact != null ? () => onContact!.call(report) : null,
+                onIntervenantTap: () =>
+                    openIntervenantProfile(context, report),
               );
             },
           ),

@@ -6,6 +6,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/widgets/report_card.dart';
 import '../../../shared/widgets/ghost_report_card.dart';
+import '../../../shared/navigation/profile_navigation.dart';
 import '../models/home_report_model.dart';
 
 class HomeNearbyReports extends StatelessWidget {
@@ -93,6 +94,8 @@ class HomeNearbyReports extends StatelessWidget {
               onContact: onContact != null
                   ? () => onContact!.call(reports.first)
                   : null,
+              onIntervenantTap: () =>
+                  openIntervenantProfile(context, reports.first),
             ),
           )
         else
@@ -238,6 +241,8 @@ class _UniformHeightCardRowState extends State<_UniformHeightCardRow> {
                           widget.onTakeCharge?.call(widget.reports[i]),
                       onContact: () =>
                           widget.onContact?.call(widget.reports[i]),
+                      onIntervenantTap: () =>
+                          openIntervenantProfile(context, widget.reports[i]),
                     ),
                   )
                 : SizedBox(
@@ -251,6 +256,8 @@ class _UniformHeightCardRowState extends State<_UniformHeightCardRow> {
                           widget.onTakeCharge?.call(widget.reports[i]),
                       onContact: () =>
                           widget.onContact?.call(widget.reports[i]),
+                      onIntervenantTap: () =>
+                          openIntervenantProfile(context, widget.reports[i]),
                     ),
                   ),
           ],

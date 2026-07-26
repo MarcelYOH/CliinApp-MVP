@@ -15,6 +15,7 @@ abstract class AuthRepository {
     String? username,
     String? zone,
     String? avatarPath,
+    bool? publicProfileEnabled,
   });
   Future<void> signInWithGoogle();
   Future<void> signOut();

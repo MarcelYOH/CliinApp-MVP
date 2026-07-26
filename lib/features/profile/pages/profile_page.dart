@@ -358,6 +358,27 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Autoriser l\'affichage public de mon profil',
+                  style: CliinAppTextStyles.bodySmall.copyWith(
+                    color: CliinAppColors.textDark,
+                  ),
+                ),
+              ),
+              Switch(
+                value: user?.publicProfileEnabled ?? true,
+                onChanged: user == null
+                    ? null
+                    : (v) => AuthStore.instance
+                        .updateProfile(publicProfileEnabled: v),
+                activeThumbColor: CliinAppColors.primary,
+              ),
+            ],
+          ),
         ],
       ),
     );

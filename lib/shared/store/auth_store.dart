@@ -68,11 +68,13 @@ class AuthStore extends ChangeNotifier {
     String? username,
     String? zone,
     String? avatarPath,
+    bool? publicProfileEnabled,
   }) async {
     final user = await _repository.updateProfile(
       username: username,
       zone: zone,
       avatarPath: avatarPath,
+      publicProfileEnabled: publicProfileEnabled,
     );
     _currentUser = user;
     notifyListeners();
@@ -87,5 +89,18 @@ class AuthStore extends ChangeNotifier {
     await _repository.signOut();
     _currentUser = null;
     notifyListeners();
+  }
+
+  // ── Correction 2 — confidentialité individuelle ──────────────────
+  // Seul l'utilisateur réellement connecté possède un réglage persistant
+  // (publicProfileEnabled sur AuthUser). Pour tout autre id (comptes de
+  // démonstration sans session propre), aucune préférence n'existe : on
+  // considère le profil public par défaut, faute de donnée réelle à
+  // vérifier — jamais un blocage inventé.
+  bool isProfilePublic(String userId) {
+    if (userId == _currentUser?.id) {
+      return _currentUser?.publicProfileEnabled ?? true;
+    }
+    return true;
   }
 }
