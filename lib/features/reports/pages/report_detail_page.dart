@@ -221,8 +221,18 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
                               const SizedBox(height: 16),
                               ReportCommentsSection(
                                 count: _data.comments,
-                                reportId: _data.id,
                                 comments: _data.commentsList,
+                                onEdit: (commentId, newText) =>
+                                    ReportStore.instance.editComment(
+                                  reportId: _data.id,
+                                  commentId: commentId,
+                                  newText: newText,
+                                ),
+                                onDelete: (commentId) =>
+                                    ReportStore.instance.deleteComment(
+                                  reportId: _data.id,
+                                  commentId: commentId,
+                                ),
                               ),
                               // Réserve la place occupée par la barre de
                               // commentaire + la nav du bas, désormais en

@@ -10,6 +10,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
+import '../../features/actions/pages/actions_page.dart';
+import '../navigation/fast_page_route.dart';
 
 // Un bottom sheet standard doit recouvrir toute la page, y compris la
 // bottom bar de navigation — jamais laisser une bande vide/interactive en
@@ -29,13 +31,9 @@ Future<void> showMoreMenuSheet(BuildContext context) {
 }
 
 void _openActionTerrain(BuildContext context) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text('Campagnes organisées — module en cours de déploiement.'),
-      behavior: SnackBarBehavior.floating,
-      duration: Duration(seconds: 2),
-    ),
-  );
+  final navigator = Navigator.of(context);
+  navigator.pop();
+  navigator.push(fastFadeRoute<void>(const ActionsPage()));
 }
 
 class _MoreMenuEntry {

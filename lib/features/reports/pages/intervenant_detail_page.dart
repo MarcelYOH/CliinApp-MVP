@@ -405,8 +405,18 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
                         const SizedBox(height: CliinAppConstants.spacingL),
                         ReportCommentsSection(
                           count: _report.comments,
-                          reportId: _report.id,
                           comments: _report.commentsList,
+                          onEdit: (commentId, newText) =>
+                              ReportStore.instance.editComment(
+                            reportId: _report.id,
+                            commentId: commentId,
+                            newText: newText,
+                          ),
+                          onDelete: (commentId) =>
+                              ReportStore.instance.deleteComment(
+                            reportId: _report.id,
+                            commentId: commentId,
+                          ),
                         ),
                         // Réserve la place occupée par la barre de
                         // commentaire + la nav du bas, désormais en overlay

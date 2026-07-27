@@ -11,7 +11,6 @@ import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../models/report_comment_model.dart';
 import '../store/auth_store.dart';
-import '../store/report_store.dart';
 import 'report_card.dart' show buildReportImage, reportTimeAgoLabel;
 import 'package:cliinapp/features/auth/auth_guard.dart';
 
@@ -148,11 +147,18 @@ class _Stat extends StatelessWidget {
 class ReportCommentsSection extends StatelessWidget {
   final int count;
   final List<ReportComment> comments;
-  final String reportId;
+  // Callbacks injectables plutôt qu'un reportId figé — permet de réutiliser
+  // ce composant pour n'importe quel élément commentable (signalement,
+  // action terrain...) sans le coupler à ReportStore. L'appelant persiste
+  // le changement où il veut (ReportStore.editComment/deleteComment,
+  // ActionStore.editComment/deleteComment...).
+  final Future<void> Function(String commentId, String newText) onEdit;
+  final Future<void> Function(String commentId) onDelete;
   const ReportCommentsSection({
     super.key,
     required this.count,
-    required this.reportId,
+    required this.onEdit,
+    required this.onDelete,
     this.comments = const [],
   });
 
@@ -180,7 +186,7 @@ class ReportCommentsSection extends StatelessWidget {
           )
         else
           for (final c in comments) ...[
-            _CommentItem(comment: c, reportId: reportId),
+            _CommentItem(comment: c, onEdit: onEdit, onDelete: onDelete),
             const SizedBox(height: 12),
           ],
       ],
@@ -190,8 +196,13 @@ class ReportCommentsSection extends StatelessWidget {
 
 class _CommentItem extends StatefulWidget {
   final ReportComment comment;
-  final String reportId;
-  const _CommentItem({required this.comment, required this.reportId});
+  final Future<void> Function(String commentId, String newText) onEdit;
+  final Future<void> Function(String commentId) onDelete;
+  const _CommentItem({
+    required this.comment,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   @override
   State<_CommentItem> createState() => _CommentItemState();
@@ -295,11 +306,7 @@ class _CommentItemState extends State<_CommentItem> {
     if (newText == null || newText.isEmpty || newText == widget.comment.text) {
       return;
     }
-    await ReportStore.instance.editComment(
-      reportId: widget.reportId,
-      commentId: widget.comment.id,
-      newText: newText,
-    );
+    await widget.onEdit(widget.comment.id, newText);
   }
 
   Future<void> _confirmDelete(BuildContext context) async {
@@ -324,10 +331,7 @@ class _CommentItemState extends State<_CommentItem> {
       ),
     );
     if (confirmed != true) return;
-    await ReportStore.instance.deleteComment(
-      reportId: widget.reportId,
-      commentId: widget.comment.id,
-    );
+    await widget.onDelete(widget.comment.id);
   }
 
   @override

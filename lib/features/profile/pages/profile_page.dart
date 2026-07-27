@@ -17,6 +17,7 @@ import 'public_profile_page.dart';
 import 'mes_cas_signales_page.dart';
 import 'mes_prises_en_charge_page.dart';
 import 'mes_contributions_page.dart';
+import 'mes_favoris_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -480,6 +481,18 @@ class _ProfilePageState extends State<ProfilePage> {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const MesContributionsPage()),
+            ),
+          ),
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          _buildMenuItem(
+            context: context,
+            icon: Icons.bookmark_outline_rounded,
+            iconColor: CliinAppColors.primary,
+            title: 'Mes favoris',
+            subtitle: 'Actions terrain que vous avez mises en favori',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MesFavorisPage()),
             ),
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),

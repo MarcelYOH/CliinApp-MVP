@@ -6,6 +6,7 @@
 // ne jamais réimplémenter cette logique ailleurs.
 
 import 'package:flutter/material.dart';
+import '../../features/actions/models/action_model.dart';
 import '../../features/groups/pages/group_profile_page.dart';
 import '../../features/home/models/home_report_model.dart';
 import '../../features/profile/pages/public_profile_page.dart';
@@ -76,5 +77,26 @@ void openIntervenantProfile(BuildContext context, HomeReportModel report) {
     context,
     userId: intervenant.id,
     displayName: intervenant.name,
+  );
+}
+
+/// Ouvre le profil de l'organisateur d'une action terrain — profil de
+/// groupe si organisée au nom d'un groupe, sinon profil individuel. Ne fait
+/// rien si l'organisateur est anonyme (l'appelant doit déjà filtrer ce cas
+/// pour ne pas rendre le bloc "Organisé par" cliquable, ce guard n'est
+/// qu'une sécurité).
+void openActionOrganisateurProfile(BuildContext context, ActionModel action) {
+  if (action.isAnonyme) return;
+  if (action.organisateurEstGroupe) {
+    Navigator.push(
+      context,
+      fastFadeRoute<void>(GroupProfilePage(groupId: action.organisateurId)),
+    );
+    return;
+  }
+  _openIndividualProfile(
+    context,
+    userId: action.organisateurId,
+    displayName: action.organisateurNom,
   );
 }

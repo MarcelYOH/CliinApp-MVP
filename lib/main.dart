@@ -7,6 +7,7 @@ import 'core/utils/system_ui_helper.dart';
 import 'shared/store/report_store.dart';
 import 'shared/store/auth_store.dart';
 import 'shared/store/group_store.dart';
+import 'shared/store/action_store.dart';
 import 'features/home/pages/home_page.dart';
 
 Future<void> main() async {
@@ -26,6 +27,7 @@ Future<void> main() async {
   await ReportStore.instance.init();
   await AuthStore.instance.init();
   await GroupStore.instance.init();
+  await ActionStore.instance.init();
 
   runApp(const CliinApp());
 }
