@@ -6,10 +6,13 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/navigation/fast_page_route.dart';
+import '../../../shared/store/action_store.dart';
 import '../../../shared/store/group_store.dart';
 import '../../../shared/store/report_store.dart';
 import '../../../shared/widgets/report_card.dart' show buildReportImage;
+import '../../actions/models/action_model.dart';
 import '../../home/models/home_report_model.dart';
+import '../../profile/pages/mes_actions_page.dart';
 import '../../profile/pages/mes_cas_signales_page.dart';
 import '../../profile/pages/mes_prises_en_charge_page.dart';
 import '../models/group_model.dart';
@@ -29,15 +32,8 @@ class GroupManagementTab extends StatelessWidget {
   bool _isGroupCas(HomeReportModel r) => r.groupId == group.id;
   bool _isGroupPriseEnCharge(HomeReportModel r) =>
       r.intervenant?.groupName == group.nom;
-
-  void _showComingSoon(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Le module Actions Terrain arrive bientôt.'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
+  bool _isGroupAction(ActionModel a) =>
+      a.organisateurEstGroupe && a.organisateurId == group.id;
 
   void _showAllAdmins(BuildContext context, List<GroupMemberModel> admins) {
     showModalBottomSheet<void>(
@@ -136,6 +132,9 @@ class GroupManagementTab extends StatelessWidget {
         ReportStore.instance.reports.where(_isGroupCas).length;
     final prisesEnChargeCount =
         ReportStore.instance.reports.where(_isGroupPriseEnCharge).length;
+    // Compteur live depuis ActionStore — group.actionsCount est un champ
+    // statique du modèle (seuils de badge), pas une source à jour.
+    final actionsCount = ActionStore.instance.allActions.where(_isGroupAction).length;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(
@@ -205,8 +204,14 @@ class GroupManagementTab extends StatelessWidget {
               icon: Icons.bolt_rounded,
               color: CliinAppColors.levelOfficiel,
               label: 'Nos actions',
-              count: group.actionsCount,
-              onTap: () => _showComingSoon(context),
+              count: actionsCount,
+              onTap: () => Navigator.push(
+                context,
+                fastFadeRoute<void>(MesActionsPage(
+                  headerTitle: 'Nos actions',
+                  filterOverride: _isGroupAction,
+                )),
+              ),
             ),
           ]),
         ),

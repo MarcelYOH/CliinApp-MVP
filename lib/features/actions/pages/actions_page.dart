@@ -32,6 +32,15 @@ class _ActionsPageState extends State<ActionsPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
+  // Filtres combinables (logique ET) — même principe que
+  // GroupSearchPage : une valeur nullable par catégorie (null = pas de
+  // filtre actif), re-tap sur la valeur déjà sélectionnée la désélectionne.
+  // Proximité active par défaut pour préserver le comportement actuel de
+  // la page ("Actions à proximité").
+  ActionType? _selectedType;
+  ActionStatus? _selectedStatut;
+  bool _proximityActive = true;
+
   @override
   void initState() {
     super.initState();
@@ -85,11 +94,25 @@ class _ActionsPageState extends State<ActionsPage> {
     ));
   }
 
-  List<ActionModel> get _actionsAProximite {
+  // Filtres Type/Statut/Proximité combinés en ET, cohérent avec la logique
+  // déjà en place pour la recherche de groupes (GroupSearchPage) — une
+  // valeur nullable par catégorie, recherche texte toujours combinée en
+  // plus. La distance réutilise UserLocationService (même calcul que
+  // ActionCard/DynamicDistanceLabel), aucun Haversine ré-écrit ici.
+  List<ActionModel> get _filteredActions {
     final position = UserLocationService.instance.lastKnownPosition;
-    if (position == null) return const [];
-    var actions = ActionStore.instance
-        .getActionsAProximite(position.latitude, position.longitude);
+    if (_proximityActive && position == null) return const [];
+
+    var actions = ActionStore.instance.allActions.where((a) {
+      final matchesType = _selectedType == null || a.type == _selectedType;
+      final matchesStatut = _selectedStatut == null || a.statut == _selectedStatut;
+      final matchesProximity = !_proximityActive ||
+          ((UserLocationService.instance.distanceMetersTo(a.latitude, a.longitude) ??
+                  double.infinity) <=
+              2000);
+      return matchesType && matchesStatut && matchesProximity;
+    }).toList();
+
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase();
       actions = actions
@@ -99,12 +122,132 @@ class _ActionsPageState extends State<ActionsPage> {
               a.organisateurNom.toLowerCase().contains(q))
           .toList();
     }
+
+    if (_proximityActive) {
+      actions.sort((a, b) =>
+          (UserLocationService.instance.distanceMetersTo(a.latitude, a.longitude) ??
+                  double.infinity)
+              .compareTo(UserLocationService.instance
+                      .distanceMetersTo(b.latitude, b.longitude) ??
+                  double.infinity));
+    } else {
+      actions.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    }
     return actions;
+  }
+
+  bool get _hasActiveFilters =>
+      _selectedType != null || _selectedStatut != null || !_proximityActive;
+
+  void _toggleProximity() => setState(() => _proximityActive = !_proximityActive);
+
+  Future<void> _pickType() async {
+    final result = await _showSingleSelectSheet<ActionType>(
+      title: 'Type d\'action',
+      options: ActionType.values,
+      current: _selectedType,
+      labelBuilder: (t) => t.label,
+      iconBuilder: (t) => t.icon,
+      colorBuilder: (t) => t.color,
+    );
+    // null = feuille fermée sans choix (tap en dehors) — ne touche pas au
+    // filtre actif. _PickResult(null) = "Tous" tapé explicitement.
+    if (result != null) setState(() => _selectedType = result.value);
+  }
+
+  Future<void> _pickStatut() async {
+    final result = await _showSingleSelectSheet<ActionStatus>(
+      title: 'Statut',
+      options: ActionStatus.values,
+      current: _selectedStatut,
+      labelBuilder: (s) => s.label,
+      iconBuilder: (_) => Icons.flag_rounded,
+      colorBuilder: (s) => s.color,
+    );
+    if (result != null) setState(() => _selectedStatut = result.value);
+  }
+
+  // Sélecteur générique liste + coche — pas de composant équivalent
+  // existant à réutiliser (voir recherche). Retour enveloppé dans
+  // _PickResult pour distinguer "fermé sans choix" (null, filtre inchangé)
+  // de "Tous" tapé explicitement (_PickResult(null), filtre effacé).
+  Future<_PickResult<T>?> _showSingleSelectSheet<T>({
+    required String title,
+    required List<T> options,
+    required T? current,
+    required String Function(T) labelBuilder,
+    required IconData Function(T) iconBuilder,
+    required Color Function(T) colorBuilder,
+  }) {
+    return showModalBottomSheet<_PickResult<T>>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),
+        decoration: const BoxDecoration(
+          color: CliinAppColors.cardWhite,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(CliinAppConstants.radiusLarge),
+            topRight: Radius.circular(CliinAppConstants.radiusLarge),
+          ),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    CliinAppConstants.pagePadding, CliinAppConstants.spacingL,
+                    CliinAppConstants.pagePadding, CliinAppConstants.spacingM),
+                child: Text(title, style: CliinAppTextStyles.headingMedium.copyWith(fontSize: 16)),
+              ),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(horizontal: CliinAppConstants.pagePadding),
+                  itemCount: options.length,
+                  separatorBuilder: (_, _) =>
+                      const Divider(height: 1, color: CliinAppColors.divider),
+                  itemBuilder: (context, i) {
+                    final option = options[i];
+                    final selected = option == current;
+                    return InkWell(
+                      onTap: () => Navigator.pop(
+                          context, _PickResult<T>(selected ? null : option)),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Row(
+                          children: [
+                            Icon(iconBuilder(option), color: colorBuilder(option), size: 20),
+                            const SizedBox(width: CliinAppConstants.spacingM),
+                            Expanded(
+                              child: Text(labelBuilder(option),
+                                  style: CliinAppTextStyles.bodyMedium
+                                      .copyWith(color: CliinAppColors.textDark)),
+                            ),
+                            if (selected)
+                              const Icon(Icons.check_rounded,
+                                  color: CliinAppColors.primary, size: 20),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: CliinAppConstants.spacingS),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final actions = _actionsAProximite;
+    final actions = _filteredActions;
 
     return Scaffold(
       backgroundColor: CliinAppColors.background,
@@ -127,7 +270,8 @@ class _ActionsPageState extends State<ActionsPage> {
                   horizontal: CliinAppConstants.pagePadding),
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Actions à proximité',
+                child: Text(
+                    _proximityActive ? 'Actions à proximité' : 'Toutes les actions',
                     style: CliinAppTextStyles.headingSmall.copyWith(
                         fontSize: 14.5, fontWeight: FontWeight.bold)),
               ),
@@ -278,41 +422,73 @@ class _ActionsPageState extends State<ActionsPage> {
       child: Row(
         children: [
           _buildFilterChip(
-              icon: Icons.category_outlined, label: 'Type d\'action'),
+            icon: Icons.category_outlined,
+            label: _selectedType?.label ?? 'Type d\'action',
+            active: _selectedType != null,
+            onTap: _pickType,
+          ),
           const SizedBox(width: CliinAppConstants.spacingS),
           _buildFilterChip(
-              icon: Icons.flag_outlined, label: 'Statut'),
+            icon: Icons.flag_outlined,
+            label: _selectedStatut?.label ?? 'Statut',
+            active: _selectedStatut != null,
+            onTap: _pickStatut,
+          ),
           const SizedBox(width: CliinAppConstants.spacingS),
           _buildFilterChip(
-              icon: Icons.near_me_outlined, label: 'À proximité (0–2 km)'),
+            icon: Icons.near_me_outlined,
+            label: 'À proximité (0–2 km)',
+            active: _proximityActive,
+            showDropdownArrow: false,
+            onTap: _toggleProximity,
+          ),
           const SizedBox(width: CliinAppConstants.spacingS),
           _buildFilterChip(
-              icon: Icons.swap_vert_rounded, label: 'Trier'),
+            icon: Icons.swap_vert_rounded,
+            label: 'Trier',
+            active: false,
+            onTap: () => _showFilterComingSoon('Trier'),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildFilterChip({required IconData icon, required String label}) {
+  Widget _buildFilterChip({
+    required IconData icon,
+    required String label,
+    required bool active,
+    required VoidCallback onTap,
+    bool showDropdownArrow = true,
+  }) {
     return GestureDetector(
-      onTap: () => _showFilterComingSoon(label),
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: CliinAppColors.cardWhite,
+          color: active ? CliinAppColors.primaryLight : CliinAppColors.cardWhite,
           borderRadius: BorderRadius.circular(CliinAppConstants.radiusLarge),
-          border: Border.all(color: CliinAppColors.divider),
+          border: Border.all(
+              color: active ? CliinAppColors.primary : CliinAppColors.divider),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: CliinAppColors.textSecondary),
+            Icon(icon,
+                size: 16,
+                color: active ? CliinAppColors.primary : CliinAppColors.textSecondary),
             const SizedBox(width: 6),
             Text(label,
-                style: CliinAppTextStyles.bodySmall.copyWith(fontSize: 12)),
-            const SizedBox(width: 4),
-            const Icon(Icons.keyboard_arrow_down_rounded,
-                size: 16, color: CliinAppColors.textSecondary),
+                style: CliinAppTextStyles.bodySmall.copyWith(
+                    fontSize: 12,
+                    color: active ? CliinAppColors.primary : null,
+                    fontWeight: active ? FontWeight.w600 : null)),
+            if (showDropdownArrow) ...[
+              const SizedBox(width: 4),
+              Icon(Icons.keyboard_arrow_down_rounded,
+                  size: 16,
+                  color: active ? CliinAppColors.primary : CliinAppColors.textSecondary),
+            ],
           ],
         ),
       ),
@@ -320,7 +496,16 @@ class _ActionsPageState extends State<ActionsPage> {
   }
 
   Widget _buildEmptyState() {
-    final noPosition = UserLocationService.instance.lastKnownPosition == null;
+    final noPosition =
+        _proximityActive && UserLocationService.instance.lastKnownPosition == null;
+    final message = noPosition
+        ? 'Localisation en cours... les actions à proximité '
+            's\'afficheront dès que votre position sera connue.'
+        : (_hasActiveFilters
+            ? 'Aucune action ne correspond à ces filtres.'
+            : (_proximityActive
+                ? 'Aucune action à proximité pour le moment.'
+                : 'Aucune action pour le moment.'));
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(
@@ -335,10 +520,7 @@ class _ActionsPageState extends State<ActionsPage> {
             ),
             const SizedBox(height: CliinAppConstants.spacingM),
             Text(
-              noPosition
-                  ? 'Localisation en cours... les actions à proximité '
-                      's\'afficheront dès que votre position sera connue.'
-                  : 'Aucune action à proximité pour le moment.',
+              message,
               textAlign: TextAlign.center,
               style: CliinAppTextStyles.bodyMedium,
             ),
@@ -347,4 +529,11 @@ class _ActionsPageState extends State<ActionsPage> {
       ),
     );
   }
+}
+
+// Enveloppe le résultat du sélecteur mono-sélection pour distinguer "feuille
+// fermée sans choix" (null) de "Tous" tapé explicitement (_PickResult(null)).
+class _PickResult<T> {
+  final T? value;
+  const _PickResult(this.value);
 }

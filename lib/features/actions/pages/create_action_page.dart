@@ -42,7 +42,12 @@ class CreateActionPage extends StatefulWidget {
   // défaut, modifiable).
   final String? preselectedGroupId;
 
-  const CreateActionPage({super.key, this.preselectedGroupId});
+  // Renseigné = mode modification (formulaire pré-rempli depuis l'action
+  // existante, soumission via ActionStore.updateAction). Null = création —
+  // même principe que GroupFormPage (groupId == null → création).
+  final String? actionId;
+
+  const CreateActionPage({super.key, this.preselectedGroupId, this.actionId});
 
   @override
   State<CreateActionPage> createState() => _CreateActionPageState();
@@ -68,6 +73,8 @@ class _CreateActionPageState extends State<CreateActionPage> {
   ReportAttribution? _attribution;
   bool _isSubmitting = false;
 
+  bool get _isEditMode => widget.actionId != null;
+
   // Seule condition obligatoire à la publication — tout le reste du
   // formulaire est facultatif ou pré-rempli.
   bool get _canSubmit => _selectedType != null && !_isSubmitting;
@@ -91,6 +98,40 @@ class _CreateActionPageState extends State<CreateActionPage> {
   void initState() {
     super.initState();
     final user = AuthStore.instance.currentUser;
+
+    if (_isEditMode) {
+      final existing = ActionStore.instance.actionById(widget.actionId!);
+      if (existing != null) {
+        _selectedType = existing.type;
+        _selectedDate = existing.date;
+        _selectedTime = TimeOfDay(hour: existing.date.hour, minute: existing.date.minute);
+        _lieuController.text = existing.lieu;
+        _latitude = existing.latitude;
+        _longitude = existing.longitude;
+        _photoPath = existing.photoPath;
+        _descController.text = existing.description ?? '';
+        _communicationController.text = existing.besoinCommunication ?? '';
+        _benevolesController.text = existing.besoinBenevoles ?? '';
+        _financementController.text = existing.besoinFinancement ?? '';
+        _materielController.text = existing.besoinMateriel ?? '';
+        _selectedCasIds.addAll(existing.casPrisEnChargeIds);
+        // Reconstruit l'attribution depuis le modèle existant — organisateurId
+        // porte l'id du groupe quand organisateurEstGroupe, sinon l'id de
+        // l'organisateur individuel (même convention que _submit ci-dessous).
+        _attribution = ReportAttribution(
+          signaleParNom: existing.organisateurNom,
+          signaleParId: existing.organisateurEstGroupe
+              ? (user?.id ?? existing.organisateurId)
+              : existing.organisateurId,
+          groupId: existing.organisateurEstGroupe ? existing.organisateurId : null,
+          isAnonyme: existing.isAnonyme,
+        );
+      }
+      // Pas de détection GPS automatique en modification — le lieu existant
+      // est déjà connu, jamais écrasé silencieusement.
+      return;
+    }
+
     if (user != null) {
       if (widget.preselectedGroupId != null) {
         final group = GroupStore.instance.groupById(widget.preselectedGroupId!);
@@ -234,36 +275,77 @@ class _CreateActionPageState extends State<CreateActionPage> {
         _selectedTime.hour,
         _selectedTime.minute,
       );
-      final model = ActionModel(
-        id: '',
-        type: _selectedType!,
-        date: date,
-        lieu: _lieuController.text.trim(),
-        latitude: _latitude,
-        longitude: _longitude,
-        description:
-            _descController.text.trim().isEmpty ? null : _descController.text.trim(),
-        photoPath: _photoPath,
-        organisateurNom: attribution.signaleParNom,
-        organisateurId: attribution.groupId ?? attribution.signaleParId,
-        organisateurEstGroupe: attribution.groupId != null,
-        isAnonyme: attribution.isAnonyme,
-        casPrisEnChargeIds: _selectedCasIds.toList(),
-        createdAt: DateTime.now(),
-        besoinCommunication: _communicationController.text.trim().isEmpty
-            ? null
-            : _communicationController.text.trim(),
-        besoinBenevoles: _benevolesController.text.trim().isEmpty
-            ? null
-            : _benevolesController.text.trim(),
-        besoinFinancement: _financementController.text.trim().isEmpty
-            ? null
-            : _financementController.text.trim(),
-        besoinMateriel: _materielController.text.trim().isEmpty
-            ? null
-            : _materielController.text.trim(),
-      );
-      await ActionStore.instance.createAction(model);
+      final besoinCommunication = _communicationController.text.trim().isEmpty
+          ? null
+          : _communicationController.text.trim();
+      final besoinBenevoles = _benevolesController.text.trim().isEmpty
+          ? null
+          : _benevolesController.text.trim();
+      final besoinFinancement = _financementController.text.trim().isEmpty
+          ? null
+          : _financementController.text.trim();
+      final besoinMateriel = _materielController.text.trim().isEmpty
+          ? null
+          : _materielController.text.trim();
+      final description =
+          _descController.text.trim().isEmpty ? null : _descController.text.trim();
+
+      if (_isEditMode) {
+        final existing = ActionStore.instance.actionById(widget.actionId!)!;
+        // Construction directe (pas copyWith) — copyWith retombe sur l'ancienne
+        // valeur via `??` dès qu'un champ nullable est passé à null, ce qui
+        // empêcherait d'effacer une description/un besoin existant.
+        final updated = ActionModel(
+          id: existing.id,
+          type: _selectedType!,
+          date: date,
+          lieu: _lieuController.text.trim(),
+          latitude: _latitude,
+          longitude: _longitude,
+          description: description,
+          photoPath: _photoPath,
+          participantsCount: existing.participantsCount,
+          statut: existing.statut,
+          organisateurNom: attribution.signaleParNom,
+          organisateurId: attribution.groupId ?? attribution.signaleParId,
+          organisateurEstGroupe: attribution.groupId != null,
+          isAnonyme: attribution.isAnonyme,
+          casPrisEnChargeIds: _selectedCasIds.toList(),
+          createdAt: existing.createdAt,
+          viewsCount: existing.viewsCount,
+          commentsCount: existing.commentsCount,
+          sharesCount: existing.sharesCount,
+          viewedByUserIds: existing.viewedByUserIds,
+          commentsList: existing.commentsList,
+          besoinCommunication: besoinCommunication,
+          besoinBenevoles: besoinBenevoles,
+          besoinFinancement: besoinFinancement,
+          besoinMateriel: besoinMateriel,
+        );
+        await ActionStore.instance.updateAction(updated);
+      } else {
+        final model = ActionModel(
+          id: '',
+          type: _selectedType!,
+          date: date,
+          lieu: _lieuController.text.trim(),
+          latitude: _latitude,
+          longitude: _longitude,
+          description: description,
+          photoPath: _photoPath,
+          organisateurNom: attribution.signaleParNom,
+          organisateurId: attribution.groupId ?? attribution.signaleParId,
+          organisateurEstGroupe: attribution.groupId != null,
+          isAnonyme: attribution.isAnonyme,
+          casPrisEnChargeIds: _selectedCasIds.toList(),
+          createdAt: DateTime.now(),
+          besoinCommunication: besoinCommunication,
+          besoinBenevoles: besoinBenevoles,
+          besoinFinancement: besoinFinancement,
+          besoinMateriel: besoinMateriel,
+        );
+        await ActionStore.instance.createAction(model);
+      }
       if (mounted) Navigator.pop(context);
     } catch (_) {
       if (mounted) {
@@ -354,7 +436,7 @@ class _CreateActionPageState extends State<CreateActionPage> {
                 enabled: _canSubmit,
                 isSubmitting: _isSubmitting,
                 onPressed: _submit,
-                label: 'Publier l\'action',
+                label: _isEditMode ? 'Enregistrer les modifications' : 'Publier l\'action',
               ),
             ),
           ],
@@ -377,7 +459,8 @@ class _CreateActionPageState extends State<CreateActionPage> {
           CircleIconButton.back(onTap: () => Navigator.pop(context), size: 36, iconSize: 18),
           Expanded(
             child: Center(
-              child: Text('Créer une action', style: CliinAppTextStyles.headingMedium),
+              child: Text(_isEditMode ? 'Modifier l\'action' : 'Créer une action',
+                  style: CliinAppTextStyles.headingMedium),
             ),
           ),
           const SizedBox(width: 36),

@@ -381,7 +381,7 @@ class _GroupProfilePageState extends State<GroupProfilePage>
   Widget _buildTabContent(GroupModel group, bool isAdmin) {
     return switch (_selectedTab) {
       0 => GroupAboutTab(group: group, isAdmin: isAdmin),
-      1 => const GroupActivitiesTab(),
+      1 => GroupActivitiesTab(group: group),
       2 => GroupManagementTab(group: group, isAdmin: isAdmin),
       _ => const GroupChatTab(),
     };

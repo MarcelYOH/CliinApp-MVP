@@ -742,7 +742,7 @@ class _ActionDetailPageState extends State<ActionDetailPage> {
     return Container(
       width: double.infinity,
       color: CliinAppColors.cardWhite,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
