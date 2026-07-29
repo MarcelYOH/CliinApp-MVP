@@ -10,9 +10,9 @@ import 'package:geocoding/geocoding.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/utils/image_crop_picker.dart';
 import '../../../shared/models/report_category.dart';
 import '../../../shared/models/report_status.dart';
-import '../../../shared/navigation/fast_page_route.dart';
 import '../../../shared/store/action_store.dart';
 import '../../../shared/store/auth_store.dart';
 import '../../../shared/store/group_store.dart';
@@ -29,7 +29,6 @@ import '../../groups/widgets/group_form_fields.dart'
         buildGroupFormSubmitButton,
         GroupFormDashedRectPainter;
 import '../../home/models/home_report_model.dart' show HomeReportModel;
-import '../../reports/pages/report_camera_page.dart';
 import '../../reports/widgets/attribution_choice_sheet.dart';
 import '../models/action_model.dart';
 
@@ -199,20 +198,18 @@ class _CreateActionPageState extends State<CreateActionPage> {
   // Caméra unique de l'application, une seule image — pas de galerie
   // multi-photos (décision produit MVP) — même composant exact que la photo
   // de profil et la photo de groupe (replaceMode + isAvatarMode).
+  // Galerie directe + recadrage fiable (correction 9) — même helper que
+  // pour les photos de profil/couverture des groupes, format rectangulaire
+  // (pas de cadre circulaire, photo d'action = bannière).
   Future<void> _pickPhoto() async {
     try {
-      final path = await Navigator.push<String>(
-        context,
-        fastFadeRoute<String>(
-          const ReportCameraPage(replaceMode: true, isAvatarMode: true),
-        ),
-      );
+      final path = await pickAndCropImage(isCircular: false);
       if (path != null && mounted) setState(() => _photoPath = path);
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Impossible d\'accéder à la caméra.'),
+            content: Text('Impossible d\'accéder à la galerie.'),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -384,13 +381,10 @@ class _CreateActionPageState extends State<CreateActionPage> {
                       child: _buildPhotoPicker(),
                     ),
                     const SizedBox(height: CliinAppConstants.spacingL),
-                    Text(
-                      'Choisissez le type d\'action — même philosophie que '
-                      'Signaler : rapide, sans saisie libre.',
-                      style: CliinAppTextStyles.bodySmall.copyWith(fontSize: 12),
+                    buildGroupFormLabeledField(
+                      label: 'Choisissez une action terrain à organiser',
+                      child: _buildTypeGrid(),
                     ),
-                    const SizedBox(height: CliinAppConstants.spacingM),
-                    _buildTypeGrid(),
                     const SizedBox(height: CliinAppConstants.spacingL),
                     _buildDateHeureRow(),
                     const SizedBox(height: CliinAppConstants.spacingL),
@@ -791,9 +785,6 @@ class _CreateActionPageState extends State<CreateActionPage> {
       children: [
         Text('Besoins pour cette action (optionnel)',
             style: CliinAppTextStyles.headingSmall.copyWith(fontSize: 13)),
-        const SizedBox(height: 4),
-        Text('Court et concret — laissez vide ce qui ne s\'applique pas.',
-            style: CliinAppTextStyles.bodySmall.copyWith(fontSize: 11)),
         const SizedBox(height: CliinAppConstants.spacingM),
         _buildBesoinField('📢', 'Communication et mobilisation', _communicationController,
             'Ex : Relais sur les réseaux du quartier'),

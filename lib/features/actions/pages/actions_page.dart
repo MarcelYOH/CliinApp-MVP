@@ -35,11 +35,19 @@ class _ActionsPageState extends State<ActionsPage> {
   // Filtres combinables (logique ET) — même principe que
   // GroupSearchPage : une valeur nullable par catégorie (null = pas de
   // filtre actif), re-tap sur la valeur déjà sélectionnée la désélectionne.
-  // Proximité active par défaut pour préserver le comportement actuel de
-  // la page ("Actions à proximité").
+  // Proximité INACTIVE par défaut (Correction 5) : "sans action de
+  // l'utilisateur" doit afficher le tri par défaut (statut puis proximité,
+  // voir _filteredActions), jamais une liste restreinte à 2km ni vide en
+  // attendant le GPS. L'utilisateur peut toujours activer ce filtre manuel
+  // pour restreindre la liste à un rayon précis.
   ActionType? _selectedType;
   ActionStatus? _selectedStatut;
-  bool _proximityActive = true;
+  bool _proximityActive = false;
+  // Filtre manuel "Trier par date" (Correction 5) — restreint la liste à une
+  // date précise choisie via un date picker standard ; se combine en ET avec
+  // les 3 filtres ci-dessus. Indépendant du tri par défaut (voir
+  // _filteredActions).
+  DateTime? _selectedDateFilter;
 
   @override
   void initState() {
@@ -84,16 +92,6 @@ class _ActionsPageState extends State<ActionsPage> {
     );
   }
 
-  // Sélecteurs de filtre — implémentation sommaire pour ce lot, logique
-  // complète prévue plus tard.
-  void _showFilterComingSoon(String label) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('Filtre "$label" bientôt disponible.'),
-      behavior: SnackBarBehavior.floating,
-      duration: const Duration(seconds: 2),
-    ));
-  }
-
   // Filtres Type/Statut/Proximité combinés en ET, cohérent avec la logique
   // déjà en place pour la recherche de groupes (GroupSearchPage) — une
   // valeur nullable par catégorie, recherche texte toujours combinée en
@@ -110,7 +108,11 @@ class _ActionsPageState extends State<ActionsPage> {
           ((UserLocationService.instance.distanceMetersTo(a.latitude, a.longitude) ??
                   double.infinity) <=
               2000);
-      return matchesType && matchesStatut && matchesProximity;
+      final matchesDate = _selectedDateFilter == null ||
+          (a.date.year == _selectedDateFilter!.year &&
+              a.date.month == _selectedDateFilter!.month &&
+              a.date.day == _selectedDateFilter!.day);
+      return matchesType && matchesStatut && matchesProximity && matchesDate;
     }).toList();
 
     if (_searchQuery.isNotEmpty) {
@@ -123,23 +125,34 @@ class _ActionsPageState extends State<ActionsPage> {
           .toList();
     }
 
-    if (_proximityActive) {
-      actions.sort((a, b) =>
-          (UserLocationService.instance.distanceMetersTo(a.latitude, a.longitude) ??
-                  double.infinity)
-              .compareTo(UserLocationService.instance
-                      .distanceMetersTo(b.latitude, b.longitude) ??
-                  double.infinity));
-    } else {
-      actions.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    }
+    // Tri par défaut (Correction 5) — plus récemment publiées en premier,
+    // sans action de l'utilisateur ; indépendant du filtre manuel
+    // "Proximité (0-2km)" (qui ne fait plus que restreindre le rayon, voir
+    // matchesProximity ci-dessus).
+    actions.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return actions;
   }
 
   bool get _hasActiveFilters =>
-      _selectedType != null || _selectedStatut != null || !_proximityActive;
+      _selectedType != null ||
+      _selectedStatut != null ||
+      _proximityActive ||
+      _selectedDateFilter != null;
 
   void _toggleProximity() => setState(() => _proximityActive = !_proximityActive);
+
+  Future<void> _pickDateFilter() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDateFilter ?? now,
+      firstDate: DateTime(now.year - 1),
+      lastDate: DateTime(now.year + 2),
+    );
+    if (picked != null) setState(() => _selectedDateFilter = picked);
+  }
+
+  void _clearDateFilter() => setState(() => _selectedDateFilter = null);
 
   Future<void> _pickType() async {
     final result = await _showSingleSelectSheet<ActionType>(
@@ -325,7 +338,7 @@ class _ActionsPageState extends State<ActionsPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Actions',
+                  'Actions terrain',
                   style: CliinAppTextStyles.headingLarge.copyWith(
                     fontWeight: FontWeight.w800,
                     color: CliinAppColors.textDark,
@@ -443,12 +456,61 @@ class _ActionsPageState extends State<ActionsPage> {
             onTap: _toggleProximity,
           ),
           const SizedBox(width: CliinAppConstants.spacingS),
-          _buildFilterChip(
-            icon: Icons.swap_vert_rounded,
-            label: 'Trier',
-            active: false,
-            onTap: () => _showFilterComingSoon('Trier'),
+          _buildDateFilterChip(),
+        ],
+      ),
+    );
+  }
+
+  // Filtre "Trier par date" (Correction 5) — sélection d'une date précise
+  // via le date picker standard Flutter ; bouton de réinitialisation ("x")
+  // affiché à côté dès qu'une date est active, pour revenir facilement à la
+  // liste complète triée par défaut.
+  Widget _buildDateFilterChip() {
+    final active = _selectedDateFilter != null;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: active ? CliinAppColors.primaryLight : CliinAppColors.cardWhite,
+        borderRadius: BorderRadius.circular(CliinAppConstants.radiusLarge),
+        border: Border.all(
+            color: active ? CliinAppColors.primary : CliinAppColors.divider),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: _pickDateFilter,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.event_rounded,
+                    size: 16,
+                    color: active ? CliinAppColors.primary : CliinAppColors.textSecondary),
+                const SizedBox(width: 6),
+                Text(
+                  active ? formatActionDate(_selectedDateFilter!) : 'Trier par date',
+                  style: CliinAppTextStyles.bodySmall.copyWith(
+                      fontSize: 12,
+                      color: active ? CliinAppColors.primary : null,
+                      fontWeight: active ? FontWeight.w600 : null),
+                ),
+                if (!active) ...[
+                  const SizedBox(width: 4),
+                  const Icon(Icons.keyboard_arrow_down_rounded,
+                      size: 16, color: CliinAppColors.textSecondary),
+                ],
+              ],
+            ),
           ),
+          if (active) ...[
+            const SizedBox(width: 6),
+            GestureDetector(
+              onTap: _clearDateFilter,
+              child: const Icon(Icons.close_rounded,
+                  size: 16, color: CliinAppColors.primary),
+            ),
+          ],
         ],
       ),
     );

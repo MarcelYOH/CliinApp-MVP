@@ -34,10 +34,9 @@ class HomeDummyData {
 
   static const ActionBannerModel actionBanner = ActionBannerModel(
     badgeLabel: 'Agissons ensemble',
-    title: 'Rejoignez une\naction citoyenne',
+    title: 'Rejoignez une action citoyenne',
     description:
-        'Participer aux campagnes de nettoyage, de sensibilisation et autres actions citoyennes durables.',
-    buttonLabel: 'Voir les actions',
+        'Participez aux actions de nettoyage, de sensibilisation et à toutes les autres actions citoyennes durables organisées près de chez vous.',
     imageAsset: 'assets/images/action.jpg',
   );
 

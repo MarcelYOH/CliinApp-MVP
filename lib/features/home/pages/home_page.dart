@@ -36,6 +36,7 @@ import '../../groups/pages/group_search_page.dart';
 import '../../groups/data/groups_dummy_data.dart';
 import '../../auth/auth_guard.dart';
 import '../../profile/pages/profile_page.dart';
+import '../../actions/pages/actions_page.dart';
 
 // Salutation selon l'heure du téléphone :
 // 00h-11h59 -> Bonjour · 12h-17h59 -> Bon après-midi · 18h-23h59 -> Bonsoir
@@ -138,6 +139,12 @@ class _HomePageState extends State<HomePage> {
   List<GroupModel> _groupsActifsVitrine() {
     final real = GroupStore.instance.getGroupsActifsVitrine();
     return real.isEmpty ? GroupsDummyData.forSection('actifs') : real;
+  }
+
+  // Section "Actions terrain" de l'accueil ("Voir plus" + carte cliquable) :
+  // mène directement à la page dédiée du module (correction 1).
+  void _goToActionsTerrain() {
+    Navigator.push(context, fastFadeRoute<void>(const ActionsPage()));
   }
 
   void _goToMap({
@@ -317,7 +324,10 @@ class _HomePageState extends State<HomePage> {
         onTakeCharge: _onTakeCharge,
         onContact: _onContact,
       ),
-      HomeActionBanner(data: HomeDummyData.actionBanner, onTap: () {}),
+      HomeActionBanner(
+        data: HomeDummyData.actionBanner,
+        onTap: _goToActionsTerrain,
+      ),
       HomeGroups(
         groups: _groupsActifsVitrine(),
         onVoirTout: _goToGroupesActifs,

@@ -742,7 +742,12 @@ class _ActionDetailPageState extends State<ActionDetailPage> {
     return Container(
       width: double.infinity,
       color: CliinAppColors.cardWhite,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      // Correction 6 — le texte "🔒 Votre participation..." restait
+      // partiellement caché par la bottom bar : la marge basse fixe (16)
+      // ne tenait pas compte de l'inset système sous AppBottomNav (barre de
+      // geste/navigation Android), qui varie selon les appareils.
+      padding: EdgeInsets.fromLTRB(
+          16, 12, 16, 16 + MediaQuery.of(context).padding.bottom),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

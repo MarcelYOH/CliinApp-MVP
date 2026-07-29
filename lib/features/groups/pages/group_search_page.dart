@@ -204,53 +204,7 @@ class _GroupSearchPageState extends State<GroupSearchPage> {
             _buildHeader(context),
             _buildSearchBar(),
             const SizedBox(height: CliinAppConstants.spacingM),
-            _buildFilterRow(
-              label: 'Type',
-              children: GroupType.values.map((t) {
-                final selected = _selectedType == t;
-                return _buildPill(
-                  label: t.label,
-                  selected: selected,
-                  activeColor: CliinAppColors.primary,
-                  onTap: () => setState(() {
-                    _selectedType = selected ? null : t;
-                    _resetVisibleCount();
-                  }),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: CliinAppConstants.spacingM),
-            _buildFilterRow(
-              label: 'Niveau d\'impact',
-              children: _badgeCountOptions.map((count) {
-                final selected = _selectedBadgeCount == count;
-                return _buildPill(
-                  label: _badgeCountLabel(count),
-                  selected: selected,
-                  activeColor: CliinAppColors.primary,
-                  onTap: () => setState(() {
-                    _selectedBadgeCount = selected ? null : count;
-                    _resetVisibleCount();
-                  }),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: CliinAppConstants.spacingM),
-            _buildFilterRow(
-              label: 'Trier par',
-              children: [
-                _buildSortPill(
-                  label: 'Plus proches',
-                  icon: Icons.near_me_rounded,
-                  option: _SortOption.proches,
-                ),
-                _buildSortPill(
-                  label: 'Plus récents',
-                  icon: Icons.access_time_rounded,
-                  option: _SortOption.recents,
-                ),
-              ],
-            ),
+            _buildFiltersButton(),
             const SizedBox(height: CliinAppConstants.spacingL),
             Expanded(
               child: visibleResults.isEmpty
@@ -360,6 +314,185 @@ class _GroupSearchPageState extends State<GroupSearchPage> {
     );
   }
 
+  // Correction 7 — compte les filtres réellement actifs (Type, Niveau
+  // d'impact, Trier par) pour le badge du bouton "Filtres".
+  int get _activeFilterCount =>
+      (_selectedType != null ? 1 : 0) +
+      (_selectedBadgeCount != null ? 1 : 0) +
+      (_selectedSort != null ? 1 : 0);
+
+  // Bouton compact remplaçant les 3 rangées de filtres affichées en
+  // permanence (Correction 7) — ouvre _showFiltersSheet au tap, badge de
+  // comptage si au moins un filtre est actif.
+  Widget _buildFiltersButton() {
+    final count = _activeFilterCount;
+    final active = count > 0;
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+          horizontal: CliinAppConstants.pagePadding),
+      child: GestureDetector(
+        onTap: _showFiltersSheet,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+          decoration: BoxDecoration(
+            color: active ? CliinAppColors.primaryLight : CliinAppColors.cardWhite,
+            borderRadius: BorderRadius.circular(CliinAppConstants.radiusLarge),
+            border: Border.all(
+                color: active ? CliinAppColors.primary : CliinAppColors.divider),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.filter_list_rounded,
+                  size: 18,
+                  color: active ? CliinAppColors.primary : CliinAppColors.textSecondary),
+              const SizedBox(width: 6),
+              Text('Filtres',
+                  style: CliinAppTextStyles.bodySmall.copyWith(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: active ? CliinAppColors.primary : CliinAppColors.textDark)),
+              if (active) ...[
+                const SizedBox(width: 6),
+                Container(
+                  width: 18,
+                  height: 18,
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    color: CliinAppColors.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    '$count',
+                    style: CliinAppTextStyles.badge.copyWith(
+                        color: CliinAppColors.textWhite,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Bottom sheet regroupant les 3 catégories de filtres (Correction 7) —
+  // même contenu/logique que précédemment, seul l'emplacement d'affichage
+  // change. StatefulBuilder nécessaire pour que les pilules reflètent
+  // immédiatement la sélection dans le sheet (setState du State parent ne
+  // reconstruit pas, seul, la route du bottom sheet).
+  void _showFiltersSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setModalState) => Container(
+          constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(sheetContext).size.height * 0.85),
+          decoration: const BoxDecoration(
+            color: CliinAppColors.cardWhite,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(CliinAppConstants.radiusLarge),
+              topRight: Radius.circular(CliinAppConstants.radiusLarge),
+            ),
+          ),
+          child: SafeArea(
+            top: false,
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.only(
+                    bottom: CliinAppConstants.spacingL),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Center(
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(
+                            vertical: CliinAppConstants.spacingM),
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: CliinAppColors.divider,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: CliinAppConstants.pagePadding),
+                      child: Text('Filtres',
+                          style: CliinAppTextStyles.headingMedium.copyWith(fontSize: 16)),
+                    ),
+                    const SizedBox(height: CliinAppConstants.spacingM),
+                    _buildFilterRow(
+                      label: 'Type',
+                      children: GroupType.values.map((t) {
+                        final selected = _selectedType == t;
+                        return _buildPill(
+                          label: t.label,
+                          selected: selected,
+                          activeColor: CliinAppColors.primary,
+                          onTap: () {
+                            setState(() {
+                              _selectedType = selected ? null : t;
+                              _resetVisibleCount();
+                            });
+                            setModalState(() {});
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: CliinAppConstants.spacingM),
+                    _buildFilterRow(
+                      label: 'Niveau d\'impact',
+                      children: _badgeCountOptions.map((count) {
+                        final selected = _selectedBadgeCount == count;
+                        return _buildPill(
+                          label: _badgeCountLabel(count),
+                          selected: selected,
+                          activeColor: CliinAppColors.primary,
+                          onTap: () {
+                            setState(() {
+                              _selectedBadgeCount = selected ? null : count;
+                              _resetVisibleCount();
+                            });
+                            setModalState(() {});
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: CliinAppConstants.spacingM),
+                    _buildFilterRow(
+                      label: 'Trier par',
+                      children: [
+                        _buildSortPill(
+                          label: 'Plus proches',
+                          icon: Icons.near_me_rounded,
+                          option: _SortOption.proches,
+                          onChanged: () => setModalState(() {}),
+                        ),
+                        _buildSortPill(
+                          label: 'Plus récents',
+                          icon: Icons.access_time_rounded,
+                          option: _SortOption.recents,
+                          onChanged: () => setModalState(() {}),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildFilterRow({required String label, required List<Widget> children}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -428,13 +561,17 @@ class _GroupSearchPageState extends State<GroupSearchPage> {
     required String label,
     required IconData icon,
     required _SortOption option,
+    VoidCallback? onChanged,
   }) {
     final selected = _selectedSort == option;
     return GestureDetector(
-      onTap: () => setState(() {
-        _selectedSort = selected ? null : option;
-        _resetVisibleCount();
-      }),
+      onTap: () {
+        setState(() {
+          _selectedSort = selected ? null : option;
+          _resetVisibleCount();
+        });
+        onChanged?.call();
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(

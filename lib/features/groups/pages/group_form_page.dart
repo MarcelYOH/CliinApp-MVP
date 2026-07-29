@@ -13,14 +13,13 @@ import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/navigation/fast_page_route.dart';
 import '../../../shared/store/auth_store.dart';
 import '../../../shared/store/group_store.dart';
+import '../../../core/utils/image_crop_picker.dart';
 import '../../../shared/widgets/circle_icon_button.dart';
 import '../../../shared/widgets/gps_retry_button.dart';
-import '../../reports/pages/report_camera_page.dart';
 import '../models/group_model.dart';
 import '../widgets/add_admin_sheet.dart'
     show kGroupClassicPostes, kAutrePosteOption;
 import '../widgets/group_form_fields.dart';
-import 'group_photo_adjust_page.dart';
 import 'group_profile_page.dart';
 
 // Postes proposés au créateur — les postes classiques + "Autre..." (saisie
@@ -156,7 +155,10 @@ class _GroupFormPageState extends State<GroupFormPage> {
   // l'utilisateur (icône de localisation), écrase toujours le texte + les
   // coordonnées existantes.
   Future<void> _manualRedetectZone() async {
-    setState(() => _isDetectingZone = true);
+    setState(() {
+      _isDetectingZone = true;
+      _gpsFailed = false;
+    });
     try {
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
@@ -178,6 +180,7 @@ class _GroupFormPageState extends State<GroupFormPage> {
       }
     } catch (_) {
       if (mounted) {
+        setState(() => _gpsFailed = true);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
@@ -193,31 +196,19 @@ class _GroupFormPageState extends State<GroupFormPage> {
 
   Future<void> _pickPhoto() async {
     try {
-      final path = await Navigator.push<String>(
-        context,
-        fastFadeRoute<String>(
-          const ReportCameraPage(replaceMode: true, isAvatarMode: true),
-        ),
-      );
+      final path = await pickAndCropImage(isCircular: true);
       if (path == null || !mounted) return;
-      final alignY = await Navigator.push<double>(
-        context,
-        MaterialPageRoute<double>(
-          builder: (_) =>
-              GroupPhotoAdjustPage(imagePath: path, isCircular: true),
-        ),
-      );
-      if (mounted) {
-        setState(() {
-          _photoPath = path;
-          _photoAlignY = alignY ?? 0.0;
-        });
-      }
+      // Le recadrage produit déjà une image cadrée à la bonne proportion —
+      // plus besoin de réajustement vertical a posteriori (correction 9).
+      setState(() {
+        _photoPath = path;
+        _photoAlignY = 0.0;
+      });
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Impossible d\'accéder à la caméra.'),
+            content: Text('Impossible d\'accéder à la galerie.'),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -227,31 +218,17 @@ class _GroupFormPageState extends State<GroupFormPage> {
 
   Future<void> _pickBanner() async {
     try {
-      final path = await Navigator.push<String>(
-        context,
-        fastFadeRoute<String>(
-          const ReportCameraPage(replaceMode: true, isAvatarMode: true),
-        ),
-      );
+      final path = await pickAndCropImage(isCircular: false);
       if (path == null || !mounted) return;
-      final alignY = await Navigator.push<double>(
-        context,
-        MaterialPageRoute<double>(
-          builder: (_) =>
-              GroupPhotoAdjustPage(imagePath: path, isCircular: false),
-        ),
-      );
-      if (mounted) {
-        setState(() {
-          _bannerPath = path;
-          _bannerAlignY = alignY ?? 0.0;
-        });
-      }
+      setState(() {
+        _bannerPath = path;
+        _bannerAlignY = 0.0;
+      });
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Impossible d\'accéder à la caméra.'),
+            content: Text('Impossible d\'accéder à la galerie.'),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -390,7 +367,7 @@ class _GroupFormPageState extends State<GroupFormPage> {
                     ),
                     const SizedBox(height: CliinAppConstants.spacingL),
                     buildGroupFormLabeledField(
-                      label: 'Zone principale',
+                      label: 'Localisation',
                       helper: _isEditMode
                           ? 'Modifiable manuellement, ou relancez la détection GPS.'
                           : (_gpsFailed
@@ -424,11 +401,17 @@ class _GroupFormPageState extends State<GroupFormPage> {
                                       )
                                     : null),
                           ),
-                          if (!_isEditMode && _gpsFailed) ...[
+                          if (_gpsFailed) ...[
                             const SizedBox(height: 6),
                             GpsRetryButton(
                               isLoading: _isDetectingZone,
-                              onPressed: _autoDetectZone,
+                              // En modification, _autoDetectZone n'écrase
+                              // jamais un champ déjà rempli (voir sa garde
+                              // isEmpty) — la vraie action de "réessai" doit
+                              // donc passer par _manualRedetectZone, qui
+                              // écrase toujours le texte + les coordonnées.
+                              onPressed:
+                                  _isEditMode ? _manualRedetectZone : _autoDetectZone,
                             ),
                           ],
                         ],

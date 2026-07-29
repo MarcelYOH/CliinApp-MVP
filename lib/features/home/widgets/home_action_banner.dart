@@ -1,5 +1,5 @@
 // lib/features/home/widgets/home_action_banner.dart
-// Bannière Action Citoyenne — CliinApp
+// Section "Actions terrain" — page d'accueil — CliinApp
 
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
@@ -17,66 +17,95 @@ class HomeActionBanner extends StatelessWidget {
     this.onTap,
   });
 
-  static const Color _kGreenDark  = Color(0xFF1A6B2F);
-  static const Color _kGreenBadge = Color(0xFFE6F7EB);
-
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(
-        horizontal: CliinAppConstants.pagePadding,
-      ),
-      height: 192,
-      decoration: BoxDecoration(
-        color: CliinAppColors.cardWhite,
-        borderRadius: BorderRadius.circular(CliinAppConstants.radiusLarge),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.07),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(
+              horizontal: CliinAppConstants.pagePadding),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Actions terrain',
+                  style: CliinAppTextStyles.headingMedium
+                      .copyWith(color: CliinAppColors.textDark)),
+              GestureDetector(
+                onTap: onTap,
+                child: Row(children: [
+                  Text('Voir plus',
+                      style: CliinAppTextStyles.link.copyWith(fontSize: 13)),
+                  const SizedBox(width: 2),
+                  const Icon(Icons.chevron_right,
+                      color: CliinAppColors.primary, size: 18),
+                ]),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(CliinAppConstants.radiusLarge),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // ── IMAGE GAUCHE avec fondu ──
-            _buildImageSection(),
-
-            // ── CONTENU DROIT ──
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 14, 14, 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _buildBadge(),
-                    const SizedBox(height: 6),
-                    _buildTitle(),
-                    const SizedBox(height: 6),
-                    _buildDividerLine(),
-                    const SizedBox(height: 8),
-                    _buildDescription(),
-                    const SizedBox(height: 10),
-                    _buildButton(),
-                  ],
+        ),
+        const SizedBox(height: CliinAppConstants.spacingM),
+        Padding(
+          padding: const EdgeInsets.symmetric(
+              horizontal: CliinAppConstants.pagePadding),
+          child: GestureDetector(
+            onTap: onTap,
+            child: Container(
+              decoration: BoxDecoration(
+                color: CliinAppColors.cardWhite,
+                borderRadius: BorderRadius.circular(CliinAppConstants.radiusLarge),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.07),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(CliinAppConstants.radiusLarge),
+                // IntrinsicHeight : sans hauteur fixe, permet à la Row de
+                // dimensionner la photo (stretch) sur la hauteur réelle du
+                // contenu texte, quel que soit le nombre de lignes de la
+                // description (jamais tronquée, voir _buildDescription).
+                child: IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildImageSection(),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 14, 14, 14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildBadge(),
+                              const SizedBox(height: 6),
+                              _buildTitle(),
+                              const SizedBox(height: 6),
+                              _buildDividerLine(),
+                              const SizedBox(height: 8),
+                              _buildDescription(),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
   // ── Image gauche avec dégradé fondu vers droite ──
   Widget _buildImageSection() {
     return SizedBox(
-      width: 130,
+      width: 110,
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -110,18 +139,18 @@ class HomeActionBanner extends StatelessWidget {
     );
   }
 
-  // ── Badge pill 🍃 ──
+  // ── Badge pill 🌿 ──
   Widget _buildBadge() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: _kGreenBadge,
+        color: CliinAppColors.primaryLight,
         borderRadius: BorderRadius.circular(CliinAppConstants.radiusLarge),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.eco_rounded, color: Color(0xFF2DB84B), size: 14),
+          const Icon(Icons.eco_rounded, color: CliinAppColors.primary, size: 14),
           const SizedBox(width: 4),
           Text(
             data.badgeLabel,
@@ -141,21 +170,19 @@ class HomeActionBanner extends StatelessWidget {
     return Text(
       data.title,
       style: CliinAppTextStyles.headingMedium.copyWith(
-        fontSize: 15,
+        fontSize: 15.5,
         fontWeight: FontWeight.w800,
-        color: _kGreenDark,
+        color: CliinAppColors.primaryDark,
         height: 1.2,
       ),
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
     );
   }
 
   // ── Ligne décorative verte ──
   Widget _buildDividerLine() {
     return Container(
-      width: 28,
-      height: 2.5,
+      width: 36,
+      height: 3,
       decoration: BoxDecoration(
         color: CliinAppColors.primary,
         borderRadius: BorderRadius.circular(2),
@@ -163,7 +190,7 @@ class HomeActionBanner extends StatelessWidget {
     );
   }
 
-  // ── Description ──
+  // ── Description — jamais tronquée (Correction 1) ──
   Widget _buildDescription() {
     return Text(
       data.description,
@@ -171,51 +198,6 @@ class HomeActionBanner extends StatelessWidget {
         fontSize: 11,
         color: CliinAppColors.textSecondary,
         height: 1.4,
-      ),
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
-    );
-  }
-
-  // ── Bouton vert foncé compact ──
-  Widget _buildButton() {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: _kGreenDark,
-          borderRadius: BorderRadius.circular(CliinAppConstants.radiusLarge),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 22,
-              height: 22,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.18),
-                shape: BoxShape.circle,
-              ),
-              child: const Center(
-                child: Icon(Icons.eco_rounded, color: Colors.white, size: 14),
-              ),
-            ),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                data.buttonLabel,
-                style: CliinAppTextStyles.button.copyWith(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: 4),
-            const Icon(Icons.chevron_right, color: Colors.white, size: 16),
-          ],
-        ),
       ),
     );
   }

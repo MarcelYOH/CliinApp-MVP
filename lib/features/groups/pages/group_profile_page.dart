@@ -372,7 +372,22 @@ class _GroupProfilePageState extends State<GroupProfilePage>
               ],
             ),
           ),
-          Expanded(child: _buildTabContent(group, isAdmin)),
+          Expanded(
+            child: Padding(
+              // Correction 10 — la barre "Aperçu public / Revenir" flotte en
+              // overlay (Positioned) par-dessus le panel, sans que le
+              // contenu scrollable de l'onglet actif ne le sache : réserve
+              // ici la place qu'elle occupe (hauteur estimée généreuse +
+              // inset système) pour qu'aucune information ne reste jamais
+              // masquée dessous, quel que soit l'onglet consulté.
+              padding: EdgeInsets.only(
+                bottom: _previewingAsPublic
+                    ? 88 + MediaQuery.of(context).padding.bottom
+                    : 0,
+              ),
+              child: _buildTabContent(group, isAdmin),
+            ),
+          ),
         ],
       ),
     );
