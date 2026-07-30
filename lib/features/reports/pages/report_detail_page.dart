@@ -10,7 +10,7 @@ import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../features/home/models/home_report_model.dart';
 import '../../../shared/navigation/profile_navigation.dart';
 import '../../../shared/widgets/report_card.dart'
-    show buildReportImage, reportTimeAgoLabel, copyReportCode, DynamicDistanceLabel;
+    show buildReportImage, reportTimeAgoLabel, copyReportCode, DynamicDistanceLabel, showFullAddressSheet;
 import '../../../shared/widgets/report_action_zone.dart';
 import '../../../shared/widgets/public_view_link_button.dart';
 import '../../../shared/store/auth_store.dart';
@@ -334,8 +334,7 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          CircleIconButton(
-            icon: Icons.ios_share_rounded,
+          CircleIconButton.share(
             onTap: _onShare,
             size: 38,
             iconSize: 18,
@@ -407,27 +406,30 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
 
   // ── Localisation ─────────────────────────────────────────────
   Widget _buildLocationRow() {
-    return Row(
-      children: [
-        const Icon(
-          Icons.location_on_rounded,
-          color: CliinAppColors.primary,
-          size: 13,
-        ),
-        const SizedBox(width: 4),
-        Expanded(
-          child: Text(
-            _data.location,
-            style: CliinAppTextStyles.bodySmall.copyWith(
-              color: CliinAppColors.primary,
-              fontWeight: FontWeight.w500,
-              fontSize: 12.5,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+    return GestureDetector(
+      onTap: () => showFullAddressSheet(context, address: _data.location),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.location_on_rounded,
+            color: CliinAppColors.primary,
+            size: 13,
           ),
-        ),
-      ],
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              _data.location,
+              style: CliinAppTextStyles.bodySmall.copyWith(
+                color: CliinAppColors.primary,
+                fontWeight: FontWeight.w500,
+                fontSize: 12.5,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

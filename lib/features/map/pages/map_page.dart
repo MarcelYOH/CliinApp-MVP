@@ -128,6 +128,21 @@ class _MapPageState extends State<MapPage> {
           .toList()
         ..sort((a, b) => a.meters!.compareTo(b.meters!));
       var filtered = result.map((e) => e.report).toList();
+
+      // Complément recherche texte (Correction 6) — le géocodage peut
+      // réussir sur une correspondance approximative/hors zone réelle pour
+      // un lieu peu référencé ; ajoute (sans doublon) les cas Disponibles
+      // dont l'adresse/description/titre correspond réellement au terme
+      // recherché, même hors du rayon de 2km, plutôt que de les faire
+      // disparaître silencieusement.
+      if (_searchQuery.isNotEmpty) {
+        final textMatches = ReportStore.instance.mapReports
+            .where((r) => r.status == ReportStatus.disponible)
+            .where((r) => matchesReportSearch(r, _searchQuery))
+            .where((r) => !filtered.any((f) => f.id == r.id));
+        filtered = [...filtered, ...textMatches];
+      }
+
       if (_filters.categories.isNotEmpty) {
         filtered =
             filtered.where((r) => _filters.categories.contains(r.category)).toList();
@@ -288,7 +303,13 @@ class _MapPageState extends State<MapPage> {
           _zoneCenter = (lat: loc.latitude, lng: loc.longitude);
           _proximityModeActive = true;
           _searchedZoneLabel = query;
-          _searchQuery = '';
+          // Conservé (pas vidé) — Correction 6 : le géocodage peut réussir
+          // sur une correspondance approximative pour un lieu peu référencé
+          // (ex: un petit quartier) ; la recherche texte reste appliquée en
+          // COMPLÉMENT du rayon de 2km dans _filteredReports, pour que les
+          // cas dont l'adresse/description contient réellement le terme
+          // recherché ne disparaissent jamais silencieusement.
+          _searchQuery = query;
         });
         return;
       }

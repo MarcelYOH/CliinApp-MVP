@@ -14,6 +14,7 @@ import 'report_camera_page.dart';
 import 'report_detail_page.dart';
 import '../../../../shared/navigation/fast_page_route.dart';
 import '../../../../shared/store/report_store.dart';
+import '../../../../shared/widgets/circle_icon_button.dart';
 import '../../../../features/home/models/home_report_model.dart' as home;
 
 class ReportSuccessPage extends StatefulWidget {
@@ -204,19 +205,8 @@ class _ReportSuccessPageState extends State<ReportSuccessPage>
           CliinAppConstants.spacingM),
       child: Row(
         children: [
-          GestureDetector(
+          CircleIconButton.back(
             onTap: () => _goHome(context),
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: CliinAppColors.primaryLight,
-                borderRadius:
-                    BorderRadius.circular(CliinAppConstants.radiusMedium),
-              ),
-              child: const Icon(Icons.arrow_back,
-                  color: CliinAppColors.primary, size: 20),
-            ),
           ),
           Expanded(
             child: Text('Cas signalé publié !',

@@ -56,7 +56,7 @@ class _MoreMenuSheet extends StatelessWidget {
   static const List<_MoreMenuEntry> _entries = [
     _MoreMenuEntry(
       icon: Icons.bolt_rounded,
-      label: 'Voir actions terrain',
+      label: 'Voir les actions terrain',
       onTap: _openActionTerrain,
     ),
   ];

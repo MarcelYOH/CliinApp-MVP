@@ -11,6 +11,7 @@ import '../../../shared/store/auth_store.dart';
 import '../../../shared/store/group_store.dart';
 import '../../../shared/store/report_store.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
+import '../../../shared/widgets/circle_icon_button.dart';
 import '../../../shared/widgets/group_badge_chip.dart';
 import '../../../shared/widgets/report_card.dart'
     show buildReportImage, openFullScreenPhoto;
@@ -417,10 +418,8 @@ class _GroupProfilePageState extends State<GroupProfilePage>
                 CliinAppConstants.pagePadding,
                 12,
               ),
-              child: GestureDetector(
+              child: CircleIconButton.back(
                 onTap: () => Navigator.pop(context),
-                child: const Icon(Icons.arrow_back_rounded,
-                    color: CliinAppColors.textDark, size: 24),
               ),
             ),
             Expanded(
@@ -468,7 +467,7 @@ class _GroupProfilePageState extends State<GroupProfilePage>
             top: MediaQuery.of(context).padding.top + 12,
             right: 16,
             child: _circleIconButton(
-              icon: Icons.share_outlined,
+              icon: Icons.share,
               onTap: () => _share(group),
             ),
           ),

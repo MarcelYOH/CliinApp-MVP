@@ -6,6 +6,7 @@ import '../data/report_dummy_data.dart';
 import '../widgets/report_stepper.dart';
 import '../widgets/report_image_view.dart';
 import 'report_form_page.dart';
+import '../../../../shared/widgets/circle_icon_button.dart';
 
 // ─────────────────────────────────────────
 // Page — ReportPreviewPage
@@ -229,19 +230,8 @@ class _ReportPreviewPageState extends State<ReportPreviewPage> {
       ),
       child: Row(
         children: [
-          GestureDetector(
+          CircleIconButton.back(
             onTap: () => Navigator.pop(context),
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: CliinAppColors.primaryLight,
-                borderRadius:
-                    BorderRadius.circular(CliinAppConstants.radiusMedium),
-              ),
-              child: const Icon(Icons.arrow_back,
-                  color: CliinAppColors.primary, size: 20),
-            ),
           ),
           Expanded(
             child: Text(

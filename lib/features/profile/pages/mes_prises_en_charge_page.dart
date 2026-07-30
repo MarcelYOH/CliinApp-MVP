@@ -28,10 +28,13 @@ extension _TakeoverStatusExt on _TakeoverStatus {
     }
   }
 
+  // Fond plein et vif pour En cours/Traité (Correction 8, cohérent avec
+  // ReportStatus) — Abandonné/Rejeté hors périmètre de cette correction,
+  // conservent leur teinte pâle neutre existante.
   Color get color {
     switch (this) {
-      case _TakeoverStatus.enCours:    return const Color(0xFFFF9800);
-      case _TakeoverStatus.traite:     return const Color(0xFFE53935);
+      case _TakeoverStatus.enCours:    return CliinAppColors.textWhite;
+      case _TakeoverStatus.traite:     return CliinAppColors.textWhite;
       case _TakeoverStatus.abandonne:  return const Color(0xFF9E9E9E);
       case _TakeoverStatus.rejete:     return const Color(0xFF9C27B0);
     }
@@ -39,8 +42,8 @@ extension _TakeoverStatusExt on _TakeoverStatus {
 
   Color get bgColor {
     switch (this) {
-      case _TakeoverStatus.enCours:    return const Color(0xFFFFF3E0);
-      case _TakeoverStatus.traite:     return const Color(0xFFFFEBEE);
+      case _TakeoverStatus.enCours:    return CliinAppColors.alertOrange;
+      case _TakeoverStatus.traite:     return CliinAppColors.alertRed;
       case _TakeoverStatus.abandonne:  return const Color(0xFFF5F5F5);
       case _TakeoverStatus.rejete:     return const Color(0xFFF3E5F5);
     }

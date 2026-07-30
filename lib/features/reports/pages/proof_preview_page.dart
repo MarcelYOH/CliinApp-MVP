@@ -13,6 +13,7 @@ import '../../../../features/home/models/home_report_model.dart';
 import 'proof_camera_page.dart';
 import 'proof_upload_page.dart';
 import '../../../../shared/navigation/fast_page_route.dart';
+import '../../../../shared/widgets/circle_icon_button.dart';
 
 class ProofPreviewPage extends StatelessWidget {
   final HomeReportModel report;
@@ -85,17 +86,8 @@ class ProofPreviewPage extends StatelessWidget {
                   CliinAppConstants.pagePadding,
                   CliinAppConstants.spacingM),
               child: Row(children: [
-                GestureDetector(
+                CircleIconButton.back(
                   onTap: () => Navigator.pop(context),
-                  child: Container(
-                    width: 40, height: 40,
-                    decoration: BoxDecoration(
-                      color: CliinAppColors.primaryLight,
-                      borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
-                    ),
-                    child: const Icon(Icons.arrow_back,
-                        color: CliinAppColors.primary, size: 20),
-                  ),
                 ),
                 const SizedBox(width: CliinAppConstants.spacingM),
                 Text('Aperçu de la preuve',

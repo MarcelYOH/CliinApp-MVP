@@ -9,6 +9,7 @@ import '../../../core/utils/user_location_service.dart';
 import '../../../shared/navigation/fast_page_route.dart';
 import '../../../shared/navigation/tab_navigation.dart';
 import '../../../shared/store/action_store.dart';
+import '../../../shared/utils/search_helper.dart';
 import '../../../shared/widgets/action_card.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../auth/auth_guard.dart';
@@ -115,15 +116,12 @@ class _ActionsPageState extends State<ActionsPage> {
       return matchesType && matchesStatut && matchesProximity && matchesDate;
     }).toList();
 
-    if (_searchQuery.isNotEmpty) {
-      final q = _searchQuery.toLowerCase();
-      actions = actions
-          .where((a) =>
-              a.type.label.toLowerCase().contains(q) ||
-              a.lieu.toLowerCase().contains(q) ||
-              a.organisateurNom.toLowerCase().contains(q))
-          .toList();
-    }
+    // Recherche texte unique et réutilisable (Correction 6) — titre/type,
+    // description, lieu de l'action.
+    actions = actions
+        .where((a) =>
+            matchesSearch(_searchQuery, [a.type.label, a.description, a.lieu]))
+        .toList();
 
     // Tri par défaut (Correction 5) — plus récemment publiées en premier,
     // sans action de l'utilisateur ; indépendant du filtre manuel

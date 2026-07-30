@@ -14,9 +14,16 @@ import '../constants/app_colors.dart';
 // Retourne le chemin de l'image recadrée, ou null si l'utilisateur annule
 // à n'importe quelle étape.
 Future<String?> pickAndCropImage({required bool isCircular}) async {
+  // maxWidth/maxHeight forcent un redimensionnement à la décodification
+  // (côté plateforme, avant que l'image n'atteigne l'écran de recadrage) —
+  // sans ça, une photo de galerie haute résolution (12+ Mpx, courant sur
+  // smartphone récent) peut saturer la mémoire de l'écran de recadrage sur
+  // un appareil peu puissant et provoquer la fermeture de l'application.
   final picked = await ImagePicker().pickImage(
     source: ImageSource.gallery,
     imageQuality: 90,
+    maxWidth: 1920,
+    maxHeight: 1920,
   );
   if (picked == null) return null;
 

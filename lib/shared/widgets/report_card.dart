@@ -230,6 +230,77 @@ Future<void> copyReportCode(BuildContext context, String reference) async {
 }
 
 // ─────────────────────────────────────────────────────────────────
+// ADRESSE COMPLÈTE — bottom sheet ouverte au tap sur un champ "Lieu"/
+// "Adresse" tronqué (grille infos clés Actions, en-tête Signalements...)
+// ─────────────────────────────────────────────────────────────────
+
+void showFullAddressSheet(BuildContext context, {required String address}) {
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: CliinAppColors.cardWhite,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(
+          top: Radius.circular(CliinAppConstants.radiusMedium + 4)),
+    ),
+    builder: (_) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+            CliinAppConstants.pagePadding,
+            CliinAppConstants.spacingM,
+            CliinAppConstants.pagePadding,
+            CliinAppConstants.pagePadding),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: CliinAppColors.divider,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: CliinAppConstants.spacingL),
+            Row(children: [
+              const Icon(Icons.location_on_rounded,
+                  color: CliinAppColors.primary, size: 20),
+              const SizedBox(width: CliinAppConstants.spacingS),
+              Text('Adresse complète', style: CliinAppTextStyles.headingSmall),
+            ]),
+            const SizedBox(height: CliinAppConstants.spacingM),
+            Text(address,
+                style: CliinAppTextStyles.bodyMedium
+                    .copyWith(color: CliinAppColors.textDark, height: 1.5)),
+            const SizedBox(height: CliinAppConstants.spacingL),
+            // Carte pas encore branchée pour cibler un point précis (action
+            // ou signalement) — bouton visible mais désactivé en attendant.
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: null,
+                icon: const Icon(Icons.map_outlined, size: 18),
+                label: const Text('Voir sur la carte'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: CliinAppColors.textSecondary,
+                  side: const BorderSide(color: CliinAppColors.divider),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(CliinAppConstants.radiusMedium)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
 // SECTION PHOTO
 // ─────────────────────────────────────────────────────────────────
 
@@ -689,10 +760,9 @@ class _CardFooter extends StatelessWidget {
                   data.comments > 1 ? 'Commentaires' : 'Commentaire'),
           _FooterDivider(),
           _FooterStat(
-              icon: Icons.reply_rounded,
+              icon: Icons.share,
               value: data.shares,
-              label: 'Partages',
-              mirror: true),
+              label: 'Partages'),
         ]),
       );
 }
@@ -701,26 +771,16 @@ class _FooterStat extends StatelessWidget {
   final IconData icon;
   final int value;
   final String label;
-  final bool mirror;
   const _FooterStat(
       {required this.icon,
       required this.value,
-      required this.label,
-      this.mirror = false});
+      required this.label});
 
   @override
   Widget build(BuildContext context) => Expanded(
         child: Column(children: [
           Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Transform(
-              alignment: Alignment.center,
-              transform: mirror
-                  ? (Matrix4.identity()
-                    ..scaleByDouble(-1.0, 1.0, 1.0, 1.0))
-                  : Matrix4.identity(),
-              child:
-                  Icon(icon, size: 18, color: CliinAppColors.textDark),
-            ),
+            Icon(icon, size: 18, color: CliinAppColors.textDark),
             const SizedBox(width: 5),
             Text('$value',
                 style: CliinAppTextStyles.bodySmall.copyWith(

@@ -9,11 +9,12 @@ import '../../../../core/constants/app_text_styles.dart';
 import '../../../../shared/store/auth_store.dart';
 import '../../../../shared/store/group_store.dart';
 import '../../../../shared/store/report_store.dart';
+import '../../../../shared/widgets/circle_icon_button.dart';
 import '../../../../shared/widgets/report_action_zone.dart';
 import '../../../../shared/widgets/report_stats_comments.dart';
 import '../../../../shared/widgets/public_view_link_button.dart';
 import '../../../../shared/widgets/report_card.dart'
-    show buildReportImage, DynamicDistanceLabel, copyReportCode;
+    show buildReportImage, DynamicDistanceLabel, copyReportCode, showFullAddressSheet;
 import '../../../../shared/widgets/app_bottom_nav.dart';
 import '../../../../shared/widgets/phone_country_field.dart';
 import '../../../../shared/navigation/tab_navigation.dart';
@@ -645,23 +646,8 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
       ),
       child: Row(
         children: [
-          GestureDetector(
+          CircleIconButton.back(
             onTap: () => Navigator.pop(context),
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: CliinAppColors.primaryLight,
-                borderRadius: BorderRadius.circular(
-                  CliinAppConstants.radiusMedium,
-                ),
-              ),
-              child: const Icon(
-                Icons.arrow_back,
-                color: CliinAppColors.primary,
-                size: 20,
-              ),
-            ),
           ),
           Expanded(
             child: Text(
@@ -1326,26 +1312,30 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.location_on_rounded,
-                      color: CliinAppColors.primary,
-                      size: 12,
-                    ),
-                    const SizedBox(width: 2),
-                    Expanded(
-                      child: Text(
-                        _report.location,
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          color: CliinAppColors.primary,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                GestureDetector(
+                  onTap: () => showFullAddressSheet(context,
+                      address: _report.location),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.location_on_rounded,
+                        color: CliinAppColors.primary,
+                        size: 12,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 2),
+                      Expanded(
+                        child: Text(
+                          _report.location,
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            color: CliinAppColors.primary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -1787,6 +1777,9 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
                         icon: Icons.location_on_outlined,
                         label: 'Localisation',
                         value: _report.location,
+                        onTap: () => showFullAddressSheet(context,
+                            address: _report.location),
+                        tapIcon: Icons.open_in_full_rounded,
                       ),
                     ),
                   ],
@@ -1973,12 +1966,17 @@ class _InfoTile extends StatelessWidget {
   final String value;
   final Color? valueColor;
   final VoidCallback? onTap;
+  // Icône affichée à côté de la valeur quand [onTap] est fourni — copie par
+  // défaut (référence), remplaçable pour un tap qui ouvre autre chose
+  // qu'une copie presse-papier (ex: adresse complète, Correction 9).
+  final IconData tapIcon;
   const _InfoTile({
     required this.icon,
     required this.label,
     required this.value,
     this.valueColor,
     this.onTap,
+    this.tapIcon = Icons.copy_rounded,
   });
 
   @override
@@ -2021,8 +2019,8 @@ class _InfoTile extends StatelessWidget {
             ),
             if (tappable) ...[
               const SizedBox(width: 4),
-              const Icon(
-                Icons.copy_rounded,
+              Icon(
+                tapIcon,
                 size: 12,
                 color: CliinAppColors.primary,
               ),

@@ -48,7 +48,7 @@ class CircleIconButton extends StatelessWidget {
     this.iconSize = 20,
     this.backgroundColor = CliinAppColors.primary,
     this.iconColor = CliinAppColors.textWhite,
-  }) : icon = Icons.share_outlined;
+  }) : icon = Icons.share;
 
   @override
   Widget build(BuildContext context) {

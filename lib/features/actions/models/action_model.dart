@@ -93,19 +93,21 @@ extension ActionStatusExt on ActionStatus {
     }
   }
 
+  // Fond plein et vif (couleur solide, pas de teinte pâle) pour rester
+  // lisible en plein soleil — le texte du badge (color) est donc blanc.
   Color get bgColor {
     switch (this) {
-      case ActionStatus.aVenir:   return CliinAppColors.primaryLight;
-      case ActionStatus.enCours:  return CliinAppColors.primaryLight;
-      case ActionStatus.terminee: return CliinAppColors.divider;
+      case ActionStatus.aVenir:   return CliinAppColors.primary;
+      case ActionStatus.enCours:  return CliinAppColors.primary;
+      case ActionStatus.terminee: return CliinAppColors.textSecondary;
     }
   }
 
   Color get color {
     switch (this) {
-      case ActionStatus.aVenir:   return CliinAppColors.primary;
-      case ActionStatus.enCours:  return CliinAppColors.primary;
-      case ActionStatus.terminee: return CliinAppColors.textSecondary;
+      case ActionStatus.aVenir:   return CliinAppColors.textWhite;
+      case ActionStatus.enCours:  return CliinAppColors.textWhite;
+      case ActionStatus.terminee: return CliinAppColors.textWhite;
     }
   }
 }

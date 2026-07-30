@@ -12,6 +12,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/utils/user_location_service.dart';
 import '../models/report_model.dart';
 import '../../../../shared/store/report_store.dart';
+import '../../../../shared/widgets/circle_icon_button.dart';
 import '../../../../shared/widgets/report_card.dart' show buildReportImage;
 import '../../../../features/home/models/home_report_model.dart';
 import '../data/report_dummy_data.dart';
@@ -361,19 +362,10 @@ class _ReportFormPageState extends State<ReportFormPage> {
           CliinAppConstants.spacingS),
       child: Row(
         children: [
-          GestureDetector(
+          CircleIconButton.back(
             onTap: () => Navigator.pop(context),
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: CliinAppColors.primaryLight,
-                borderRadius:
-                    BorderRadius.circular(CliinAppConstants.radiusMedium),
-              ),
-              child: const Icon(Icons.arrow_back,
-                  color: CliinAppColors.primary, size: 18),
-            ),
+            size: 38,
+            iconSize: 18,
           ),
           Expanded(
             child: Text(

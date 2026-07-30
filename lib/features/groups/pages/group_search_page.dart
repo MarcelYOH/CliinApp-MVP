@@ -15,6 +15,7 @@ import '../../../shared/navigation/fast_page_route.dart';
 import '../../../shared/navigation/tab_navigation.dart';
 import '../../../shared/store/auth_store.dart';
 import '../../../shared/store/group_store.dart';
+import '../../../shared/utils/search_helper.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/widgets/circle_icon_button.dart';
 import '../../../shared/widgets/group_card.dart';
@@ -160,10 +161,10 @@ class _GroupSearchPageState extends State<GroupSearchPage> {
     // (exactement 3, jamais mélangées à de vraies données, correction 3).
     if (base.isEmpty) return GroupsDummyData.forSection(widget.origine);
 
-    final normalizedQuery = _searchQuery.trim().toLowerCase();
     final filtered = base.where((g) {
-      final matchesQuery = normalizedQuery.isEmpty ||
-          g.nom.toLowerCase().contains(normalizedQuery);
+      // Recherche texte unique et réutilisable (Correction 6) — nom,
+      // description, zone du groupe.
+      final matchesQuery = matchesSearch(_searchQuery, [g.nom, g.description, g.zone]);
       final matchesType = _selectedType == null || g.type == _selectedType;
       final matchesBadges = _selectedBadgeCount == null ||
           g.badges.length == _selectedBadgeCount;

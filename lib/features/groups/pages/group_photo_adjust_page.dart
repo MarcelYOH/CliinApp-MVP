@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../shared/widgets/circle_icon_button.dart';
 import '../../../shared/widgets/report_card.dart' show buildReportImage;
 
 class GroupPhotoAdjustPage extends StatefulWidget {
@@ -167,19 +168,8 @@ class _GroupPhotoAdjustPageState extends State<GroupPhotoAdjustPage> {
       ),
       child: Row(
         children: [
-          GestureDetector(
+          CircleIconButton.back(
             onTap: () => Navigator.pop(context, widget.initialAlignY),
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: CliinAppColors.primaryLight,
-                borderRadius:
-                    BorderRadius.circular(CliinAppConstants.radiusMedium),
-              ),
-              child: const Icon(Icons.arrow_back,
-                  color: CliinAppColors.primary, size: 20),
-            ),
           ),
           Expanded(
             child: Text(

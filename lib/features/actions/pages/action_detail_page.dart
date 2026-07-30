@@ -21,7 +21,7 @@ import '../../../shared/widgets/action_card.dart'
 import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/widgets/circle_icon_button.dart';
 import '../../../shared/widgets/report_card.dart'
-    show buildReportImage, DynamicDistanceLabel;
+    show buildReportImage, DynamicDistanceLabel, showFullAddressSheet;
 import '../../../shared/widgets/report_stats_comments.dart';
 import '../../auth/auth_guard.dart';
 import '../../groups/models/group_model.dart';
@@ -290,10 +290,7 @@ class _ActionDetailPageState extends State<ActionDetailPage> {
             ),
             Positioned(
               left: 0,
-              child: CircleIconButton(
-                icon: Icons.arrow_back_rounded,
-                backgroundColor: CliinAppColors.primaryLight,
-                iconColor: CliinAppColors.primary,
+              child: CircleIconButton.back(
                 onTap: () => Navigator.pop(context),
                 size: 36,
                 iconSize: 18,
@@ -304,10 +301,10 @@ class _ActionDetailPageState extends State<ActionDetailPage> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  GestureDetector(
+                  CircleIconButton.share(
                     onTap: _onShare,
-                    child: const Icon(Icons.share_outlined,
-                        color: CliinAppColors.textDark, size: 22),
+                    size: 36,
+                    iconSize: 18,
                   ),
                   const SizedBox(width: 16),
                   GestureDetector(
@@ -456,6 +453,8 @@ class _ActionDetailPageState extends State<ActionDetailPage> {
               icon: Icons.location_on_rounded,
               value: action.lieu,
               label: 'Lieu',
+              onTap: () =>
+                  showFullAddressSheet(context, address: action.lieu),
             ),
           ),
           Expanded(child: _infoTileDistance(action)),
@@ -465,8 +464,11 @@ class _ActionDetailPageState extends State<ActionDetailPage> {
   }
 
   Widget _infoTile(
-      {required IconData icon, required String value, required String label}) {
-    return Column(
+      {required IconData icon,
+      required String value,
+      required String label,
+      VoidCallback? onTap}) {
+    final content = Column(
       children: [
         Icon(icon, color: CliinAppColors.primary, size: 20),
         const SizedBox(height: 6),
@@ -484,6 +486,8 @@ class _ActionDetailPageState extends State<ActionDetailPage> {
                 .copyWith(fontSize: 10, color: CliinAppColors.textSecondary)),
       ],
     );
+    if (onTap == null) return content;
+    return GestureDetector(onTap: onTap, child: content);
   }
 
   Widget _infoTileDistance(ActionModel action) {
@@ -742,12 +746,11 @@ class _ActionDetailPageState extends State<ActionDetailPage> {
     return Container(
       width: double.infinity,
       color: CliinAppColors.cardWhite,
-      // Correction 6 — le texte "🔒 Votre participation..." restait
-      // partiellement caché par la bottom bar : la marge basse fixe (16)
-      // ne tenait pas compte de l'inset système sous AppBottomNav (barre de
-      // geste/navigation Android), qui varie selon les appareils.
-      padding: EdgeInsets.fromLTRB(
-          16, 12, 16, 16 + MediaQuery.of(context).padding.bottom),
+      // AppBottomNav réserve déjà lui-même l'inset système bas (voir
+      // AppBottomNav — SizedBox(height: MediaQuery.of(context).padding.bottom)
+      // après son Divider) : l'ajouter aussi ici comptait l'inset deux fois
+      // et créait un grand vide entre ce bouton et la bottom bar.
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

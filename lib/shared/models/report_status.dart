@@ -4,6 +4,7 @@
 //   l'état technique du flow d'upload côté client lors de la création.
 
 import 'package:flutter/material.dart';
+import '../../core/constants/app_colors.dart';
 
 enum ReportStatus {
   disponible,
@@ -20,19 +21,23 @@ extension ReportStatusExtension on ReportStatus {
     }
   }
 
+  // Couleur du texte/icône du badge — blanc, car bgColor est désormais un
+  // fond plein et vif (lisibilité en plein soleil, cf. Correction 8).
   Color get color {
     switch (this) {
-      case ReportStatus.disponible: return const Color(0xFF2DB84B);
-      case ReportStatus.enCours:    return const Color(0xFFFF9800);
-      case ReportStatus.traite:     return const Color(0xFFE53935);
+      case ReportStatus.disponible: return CliinAppColors.textWhite;
+      case ReportStatus.enCours:    return CliinAppColors.textWhite;
+      case ReportStatus.traite:     return CliinAppColors.textWhite;
     }
   }
 
+  // Fond plein et vif du badge (pas de teinte pâle) — même exigence que le
+  // badge de statut des actions.
   Color get bgColor {
     switch (this) {
-      case ReportStatus.disponible: return const Color(0xFFE6F7EB);
-      case ReportStatus.enCours:    return const Color(0xFFFFF3E0);
-      case ReportStatus.traite:     return const Color(0xFFFFEBEE);
+      case ReportStatus.disponible: return CliinAppColors.primary;
+      case ReportStatus.enCours:    return CliinAppColors.alertOrange;
+      case ReportStatus.traite:     return CliinAppColors.alertRed;
     }
   }
 

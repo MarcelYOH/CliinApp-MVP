@@ -77,10 +77,9 @@ class ReportStatsRow extends StatelessWidget {
           ),
           _StatDivider(),
           _Stat(
-            icon: Icons.reply_rounded,
+            icon: Icons.share,
             value: shares,
             label: 'Partages',
-            mirror: true,
           ),
         ],
       ),
@@ -102,25 +101,17 @@ class _Stat extends StatelessWidget {
   final IconData icon;
   final int value;
   final String label;
-  final bool mirror;
   const _Stat({
     required this.icon,
     required this.value,
     required this.label,
-    this.mirror = false,
   });
 
   @override
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      Transform(
-        alignment: Alignment.center,
-        transform: mirror
-            ? (Matrix4.identity()..scaleByDouble(-1.0, 1.0, 1.0, 1.0))
-            : Matrix4.identity(),
-        child: Icon(icon, size: 16, color: CliinAppColors.textDark),
-      ),
+      Icon(icon, size: 16, color: CliinAppColors.textDark),
       const SizedBox(width: 4),
       Text(
         '$value',

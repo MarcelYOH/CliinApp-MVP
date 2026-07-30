@@ -54,50 +54,65 @@ class ActionCard extends StatelessWidget {
           ],
         ),
         clipBehavior: Clip.hardEdge,
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _ActionCardPhoto(data: data),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(CliinAppConstants.pagePadding),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _buildTypeAndStatusRow(),
-                      const SizedBox(height: CliinAppConstants.spacingS),
-                      _buildDateHeureRow(),
-                      const SizedBox(height: CliinAppConstants.spacingXS),
-                      _buildLieuRow(),
-                      const SizedBox(height: CliinAppConstants.spacingXS),
-                      _buildOrganisateurRow(),
-                      const SizedBox(height: CliinAppConstants.spacingM),
-                      _buildParticipantsDistanceRow(),
-                      const SizedBox(height: CliinAppConstants.spacingS),
-                      const Divider(
-                          height: 1, thickness: 1, color: CliinAppColors.divider),
-                      const SizedBox(height: CliinAppConstants.spacingS),
-                      _buildEngagementRow(),
-                    ],
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // ── BLOC 1 : photo + infos ──
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 110,
+                  height: 200,
+                  child: _ActionCardPhoto(data: data),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.all(CliinAppConstants.pagePadding),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ActionTypeChip(type: data.type),
+                        if (data.description != null &&
+                            data.description!.trim().isNotEmpty) ...[
+                          const SizedBox(height: CliinAppConstants.spacingXS),
+                          Text(
+                            data.description!.trim(),
+                            style: CliinAppTextStyles.bodySmall
+                                .copyWith(fontSize: 12),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                        const SizedBox(height: CliinAppConstants.spacingS),
+                        _buildDateHeureRow(),
+                        const SizedBox(height: CliinAppConstants.spacingXS),
+                        _buildLieuRow(),
+                        const SizedBox(height: CliinAppConstants.spacingXS),
+                        _buildOrganisateurRow(),
+                        const SizedBox(height: CliinAppConstants.spacingM),
+                        _buildParticipantsDistanceRow(),
+                      ],
+                    ),
                   ),
                 ),
+              ],
+            ),
+            const Divider(
+                height: 1, thickness: 1, color: CliinAppColors.divider),
+            // ── BLOC 2 : engagement + statut ──
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: CliinAppConstants.pagePadding,
+                vertical: CliinAppConstants.spacingS + 2,
               ),
-            ],
-          ),
+              child: _buildEngagementRow(),
+            ),
+          ],
         ),
       ),
-    );
-  }
-
-  Widget _buildTypeAndStatusRow() {
-    return Row(
-      children: [
-        Expanded(child: ActionTypeChip(type: data.type)),
-        const SizedBox(width: CliinAppConstants.spacingS),
-        _StatusBadge(statut: data.statut),
-      ],
     );
   }
 
@@ -169,7 +184,7 @@ class ActionCard extends StatelessWidget {
             style: CliinAppTextStyles.bodySmall.copyWith(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: CliinAppColors.textDark)),
+                color: CliinAppColors.primary)),
         const Spacer(),
         Icon(Icons.near_me_rounded,
             size: 12, color: CliinAppColors.textSecondary.withValues(alpha: 0.8)),
@@ -185,13 +200,20 @@ class ActionCard extends StatelessWidget {
 
   Widget _buildEngagementRow() {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        _EngagementStat(icon: Icons.remove_red_eye_outlined, value: data.viewsCount),
-        const SizedBox(width: CliinAppConstants.spacingL),
-        _EngagementStat(
-            icon: Icons.chat_bubble_outline_rounded, value: data.commentsCount),
-        const SizedBox(width: CliinAppConstants.spacingL),
-        _EngagementStat(icon: Icons.reply_rounded, value: data.sharesCount, mirror: true),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _EngagementStat(icon: Icons.remove_red_eye_outlined, value: data.viewsCount),
+            const SizedBox(width: CliinAppConstants.spacingL),
+            _EngagementStat(
+                icon: Icons.chat_bubble_outline_rounded, value: data.commentsCount),
+            const SizedBox(width: CliinAppConstants.spacingL),
+            _EngagementStat(icon: Icons.share, value: data.sharesCount),
+          ],
+        ),
+        _StatusBadge(statut: data.statut),
       ],
     );
   }
@@ -203,16 +225,13 @@ class _ActionCardPhoto extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 88,
-      child: data.photoPath != null
-          ? buildReportImage(
-              data.photoPath!,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => _fallback(),
-            )
-          : _fallback(),
-    );
+    return data.photoPath != null
+        ? buildReportImage(
+            data.photoPath!,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => _fallback(),
+          )
+        : _fallback();
   }
 
   Widget _fallback() {
@@ -252,21 +271,13 @@ class _StatusBadge extends StatelessWidget {
 class _EngagementStat extends StatelessWidget {
   final IconData icon;
   final int value;
-  final bool mirror;
-  const _EngagementStat(
-      {required this.icon, required this.value, this.mirror = false});
+  const _EngagementStat({required this.icon, required this.value});
 
   @override
   Widget build(BuildContext context) => Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Transform(
-            alignment: Alignment.center,
-            transform: mirror
-                ? (Matrix4.identity()..scaleByDouble(-1.0, 1.0, 1.0, 1.0))
-                : Matrix4.identity(),
-            child: Icon(icon, size: 15, color: CliinAppColors.textSecondary),
-          ),
+          Icon(icon, size: 15, color: CliinAppColors.textSecondary),
           const SizedBox(width: 4),
           Text('$value',
               style: CliinAppTextStyles.bodySmall.copyWith(
