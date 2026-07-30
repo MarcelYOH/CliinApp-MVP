@@ -282,7 +282,7 @@ class _ActionsPageState extends State<ActionsPage> {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                    _proximityActive ? 'Actions à proximité' : 'Toutes les actions',
+                    _proximityActive ? 'Actions à proximité' : 'Toutes les actions terrain',
                     style: CliinAppTextStyles.headingSmall.copyWith(
                         fontSize: 14.5, fontWeight: FontWeight.bold)),
               ),

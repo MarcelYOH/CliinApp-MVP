@@ -380,7 +380,10 @@ class _CreateActionPageState extends State<CreateActionPage> {
                       label: 'Photo de l\'action (facultatif)',
                       child: _buildPhotoPicker(),
                     ),
-                    const SizedBox(height: CliinAppConstants.spacingL),
+                    // Écart agrandi (Correction 5) — le titre ci-dessous
+                    // ressemblait à une légende de la photo au lieu du titre
+                    // de la section "types d'action" à laquelle il appartient.
+                    const SizedBox(height: CliinAppConstants.spacingXL),
                     buildGroupFormLabeledField(
                       label: 'Choisissez une action terrain à organiser',
                       child: _buildTypeGrid(),

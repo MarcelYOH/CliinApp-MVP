@@ -39,7 +39,7 @@ class GroupProfilePage extends StatefulWidget {
 
 class _GroupProfilePageState extends State<GroupProfilePage>
     with SingleTickerProviderStateMixin {
-  static const _tabLabels = ['À propos', 'Activités', 'Espace gestion', 'Chat'];
+  static const _tabLabels = ['À propos', 'Publications', 'Espace gestion', 'Chat'];
 
   int _selectedTab = 0;
 
@@ -65,6 +65,24 @@ class _GroupProfilePageState extends State<GroupProfilePage>
   late final AnimationController _panelAnimController;
   double _animFrom = 0;
   double _animTo = 0;
+
+  // ── Correction 3 — espace réservé pour la barre "Aperçu public" ────
+  // Mesurée en temps réel (même principe que _headerHeight) plutôt qu'une
+  // valeur devinée : une estimation fixe (ex. 88 + inset) ne correspond
+  // jamais exactement à la hauteur réelle de la bannière (marges +
+  // contenu + SafeArea déjà comptée une fois par la bannière elle-même),
+  // ce qui créait un espace blanc fixe en trop entre le contenu et la
+  // barre. 0 tant qu'elle n'est pas affichée/mesurée.
+  final GlobalKey _previewBannerKey = GlobalKey();
+  double _previewBannerHeight = 0;
+
+  void _measurePreviewBanner() {
+    final box = _previewBannerKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return;
+    final h = box.size.height;
+    if ((h - _previewBannerHeight).abs() < 0.5) return;
+    setState(() => _previewBannerHeight = h);
+  }
 
   @override
   void initState() {
@@ -102,7 +120,10 @@ class _GroupProfilePageState extends State<GroupProfilePage>
 
   void _onStoreUpdate() {
     if (mounted) setState(() {});
-    WidgetsBinding.instance.addPostFrameCallback((_) => _measureHeader());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _measureHeader();
+      _measurePreviewBanner();
+    });
   }
 
   // Mesure la hauteur réelle de la bannière + identité + boutons — jamais
@@ -187,6 +208,7 @@ class _GroupProfilePageState extends State<GroupProfilePage>
 
     if (action == GroupSettingsAction.preview) {
       setState(() => _previewingAsPublic = true);
+      WidgetsBinding.instance.addPostFrameCallback((_) => _measurePreviewBanner());
       return;
     }
 
@@ -301,6 +323,7 @@ class _GroupProfilePageState extends State<GroupProfilePage>
       right: 0,
       bottom: 0,
       child: SafeArea(
+        key: _previewBannerKey,
         top: false,
         child: Container(
           margin: const EdgeInsets.all(CliinAppConstants.spacingM),
@@ -378,13 +401,12 @@ class _GroupProfilePageState extends State<GroupProfilePage>
               // Correction 10 — la barre "Aperçu public / Revenir" flotte en
               // overlay (Positioned) par-dessus le panel, sans que le
               // contenu scrollable de l'onglet actif ne le sache : réserve
-              // ici la place qu'elle occupe (hauteur estimée généreuse +
-              // inset système) pour qu'aucune information ne reste jamais
-              // masquée dessous, quel que soit l'onglet consulté.
+              // ici la place qu'elle occupe (hauteur réellement mesurée,
+              // cf. _measurePreviewBanner — Correction 3 : une estimation
+              // fixe ne correspond jamais exactement, ce qui laissait un
+              // espace blanc fixe en trop entre le contenu et la barre).
               padding: EdgeInsets.only(
-                bottom: _previewingAsPublic
-                    ? 88 + MediaQuery.of(context).padding.bottom
-                    : 0,
+                bottom: _previewingAsPublic ? _previewBannerHeight : 0,
               ),
               child: _buildTabContent(group, isAdmin),
             ),

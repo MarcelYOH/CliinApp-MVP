@@ -751,47 +751,36 @@ class _ActionDetailPageState extends State<ActionDetailPage> {
       // après son Divider) : l'ajouter aussi ici comptait l'inset deux fois
       // et créait un grand vide entre ce bouton et la bottom bar.
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          GestureDetector(
-            onTap: _onToggleParticipation,
-            child: Container(
-              width: double.infinity,
-              height: 48,
-              decoration: BoxDecoration(
-                color: isParticipant ? CliinAppColors.primaryLight : CliinAppColors.primary,
-                borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
-                border: isParticipant
-                    ? Border.all(color: CliinAppColors.primary, width: 1.5)
-                    : null,
+      child: GestureDetector(
+        onTap: _onToggleParticipation,
+        child: Container(
+          width: double.infinity,
+          height: 48,
+          decoration: BoxDecoration(
+            color: isParticipant ? CliinAppColors.primaryLight : CliinAppColors.primary,
+            borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
+            border: isParticipant
+                ? Border.all(color: CliinAppColors.primary, width: 1.5)
+                : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                isParticipant ? Icons.check_rounded : Icons.people_alt_rounded,
+                color: isParticipant ? CliinAppColors.primary : CliinAppColors.textWhite,
+                size: 20,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    isParticipant ? Icons.check_rounded : Icons.people_alt_rounded,
+              const SizedBox(width: 8),
+              Text(
+                isParticipant ? 'Vous participez' : 'Participer à cette action',
+                style: CliinAppTextStyles.button.copyWith(
                     color: isParticipant ? CliinAppColors.primary : CliinAppColors.textWhite,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    isParticipant ? 'Vous participez' : 'Participer à cette action',
-                    style: CliinAppTextStyles.button.copyWith(
-                        color: isParticipant ? CliinAppColors.primary : CliinAppColors.textWhite,
-                        fontSize: 14),
-                  ),
-                ],
+                    fontSize: 14),
               ),
-            ),
+            ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            '🔒 Votre participation sera visible publiquement',
-            textAlign: TextAlign.center,
-            style: CliinAppTextStyles.bodySmall.copyWith(fontSize: 10.5),
-          ),
-        ],
+        ),
       ),
     );
   }
