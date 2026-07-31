@@ -75,6 +75,18 @@ class _NotificationsPageState extends State<NotificationsPage> {
         Navigator.push(context, fastFadeRoute<void>(IntervenantDetailPage(report: report)));
         return;
 
+      // Correction 3 — le destinataire est un simple suiveur (pas
+      // nécessairement auteur ni intervenant) : vue publique du cas, pas
+      // le tableau de bord privé de l'intervenant.
+      case NotificationType.casSuiviMisAJour:
+        final report = ReportStore.instance.reportById(refId);
+        if (report == null) {
+          _showNotFound(context);
+          return;
+        }
+        Navigator.push(context, fastFadeRoute<void>(ReportDetailPage(data: report)));
+        return;
+
       case NotificationType.commentaire:
         final report = ReportStore.instance.reportById(refId);
         if (report == null) {

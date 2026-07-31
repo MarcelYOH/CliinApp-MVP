@@ -50,15 +50,36 @@ class GroupProfilePage extends StatefulWidget {
 
 class _GroupProfilePageState extends State<GroupProfilePage>
     with SingleTickerProviderStateMixin {
-  static const _tabLabels = [
-    'À propos', 'Publications', 'Nos contributeurs', 'Espace gestion', 'Chat',
-  ];
-  // Correction 1 — "Nos contributeurs" n'est pas un contenu embarqué dans
-  // ce panneau (les autres onglets swappent un widget dans _buildTabContent)
-  // mais un lanceur vers une page dédiée à part entière (flèche retour,
-  // plein écran) : null ici signale ce cas particulier. Les autres valeurs
+  // Correction 6 (remplace la règle précédente "visibles pour tous, contenu
+  // verrouillé") — "Espace gestion" n'apparaît dans la barre d'onglets QUE
+  // pour les administrateurs (onglet absent, pas juste verrouillé) ; "Chat"
+  // n'apparaît QUE pour un membre qui suit le groupe (administrateur ou
+  // simple abonné — les administrateurs suivent toujours leur groupe, cf.
+  // GroupStore._followerIds). "À propos"/"Publications"/"Nos contributeurs"
+  // restent inconditionnels. showEspaceGestion/showChat tiennent aussi
+  // compte de "Aperçu public" (même principe que showAdminControls) : un
+  // administrateur en aperçu doit voir exactement la barre d'un visiteur
+  // externe, donc ni Espace gestion ni Chat.
+  List<String> _tabLabels(bool showEspaceGestion, bool showChat) => [
+        'À propos',
+        'Publications',
+        'Nos contributeurs',
+        if (showEspaceGestion) 'Espace gestion',
+        if (showChat) 'Chat',
+      ];
+
+  // "Nos contributeurs" n'est pas un contenu embarqué dans ce panneau (les
+  // autres onglets swappent un widget dans _buildTabContent) mais un
+  // lanceur vers une page dédiée à part entière (flèche retour, plein
+  // écran) : null ici signale ce cas particulier. Les autres valeurs
   // pointent vers l'index réel dans _buildTabContent (0..3), inchangé.
-  static const _tabContentIndex = [0, 1, null, 2, 3];
+  List<int?> _tabContentIndex(bool showEspaceGestion, bool showChat) => [
+        0,
+        1,
+        null,
+        if (showEspaceGestion) 2,
+        if (showChat) 3,
+      ];
 
   late int _selectedTab = widget.initialTab;
 
@@ -294,6 +315,9 @@ class _GroupProfilePageState extends State<GroupProfilePage>
     // Contrôles d'administration effectivement affichés — masqués pendant
     // l'aperçu public même si l'utilisateur reste réellement administrateur.
     final showAdminControls = isAdmin && !_previewingAsPublic;
+    // Correction 6 — onglet Chat effectivement affiché, même logique que
+    // showAdminControls pendant l'aperçu public.
+    final showChatTab = isFollowing && !_previewingAsPublic;
 
     return Scaffold(
       backgroundColor: CliinAppColors.background,
@@ -320,7 +344,7 @@ class _GroupProfilePageState extends State<GroupProfilePage>
               left: 0,
               right: 0,
               bottom: 0,
-              child: _buildPanel(group, showAdminControls),
+              child: _buildPanel(group, showAdminControls, showChatTab),
             ),
             if (isAdmin && _previewingAsPublic)
               _buildPreviewBanner(context),
@@ -383,7 +407,7 @@ class _GroupProfilePageState extends State<GroupProfilePage>
 
   // Panneau glissant (onglets + contenu) — poignée au niveau de la barre
   // d'onglets, cohérent avec reports_bottom_sheet.dart (page Map).
-  Widget _buildPanel(GroupModel group, bool isAdmin) {
+  Widget _buildPanel(GroupModel group, bool isAdmin, bool showChat) {
     return Container(
       decoration: const BoxDecoration(
         color: CliinAppColors.background,
@@ -414,7 +438,7 @@ class _GroupProfilePageState extends State<GroupProfilePage>
                     ),
                   ),
                 ),
-                _buildTabBar(group),
+                _buildTabBar(group, isAdmin, showChat),
                 const SizedBox(height: CliinAppConstants.spacingS),
               ],
             ),
@@ -431,7 +455,7 @@ class _GroupProfilePageState extends State<GroupProfilePage>
               padding: EdgeInsets.only(
                 bottom: _previewingAsPublic ? _previewBannerHeight : 0,
               ),
-              child: _buildTabContent(group, isAdmin),
+              child: _buildTabContent(group, isAdmin, showChat),
             ),
           ),
         ],
@@ -439,8 +463,15 @@ class _GroupProfilePageState extends State<GroupProfilePage>
     );
   }
 
-  Widget _buildTabContent(GroupModel group, bool isAdmin) {
-    return switch (_selectedTab) {
+  // Correction 6 — si l'onglet actuellement sélectionné vient de disparaître
+  // de la barre (ex: bascule "Aperçu public" en cours de visite de "Espace
+  // gestion"), on retombe sur "À propos" plutôt que d'afficher un contenu
+  // dont l'onglet n'existe plus.
+  Widget _buildTabContent(GroupModel group, bool isAdmin, bool showChat) {
+    final visibleContentIndices = {0, 1, if (isAdmin) 2, if (showChat) 3};
+    final selected =
+        visibleContentIndices.contains(_selectedTab) ? _selectedTab : 0;
+    return switch (selected) {
       0 => GroupAboutTab(group: group, isAdmin: isAdmin),
       1 => GroupActivitiesTab(group: group, isAdmin: isAdmin),
       2 => GroupManagementTab(group: group, isAdmin: isAdmin),
@@ -806,25 +837,29 @@ class _GroupProfilePageState extends State<GroupProfilePage>
   }
 
   // ── Onglets ─────────────────────────────────────────────────────
-  Widget _buildTabBar(GroupModel group) {
+  // Correction 6 — nombre d'onglets variable (3 à 5) selon isAdmin/showChat ;
+  // la barre reste dans un SingleChildScrollView horizontal (inchangé), donc
+  // s'adapte déjà à n'importe quelle longueur de liste.
+  Widget _buildTabBar(GroupModel group, bool isAdmin, bool showChat) {
+    final labels = _tabLabels(isAdmin, showChat);
+    final contentIndex = _tabContentIndex(isAdmin, showChat);
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding:
           const EdgeInsets.symmetric(horizontal: CliinAppConstants.pagePadding),
       child: Row(
         children: [
-          for (var i = 0; i < _tabLabels.length; i++)
+          for (var i = 0; i < labels.length; i++)
             Padding(
               padding: const EdgeInsets.only(right: CliinAppConstants.spacingL),
-              child: _buildTabItem(_tabLabels[i], i, group),
+              child: _buildTabItem(labels[i], contentIndex[i], group),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildTabItem(String label, int tabBarIndex, GroupModel group) {
-    final contentIndex = _tabContentIndex[tabBarIndex];
+  Widget _buildTabItem(String label, int? contentIndex, GroupModel group) {
     final selected = contentIndex != null && _selectedTab == contentIndex;
     return GestureDetector(
       onTap: () {

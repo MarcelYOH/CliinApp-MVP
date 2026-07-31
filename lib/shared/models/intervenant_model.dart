@@ -8,7 +8,10 @@
 // abandonedVoluntary : l'intervenant a lui-même abandonné avant la fin du
 //                      délai — même effet (cas libéré) mais motif distinct,
 //                      affiché différemment dans le résidu privé.
-enum InterventionOutcome { none, abandoned, abandonedVoluntary, rejected }
+// contested          : un utilisateur a indiqué que le problème persiste
+//                      sur un cas Traité — cas remis Disponible (Correction
+//                      1, module Notifications).
+enum InterventionOutcome { none, abandoned, abandonedVoluntary, rejected, contested }
 
 class IntervenantModel {
   final String id;

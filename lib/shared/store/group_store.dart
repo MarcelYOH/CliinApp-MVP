@@ -9,8 +9,10 @@ import '../repositories/group_repository.dart';
 import '../repositories/mock_group_repository.dart';
 import '../../features/groups/models/group_model.dart';
 import '../../features/notifications/models/notification_model.dart';
+import 'action_store.dart';
 import 'auth_store.dart';
 import 'notification_store.dart';
+import 'report_store.dart';
 
 class GroupStore extends ChangeNotifier {
   GroupStore._();
@@ -387,19 +389,50 @@ class GroupStore extends ChangeNotifier {
   }
 
   // ── Badges — calcul automatique, jamais saisi manuellement ────────
-  // Appelée automatiquement à chaque mise à jour des compteurs d'impact
-  // (casSignalesCount / casTraitesCount / actionsCount). Seuils détaillés
-  // dans group_model.dart, au-dessus de calculateGroupBadges().
+  // Correction 2 (module Notifications) — utilise désormais les VRAIES
+  // statistiques déjà branchées (ReportStore/ActionStore, cf. "Notre
+  // impact"), plus les compteurs statiques GroupModel.casSignalesCount/
+  // casTraitesCount/actionsCount, jamais mis à jour par un événement réel.
+  // Appelée après chaque événement qui peut faire varier ces compteurs
+  // (ReportStore.addReport/submitProof, ActionStore.createAction). Seuils
+  // détaillés dans group_model.dart, au-dessus de calculateGroupBadges().
   Future<void> recalculerBadges(String groupId) async {
     final current = groupById(groupId);
     if (current == null) return;
     final badges = calculateGroupBadges(
-      casSignalesCount: current.casSignalesCount,
-      casTraitesCount: current.casTraitesCount,
-      actionsCount: current.actionsCount,
+      casSignalesCount: ReportStore.instance.casSignalesCountForGroup(groupId),
+      casTraitesCount: ReportStore.instance.casTraitesCountForGroup(groupId),
+      actionsCount: ActionStore.instance.actionsCountForGroup(groupId),
     );
     if (listEquals(badges, current.badges)) return;
+    final newBadges = badges.where((b) => !current.badges.contains(b)).toList();
     await _persist(current.copyWith(badges: badges));
+    for (final badge in newBadges) {
+      _notifyNouveauBadge(groupId, current.nom, badge);
+    }
+  }
+
+  // Déclencheur 10 — reconnaissance collective : TOUS les membres du
+  // groupe (tous les suiveurs, pas seulement les administrateurs).
+  void _notifyNouveauBadge(String groupId, String groupNom, String badge) {
+    final badgeLabel = switch (badge) {
+      'engage' => 'Engagé',
+      'impact' => 'Impact',
+      'officiel' => 'Officiel',
+      _ => badge,
+    };
+    for (final memberId in followerIdsOf(groupId)) {
+      NotificationStore.instance.ajouterNotification(NotificationModel(
+        id: generateNotificationId(),
+        type: NotificationType.nouveauBadge,
+        titre: 'Nouveau badge débloqué',
+        texte: '$groupNom a atteint le badge $badgeLabel !',
+        destinataireUserId: memberId,
+        dateCreation: DateTime.now(),
+        referenceId: groupId,
+        referenceType: 'groupe',
+      ));
+    }
   }
 
   // ── Requêtes ────────────────────────────────────────────────────

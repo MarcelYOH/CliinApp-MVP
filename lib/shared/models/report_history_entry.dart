@@ -11,6 +11,7 @@ enum HistoryEventType {
   abandonne,
   abandonneVolontairement,
   rejete,
+  conteste,
 }
 
 extension HistoryEventTypeExtension on HistoryEventType {
@@ -23,6 +24,7 @@ extension HistoryEventTypeExtension on HistoryEventType {
       case HistoryEventType.abandonne:           return 'Abandonné';
       case HistoryEventType.abandonneVolontairement: return 'Abandon volontaire';
       case HistoryEventType.rejete:              return 'Rejeté';
+      case HistoryEventType.conteste:            return 'Contesté';
     }
   }
 
@@ -40,6 +42,7 @@ extension HistoryEventTypeExtension on HistoryEventType {
       case HistoryEventType.abandonne:           return 'Abandonné';
       case HistoryEventType.abandonneVolontairement: return 'Abandonné';
       case HistoryEventType.rejete:              return 'Rejeté';
+      case HistoryEventType.conteste:            return 'Contesté';
     }
   }
 
@@ -52,6 +55,7 @@ extension HistoryEventTypeExtension on HistoryEventType {
       case HistoryEventType.abandonne:           return const Color(0xFF9E9E9E);
       case HistoryEventType.abandonneVolontairement: return const Color(0xFF9E9E9E);
       case HistoryEventType.rejete:              return const Color(0xFF9C27B0);
+      case HistoryEventType.conteste:            return const Color(0xFFFF9800);
     }
   }
 
@@ -64,6 +68,7 @@ extension HistoryEventTypeExtension on HistoryEventType {
       case HistoryEventType.abandonne:           return const Color(0xFFF5F5F5);
       case HistoryEventType.abandonneVolontairement: return const Color(0xFFF5F5F5);
       case HistoryEventType.rejete:              return const Color(0xFFF3E5F5);
+      case HistoryEventType.conteste:            return const Color(0xFFFFF3E0);
     }
   }
 
@@ -76,6 +81,7 @@ extension HistoryEventTypeExtension on HistoryEventType {
       case HistoryEventType.abandonne:           return 'Aucune preuve soumise dans le délai imparti';
       case HistoryEventType.abandonneVolontairement: return 'L\'intervenant a volontairement abandonné avant la fin du délai';
       case HistoryEventType.rejete:               return 'La position GPS de la preuve ne correspondait pas';
+      case HistoryEventType.conteste:            return 'Un utilisateur indique que le problème persiste';
     }
   }
 
@@ -88,6 +94,7 @@ extension HistoryEventTypeExtension on HistoryEventType {
       case HistoryEventType.abandonne:           return const Color(0xFF6B7280);
       case HistoryEventType.abandonneVolontairement: return const Color(0xFF6B7280);
       case HistoryEventType.rejete:              return const Color(0xFF8E24AA);
+      case HistoryEventType.conteste:            return const Color(0xFFFF9800);
     }
   }
 
@@ -100,6 +107,7 @@ extension HistoryEventTypeExtension on HistoryEventType {
       case HistoryEventType.abandonne:           return Icons.cancel_rounded;
       case HistoryEventType.abandonneVolontairement: return Icons.remove_circle_outline_rounded;
       case HistoryEventType.rejete:              return Icons.error_rounded;
+      case HistoryEventType.conteste:            return Icons.report_problem_rounded;
     }
   }
 }

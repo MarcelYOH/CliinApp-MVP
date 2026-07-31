@@ -7,10 +7,12 @@ import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/store/action_store.dart';
 import '../../../shared/store/auth_store.dart';
 import '../../../shared/store/report_store.dart';
+import '../../../shared/store/notification_store.dart';
 import '../../../shared/models/auth_user_model.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/navigation/tab_navigation.dart';
 import '../../../shared/navigation/fast_page_route.dart';
+import '../../notifications/pages/notifications_page.dart';
 import '../../reports/pages/report_camera_page.dart';
 import '../../groups/pages/group_search_page.dart';
 import '../widgets/edit_profile_sheet.dart';
@@ -208,27 +210,46 @@ class _ProfilePageState extends State<ProfilePage> {
               ],
             ),
           ),
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.notifications_outlined, size: 26),
-                color: CliinAppColors.textDark,
-                onPressed: () => _showComingSoon(context),
-              ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: CliinAppColors.primary,
+          // Correction 4 (module Notifications) — cloche réellement
+          // branchée, même convention que l'accueil/profil groupe/Actions :
+          // navigation vers NotificationsPage + badge du nombre réel de
+          // non-lues (remplace l'ancien point statique toujours affiché).
+          ListenableBuilder(
+            listenable: NotificationStore.instance,
+            builder: (context, _) {
+              final count = NotificationStore.instance.nombreNonLues;
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.notifications_outlined, size: 26),
+                    color: CliinAppColors.textDark,
+                    onPressed: () => Navigator.push(
+                        context, fastFadeRoute<void>(const NotificationsPage())),
                   ),
-                ),
-              ),
-            ],
+                  if (count > 0)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                        decoration: const BoxDecoration(
+                            color: CliinAppColors.alertRed, shape: BoxShape.circle),
+                        child: Center(
+                          child: Text(
+                            count > 9 ? '9+' : '$count',
+                            style: CliinAppTextStyles.badge.copyWith(
+                                color: CliinAppColors.textWhite,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         ],
       ),

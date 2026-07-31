@@ -1081,6 +1081,14 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
         icon: Icons.error_rounded,
       );
     }
+    if (outcome == InterventionOutcome.contested) {
+      return (
+        label: 'Contesté',
+        color: CliinAppColors.alertOrange,
+        bg: const Color(0xFFFFF3E0),
+        icon: Icons.report_problem_rounded,
+      );
+    }
     return (
       label: 'En cours',
       color: CliinAppColors.alertOrange,
@@ -1128,6 +1136,15 @@ class _IntervenantDetailPageState extends State<IntervenantDetailPage> {
         color: const Color(0xFF8E24AA),
         bg: const Color(0xFFF3E5F5),
         icon: Icons.gpp_bad_rounded,
+      );
+    }
+    if (outcome == InterventionOutcome.contested) {
+      return (
+        label: 'Résolution',
+        value: 'Contestée',
+        color: CliinAppColors.alertOrange,
+        bg: const Color(0xFFFFF3E0),
+        icon: Icons.report_problem_rounded,
       );
     }
     return (

@@ -11,6 +11,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../features/home/models/home_report_model.dart';
 import '../store/auth_store.dart';
+import '../store/report_store.dart';
 import 'package:cliinapp/features/auth/auth_guard.dart';
 
 const double _kBtnHeight = 48.0;
@@ -102,18 +103,22 @@ class ReportActionZone extends StatefulWidget {
 }
 
 class _ReportActionZoneState extends State<ReportActionZone> {
-  bool _isFollowing = false;
   int _confirmCount = 12;
   bool _isConfirmed = false;
   bool _showConfirmPrompt = false;
   bool _showPersistPrompt = false;
-  bool _isContested = false;
   bool _showDeleteConfirm = false;
 
-  // Bascule le suivi du cas — un intervenant ne peut pas suivre sa propre
-  // prise en charge (ça n'a pas de sens de se notifier soi-même). Le
-  // message de confirmation est un SnackBar temporaire, pas un état
-  // persistant, pour rester cohérent avec le reste de l'app.
+  // Correction 3 (module Notifications) — état RÉELLEMENT persisté via
+  // ReportStore.reportFollowerIds (avant : setState local, oublié en
+  // quittant l'écran). Un intervenant ne peut pas suivre sa propre prise en
+  // charge (ça n'a pas de sens de se notifier soi-même).
+  bool get _isFollowing {
+    final userId = AuthStore.instance.currentUser?.id;
+    if (userId == null) return false;
+    return ReportStore.instance.isFollowingReport(widget.data.id, userId);
+  }
+
   Future<void> _toggleFollow() async {
     if (!await requireAuth(context)) return;
     if (!mounted) return;
@@ -132,8 +137,16 @@ class _ReportActionZoneState extends State<ReportActionZone> {
       );
       return;
     }
-    setState(() => _isFollowing = !_isFollowing);
-    if (_isFollowing) {
+    if (currentUserId == null) return;
+    final willFollow = !_isFollowing;
+    if (willFollow) {
+      await ReportStore.instance.followReport(widget.data.id, currentUserId);
+    } else {
+      await ReportStore.instance.unfollowReport(widget.data.id, currentUserId);
+    }
+    if (!mounted) return;
+    setState(() {});
+    if (willFollow) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('🔔 Vous serez notifié dès que ce cas sera traité'),
@@ -141,6 +154,28 @@ class _ReportActionZoneState extends State<ReportActionZone> {
           duration: Duration(seconds: 3),
         ),
       );
+    }
+  }
+
+  // Correction 1 (module Notifications) — "Le problème persiste" applique
+  // désormais la vraie logique métier (cas remis Disponible), au lieu d'un
+  // simple état local sans effet réel. Le widget se reconstruit ensuite
+  // avec le nouveau statut via widget.data (ReportDetailPage/ReportCard
+  // relisent ReportStore en direct) — _isContested ne s'affiche donc
+  // jamais réellement, ce branchement bascule vers _buildDisponible().
+  Future<void> _confirmContest() async {
+    setState(() => _showPersistPrompt = false);
+    try {
+      await ReportStore.instance.contestResolution(reportId: widget.data.id);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Une erreur est survenue. Réessayez.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
@@ -569,7 +604,6 @@ class _ReportActionZoneState extends State<ReportActionZone> {
 
   // ── TRAITÉ ────────────────────────────────────────────────────
   Widget _buildTraite() {
-    final intervenant = widget.data.intervenant;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -668,40 +702,22 @@ class _ReportActionZoneState extends State<ReportActionZone> {
               ),
             ),
         ],
-        // Lien "persiste" ou message contesté
+        // Lien "persiste" — la confirmation applique la vraie logique
+        // métier (ReportStore.contestResolution) : le cas repasse
+        // Disponible et le widget entier se reconstruit alors sur la
+        // branche _buildDisponible(), donc aucun état intermédiaire "cas
+        // contesté" à afficher ici (contrairement à un ancien état local
+        // sans effet réel qui restait affiché indéfiniment).
         if (widget.showResolutionConfirm) ...[
-        if (_isContested) ...[
-          const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: CliinAppColors.alertOrange.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(
-                CliinAppConstants.radiusMedium,
-              ),
-            ),
-            child: Text(
-              'Cas remis en cours — '
-              '${intervenant?.groupName ?? intervenant?.name ?? 'l\'intervenant'}'
-              ' a été notifié et doit fournir une nouvelle preuve',
-              style: CliinAppTextStyles.bodySmall.copyWith(
-                fontSize: 11,
-                color: CliinAppColors.alertOrange,
-                fontWeight: FontWeight.w500,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ] else if (_showPersistPrompt) ...[
+        if (_showPersistPrompt) ...[
           const SizedBox(height: 6),
           _inlineDialog(
             question:
-                'Le cas sera remis En cours et l\'intervenant sera notifié pour re-traiter.',
+                'Le cas repassera au statut Disponible et pourra être pris '
+                'en charge par quelqu\'un d\'autre. L\'auteur et l\'intervenant '
+                'seront notifiés.',
             yesLabel: 'Oui, ça persiste',
-            onYes: () => setState(() {
-              _isContested = true;
-              _showPersistPrompt = false;
-            }),
+            onYes: () => _confirmContest(),
             onCancel: () => setState(() => _showPersistPrompt = false),
           ),
         ] else ...[

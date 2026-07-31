@@ -124,6 +124,9 @@ class ActionStore extends ChangeNotifier {
     notifyListeners();
     if (added.organisateurEstGroupe) {
       _notifyActionOrganisee(added);
+      // Correction 2 — actionsCount du groupe vient de varier, vérifie si
+      // un nouveau palier de badge est franchi.
+      GroupStore.instance.recalculerBadges(added.organisateurId);
     }
     _notifyNouvelleActionIfRelevant(added);
     return added;

@@ -36,6 +36,14 @@ abstract class ReportRepository {
     required String reportId,
   });
 
+  // ── Contestation — "Le problème persiste" sur un cas Traité ──────
+  // Motif distinct des autres retours à Disponible : cas remis Disponible,
+  // intervenant conservé avec outcome=contested pour le résidu privé
+  // (IntervenantDetailPage), même principe que abandon/rejet.
+  Future<HomeReportModel> contestResolution({
+    required String reportId,
+  });
+
   // ── Nouvelle méthode : ajouter/modifier le numéro WhatsApp ──
   Future<HomeReportModel> updateWhatsAppNumber({
     required String reportId,

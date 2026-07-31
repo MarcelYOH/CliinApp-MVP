@@ -35,6 +35,11 @@ enum NotificationType {
   nouvelleAction,
   commentaireAction,
   nouveauParticipant,
+  // Correction 3 (Lot 3) — envoyée à chaque utilisateur qui suit un cas
+  // (bouton "Suivre", indépendant du rôle auteur/intervenant) quand son
+  // statut change, en plus des notifications déjà dédiées à l'auteur et à
+  // l'intervenant (jamais à la place).
+  casSuiviMisAJour,
 }
 
 extension NotificationTypeExt on NotificationType {
@@ -55,6 +60,7 @@ extension NotificationTypeExt on NotificationType {
       case NotificationType.nouvelleAction:    return Icons.bolt_rounded;
       case NotificationType.commentaireAction: return Icons.chat_bubble_outline_rounded;
       case NotificationType.nouveauParticipant: return Icons.person_add_alt_rounded;
+      case NotificationType.casSuiviMisAJour: return Icons.notifications_active_rounded;
     }
   }
 
@@ -78,6 +84,7 @@ extension NotificationTypeExt on NotificationType {
       case NotificationType.nouvelleAction:    return CliinAppColors.primary;
       case NotificationType.commentaireAction: return CliinAppColors.infoBlue;
       case NotificationType.nouveauParticipant: return CliinAppColors.primary;
+      case NotificationType.casSuiviMisAJour: return CliinAppColors.primary;
     }
   }
 }

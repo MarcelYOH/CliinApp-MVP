@@ -195,14 +195,18 @@ class _GroupContributorsPageState extends State<GroupContributorsPage> {
             child: Column(
               children: [
                 _buildHeader(context),
-                Expanded(
-                  child: ListView(
-                    padding: EdgeInsets.fromLTRB(
-                      CliinAppConstants.pagePadding,
-                      CliinAppConstants.spacingM,
-                      CliinAppConstants.pagePadding,
-                      MediaQuery.of(context).padding.bottom + CliinAppConstants.spacingXL,
-                    ),
+                // Correction 5 — zone FIXE (ne scrolle jamais) : bandeau
+                // explicatif, filtres, compteur. Seule la liste des
+                // contributeurs ci-dessous est scrollable.
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    CliinAppConstants.pagePadding,
+                    CliinAppConstants.spacingM,
+                    CliinAppConstants.pagePadding,
+                    0,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildBanner(),
                       const SizedBox(height: CliinAppConstants.spacingL),
@@ -217,6 +221,18 @@ class _GroupContributorsPageState extends State<GroupContributorsPage> {
                             fontWeight: FontWeight.w600, color: CliinAppColors.textDark),
                       ),
                       const SizedBox(height: CliinAppConstants.spacingM),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: ListView(
+                    padding: EdgeInsets.fromLTRB(
+                      CliinAppConstants.pagePadding,
+                      0,
+                      CliinAppConstants.pagePadding,
+                      MediaQuery.of(context).padding.bottom + CliinAppConstants.spacingXL,
+                    ),
+                    children: [
                       if (contributors.isEmpty)
                         _buildEmpty()
                       else

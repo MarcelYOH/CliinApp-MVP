@@ -220,6 +220,33 @@ class MockReportRepository implements ReportRepository {
     return updated;
   }
 
+  // ── Contestation — "Le problème persiste" sur un cas Traité ──────
+  @override
+  Future<HomeReportModel> contestResolution({
+    required String reportId,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 150));
+    final report = await fetchReportById(reportId);
+    if (report == null) throw Exception('Signalement introuvable');
+    if (report.intervenant == null) throw Exception('Aucun intervenant');
+
+    final now = DateTime.now();
+    final updated = report.copyWith(
+      status: ReportStatus.disponible,
+      intervenant: report.intervenant?.copyWith(
+        outcome: InterventionOutcome.contested,
+      ),
+      history: List<ReportHistoryEntry>.of(report.history)
+        ..add(ReportHistoryEntry(
+          type: HistoryEventType.conteste,
+          dateTime: now,
+          actorName: _interventionActorName(report.intervenant),
+        )),
+    );
+    _updateReport(updated);
+    return updated;
+  }
+
   // ── Nouvelle méthode : ajouter/modifier le numéro WhatsApp ────
   @override
   Future<HomeReportModel> updateWhatsAppNumber({

@@ -11,6 +11,8 @@ import '../repositories/mock_report_repository.dart';
 import '../../core/utils/user_location_service.dart';
 import '../../features/home/models/home_report_model.dart';
 import '../../features/notifications/models/notification_model.dart';
+import 'auth_store.dart';
+import 'group_store.dart';
 import 'notification_store.dart';
 
 class ReportStore extends ChangeNotifier {
@@ -44,6 +46,30 @@ class ReportStore extends ChangeNotifier {
   List<HomeReportModel> _reports = [];
   bool _isLoading = false;
   String? _error;
+
+  // ── Suivi d'un cas (Correction 3, module Notifications) ─────────
+  // Persistance réelle du bouton "Suivre" existant (report_action_zone.dart)
+  // — jusqu'ici purement local (setState, oublié en quittant l'écran).
+  // Même modèle que GroupStore._followerIds : en mémoire pour ce mock,
+  // pas de compteur affiché nulle part (HomeReportModel n'en expose pas),
+  // donc rien à persister côté repository ici.
+  final Map<String, Set<String>> _reportFollowerIds = {};
+
+  Future<void> followReport(String reportId, String userId) async {
+    _reportFollowerIds.putIfAbsent(reportId, () => {}).add(userId);
+    notifyListeners();
+  }
+
+  Future<void> unfollowReport(String reportId, String userId) async {
+    _reportFollowerIds[reportId]?.remove(userId);
+    notifyListeners();
+  }
+
+  bool isFollowingReport(String reportId, String userId) =>
+      _reportFollowerIds[reportId]?.contains(userId) ?? false;
+
+  Set<String> followerIdsOfReport(String reportId) =>
+      Set.unmodifiable(_reportFollowerIds[reportId] ?? const {});
 
   // ── Getters publics ───────────────────────────────────────────
   List<HomeReportModel> get reports => List.unmodifiable(_reports);
@@ -297,6 +323,11 @@ class ReportStore extends ChangeNotifier {
       _reports.insert(0, added);
       _error = null;
       notifyListeners();
+      // Correction 2 — casSignalesCount du groupe vient de varier, vérifie
+      // si un nouveau palier de badge est franchi.
+      if (added.groupId != null) {
+        GroupStore.instance.recalculerBadges(added.groupId!);
+      }
       return added;
     } catch (e) {
       _error = e.toString();
@@ -331,7 +362,9 @@ class ReportStore extends ChangeNotifier {
       _delaiExpireNotified.remove(reportId);
       // Déclencheur 1 — l'auteur est notifié, sauf s'il a pris en charge
       // son propre cas (n'a normalement pas de sens, garde-fou quand même).
+      final notified = <String>{intervenant.id};
       if (updated.signaleParId != null && updated.signaleParId != intervenant.id) {
+        notified.add(updated.signaleParId!);
         final intervenantLabel = groupName ?? intervenant.name;
         NotificationStore.instance.ajouterNotification(NotificationModel(
           id: generateNotificationId(),
@@ -345,6 +378,8 @@ class ReportStore extends ChangeNotifier {
           referenceType: 'signalement',
         ));
       }
+      // Correction 3 — suiveurs du cas notifiés en plus (jamais à la place).
+      _notifyFollowers(updated, notified);
       return updated;
     } catch (e) {
       _error = e.toString();
@@ -396,6 +431,67 @@ class ReportStore extends ChangeNotifier {
     }
   }
 
+  // ── Contestation — "Le problème persiste" sur un cas Traité ──────
+  // Correction 1 (module Notifications) — remet réellement le cas
+  // Disponible (même logique que les abandons/rejets), puis notifie
+  // l'auteur ET l'intervenant traité — jamais celui des deux qui conteste
+  // lui-même (unicité du destinataire).
+  Future<HomeReportModel> contestResolution({
+    required String reportId,
+  }) async {
+    try {
+      final beforeIntervenant = reportById(reportId)?.intervenant;
+      final updated = await _repository.contestResolution(reportId: reportId);
+      _replaceReport(updated);
+      _error = null;
+      notifyListeners();
+
+      final contestataireId = AuthStore.instance.currentUser?.id;
+      final authorId = updated.signaleParId;
+      final intervenantId = beforeIntervenant?.id;
+      final title = updated.title;
+      final notified = <String>{};
+      if (authorId != null && authorId != contestataireId && notified.add(authorId)) {
+        NotificationStore.instance.ajouterNotification(NotificationModel(
+          id: generateNotificationId(),
+          type: NotificationType.conteste,
+          titre: 'Résolution contestée',
+          texte: 'Un utilisateur indique que le problème persiste sur '
+              'votre cas "$title" — il est à nouveau disponible.',
+          destinataireUserId: authorId,
+          dateCreation: DateTime.now(),
+          referenceId: updated.id,
+          referenceType: 'signalement',
+        ));
+      }
+      if (intervenantId != null &&
+          intervenantId != contestataireId &&
+          notified.add(intervenantId)) {
+        NotificationStore.instance.ajouterNotification(NotificationModel(
+          id: generateNotificationId(),
+          type: NotificationType.conteste,
+          titre: 'Résolution contestée',
+          texte: 'Un utilisateur indique que le problème persiste sur le '
+              'cas que vous avez traité, "$title" — il est à nouveau '
+              'disponible.',
+          destinataireUserId: intervenantId,
+          dateCreation: DateTime.now(),
+          referenceId: updated.id,
+          referenceType: 'signalement',
+        ));
+      }
+      // Correction 3 — suiveurs du cas notifiés en plus (jamais à la place).
+      // `notified` contient déjà le contestataire (si auteur ou
+      // intervenant) et quiconque vient d'être notifié ci-dessus.
+      if (contestataireId != null) notified.add(contestataireId);
+      _notifyFollowers(updated, notified);
+      return updated;
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
+    }
+  }
+
   // Déclencheur 5 — factorisé, utilisé par abandon volontaire, abandon
   // automatique (délai dépassé) et rejet de preuve : même texte EXACT
   // demandé, même garde-fou (jamais notifié s'il est lui-même
@@ -406,21 +502,53 @@ class ReportStore extends ChangeNotifier {
     required bool isAbandon,
   }) {
     final authorId = updated.signaleParId;
-    if (authorId == null) return;
-    if (authorId == intervenant?.id) return;
-    final intervenantLabel = intervenant?.groupName ?? intervenant?.name ?? 'un intervenant';
-    final verbe = isAbandon ? 'abandonné' : 'rejeté';
-    NotificationStore.instance.ajouterNotification(NotificationModel(
-      id: generateNotificationId(),
-      type: isAbandon ? NotificationType.abandonne : NotificationType.rejete,
-      titre: 'Cas à nouveau disponible',
-      texte: 'Votre cas signalé, pris en charge par $intervenantLabel, a été '
-          '$verbe et est à nouveau disponible.',
-      destinataireUserId: authorId,
-      dateCreation: DateTime.now(),
-      referenceId: updated.id,
-      referenceType: 'signalement',
-    ));
+    final notified = <String>{if (intervenant?.id != null) intervenant!.id};
+    if (authorId != null && authorId != intervenant?.id) {
+      notified.add(authorId);
+      final intervenantLabel = intervenant?.groupName ?? intervenant?.name ?? 'un intervenant';
+      final verbe = isAbandon ? 'abandonné' : 'rejeté';
+      NotificationStore.instance.ajouterNotification(NotificationModel(
+        id: generateNotificationId(),
+        type: isAbandon ? NotificationType.abandonne : NotificationType.rejete,
+        titre: 'Cas à nouveau disponible',
+        texte: 'Votre cas signalé, pris en charge par $intervenantLabel, a été '
+            '$verbe et est à nouveau disponible.',
+        destinataireUserId: authorId,
+        dateCreation: DateTime.now(),
+        referenceId: updated.id,
+        referenceType: 'signalement',
+      ));
+    }
+    // Correction 3 — chaque suiveur du cas est notifié EN PLUS de
+    // l'auteur/l'intervenant ci-dessus (jamais à la place), sans jamais
+    // dupliquer un destinataire déjà notifié pour ce même événement.
+    _notifyFollowers(updated, notified);
+  }
+
+  // Correction 3 (module Notifications) — notifie chaque utilisateur qui
+  // suit ce cas (bouton "Suivre" de report_action_zone.dart) que son statut
+  // a changé, EN PLUS des notifications déjà envoyées à l'auteur et à
+  // l'intervenant pour ce même événement (jamais à la place). alreadyNotified
+  // doit déjà contenir les ids notifiés par l'appelant pour ce même
+  // événement, pour garantir qu'un suiveur qui EST aussi l'auteur ou
+  // l'intervenant ne reçoive qu'UNE SEULE notification.
+  void _notifyFollowers(HomeReportModel report, Set<String> alreadyNotified) {
+    final followers = _reportFollowerIds[report.id];
+    if (followers == null || followers.isEmpty) return;
+    for (final followerId in followers) {
+      if (!alreadyNotified.add(followerId)) continue;
+      NotificationStore.instance.ajouterNotification(NotificationModel(
+        id: generateNotificationId(),
+        type: NotificationType.casSuiviMisAJour,
+        titre: 'Cas suivi mis à jour',
+        texte: 'Le cas que vous suivez, "${report.title}", est maintenant '
+            '${report.status.label}.',
+        destinataireUserId: followerId,
+        dateCreation: DateTime.now(),
+        referenceId: report.id,
+        referenceType: 'signalement',
+      ));
+    }
   }
 
   // ── Toggle WhatsApp ───────────────────────────────────────────
@@ -468,9 +596,16 @@ class ReportStore extends ChangeNotifier {
         _replaceReport(r);
         notifyListeners();
         if (result.status == ProofVerificationStatus.valid) {
+          // Correction 2 — casTraitesCount du groupe vient de varier,
+          // vérifie si un nouveau palier de badge est franchi.
+          if (r.groupId != null) {
+            GroupStore.instance.recalculerBadges(r.groupId!);
+          }
           // Déclencheur 2 — preuve validée, cas traité. Destinataire :
           // l'auteur du signalement.
+          final notified = <String>{if (r.intervenant?.id != null) r.intervenant!.id};
           if (r.signaleParId != null) {
+            notified.add(r.signaleParId!);
             NotificationStore.instance.ajouterNotification(NotificationModel(
               id: generateNotificationId(),
               type: NotificationType.traite,
@@ -482,6 +617,8 @@ class ReportStore extends ChangeNotifier {
               referenceType: 'signalement',
             ));
           }
+          // Correction 3 — suiveurs du cas notifiés en plus (jamais à la place).
+          _notifyFollowers(r, notified);
         } else if (result.status == ProofVerificationStatus.rejectedDistance) {
           // Déclencheur 5 (rejet — preuve hors tolérance) pour l'auteur +
           // Déclencheur 7 pour l'intervenant dont la preuve est rejetée.
