@@ -83,6 +83,13 @@ class _CreateActionPageState extends State<CreateActionPage> {
 
   bool get _isEditMode => widget.actionId != null;
 
+  // Correction 3 — lancée depuis le profil d'un groupe (bouton "Publier"),
+  // l'attribution "au nom du groupe" est automatique et implicite : AUCUNE
+  // possibilité de la changer, donc aucun accès à l'écran de choix
+  // d'attribution depuis ce flux (celui-ci reste inchangé partout ailleurs
+  // dans l'application).
+  bool get _attributionLocked => widget.preselectedGroupId != null;
+
   // Seule condition obligatoire à la publication — tout le reste du
   // formulaire est facultatif ou pré-rempli.
   bool get _canSubmit => _selectedType != null && !_isSubmitting;
@@ -872,38 +879,40 @@ class _CreateActionPageState extends State<CreateActionPage> {
     final icon = a == null || (!a.isAnonyme && a.groupId == null)
         ? Icons.person_rounded
         : (a.isAnonyme ? Icons.visibility_off_rounded : Icons.group_rounded);
-    return GestureDetector(
-      onTap: _pickAttribution,
-      child: Container(
-        padding: const EdgeInsets.all(CliinAppConstants.spacingM),
-        decoration: BoxDecoration(
-          color: CliinAppColors.cardWhite,
-          borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
-          border: Border.all(color: CliinAppColors.divider),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration:
-                  const BoxDecoration(color: CliinAppColors.primaryLight, shape: BoxShape.circle),
-              child: Icon(icon, color: CliinAppColors.primary, size: 18),
+    final content = Container(
+      padding: const EdgeInsets.all(CliinAppConstants.spacingM),
+      decoration: BoxDecoration(
+        color: CliinAppColors.cardWhite,
+        borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
+        border: Border.all(color: CliinAppColors.divider),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration:
+                const BoxDecoration(color: CliinAppColors.primaryLight, shape: BoxShape.circle),
+            child: Icon(icon, color: CliinAppColors.primary, size: 18),
+          ),
+          const SizedBox(width: CliinAppConstants.spacingM),
+          Expanded(
+            child: Text(
+              label,
+              style: CliinAppTextStyles.bodyMedium
+                  .copyWith(color: CliinAppColors.textDark, fontWeight: FontWeight.w600),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(width: CliinAppConstants.spacingM),
-            Expanded(
-              child: Text(
-                label,
-                style: CliinAppTextStyles.bodyMedium
-                    .copyWith(color: CliinAppColors.textDark, fontWeight: FontWeight.w600),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            Text('Modifier', style: CliinAppTextStyles.link.copyWith(fontSize: 12)),
-          ],
-        ),
+          ),
+          _attributionLocked
+              ? const Icon(Icons.lock_outline_rounded,
+                  color: CliinAppColors.textSecondary, size: 16)
+              : Text('Modifier', style: CliinAppTextStyles.link.copyWith(fontSize: 12)),
+        ],
       ),
     );
+    if (_attributionLocked) return content;
+    return GestureDetector(onTap: _pickAttribution, child: content);
   }
 }

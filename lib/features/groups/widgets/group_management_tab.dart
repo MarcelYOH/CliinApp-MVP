@@ -16,6 +16,7 @@ import '../../profile/pages/mes_actions_page.dart';
 import '../../profile/pages/mes_cas_signales_page.dart';
 import '../../profile/pages/mes_prises_en_charge_page.dart';
 import '../models/group_model.dart';
+import '../pages/group_contributors_page.dart';
 import 'add_admin_sheet.dart';
 import 'group_form_fields.dart' show GroupFormDashedCirclePainter;
 
@@ -135,6 +136,9 @@ class GroupManagementTab extends StatelessWidget {
     // Compteur live depuis ActionStore — group.actionsCount est un champ
     // statique du modèle (seuils de badge), pas une source à jour.
     final actionsCount = ActionStore.instance.allActions.where(_isGroupAction).length;
+    // Correction 1 — nombre réel de membres contributeurs classés (même
+    // agrégation que la page "Nos contributeurs", jamais recalculée).
+    final contributorsCount = computeGroupContributors(group).length;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(
@@ -211,6 +215,17 @@ class GroupManagementTab extends StatelessWidget {
                   headerTitle: 'Nos actions',
                   filterOverride: _isGroupAction,
                 )),
+              ),
+            ),
+            const Divider(height: 1, color: CliinAppColors.divider),
+            _buildRubriqueRow(
+              icon: Icons.emoji_events_rounded,
+              color: CliinAppColors.podiumGold,
+              label: 'Nos contributeurs',
+              count: contributorsCount,
+              onTap: () => Navigator.push(
+                context,
+                fastFadeRoute<void>(GroupContributorsPage(group: group)),
               ),
             ),
           ]),

@@ -20,6 +20,11 @@ class CliinAppColors {
   static const Color levelOfficiel  = Color(0xFF1565C0); // bleu vif
   // Impact réutilise primary (vert) — pas de nouvelle constante nécessaire.
 
+  // Podium "Nos contributeurs" (Correction 1) — 1er/2e/3e rang.
+  static const Color podiumGold     = Color(0xFFD4A017);
+  static const Color podiumSilver   = Color(0xFF9AA3AC);
+  static const Color podiumBronze   = Color(0xFFB2723D);
+
   // Textes
   static const Color textDark       = Color(0xFF1A1A2E);
   static const Color textSecondary  = Color(0xFF6B7280);

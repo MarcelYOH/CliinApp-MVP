@@ -91,6 +91,12 @@ class ActionStore extends ChangeNotifier {
   bool isParticipant(String actionId, String userId) =>
       _participantIds[actionId]?.contains(userId) ?? false;
 
+  // Expose (lecture seule) le bookkeeping interne des participants — même
+  // donnée déjà produite par joinAction/leaveAction, jamais recalculée
+  // (Correction 1 "Nos contributeurs" — agrège les participations réelles).
+  Set<String> participantIdsFor(String actionId) =>
+      Set.unmodifiable(_participantIds[actionId] ?? const {});
+
   Future<void> joinAction(String actionId, String userId) async {
     final participants = _participantIds.putIfAbsent(actionId, () => {});
     if (!participants.add(userId)) return;

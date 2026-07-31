@@ -19,6 +19,7 @@ import '../../../shared/utils/search_helper.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/widgets/circle_icon_button.dart';
 import '../../../shared/widgets/group_card.dart';
+import '../../../shared/widgets/left_filter_panel.dart';
 import '../../auth/auth_guard.dart';
 import '../../reports/pages/report_camera_page.dart';
 import '../data/groups_dummy_data.dart';
@@ -386,114 +387,96 @@ class _GroupSearchPageState extends State<GroupSearchPage> {
     );
   }
 
-  // Bottom sheet regroupant les 3 catégories de filtres (Correction 7) —
-  // même contenu/logique que précédemment, seul l'emplacement d'affichage
-  // change. StatefulBuilder nécessaire pour que les pilules reflètent
-  // immédiatement la sélection dans le sheet (setState du State parent ne
-  // reconstruit pas, seul, la route du bottom sheet).
+  // Panneau ancré à gauche (Correction 2 — jamais centré) regroupant les 3
+  // catégories de filtres, même contenu/logique que précédemment, seul
+  // l'emplacement d'affichage change. StatefulBuilder nécessaire pour que
+  // les pilules reflètent immédiatement la sélection dans le panneau
+  // (setState du State parent ne reconstruit pas, seul, sa route).
   void _showFiltersSheet() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => StatefulBuilder(
-        builder: (sheetContext, setModalState) => Container(
-          constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(sheetContext).size.height * 0.85),
-          decoration: const BoxDecoration(
-            color: CliinAppColors.cardWhite,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(CliinAppConstants.radiusLarge),
-              topRight: Radius.circular(CliinAppConstants.radiusLarge),
-            ),
-          ),
-          child: SafeArea(
-            top: false,
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.only(
-                    bottom: CliinAppConstants.spacingL),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Center(
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(
-                            vertical: CliinAppConstants.spacingM),
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: CliinAppColors.divider,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: CliinAppConstants.pagePadding),
-                      child: Text('Filtres',
+    showLeftFilterPanel(
+      context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setModalState) => SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.only(
+                top: CliinAppConstants.spacingM, bottom: CliinAppConstants.spacingL),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: CliinAppConstants.pagePadding),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Filtres',
                           style: CliinAppTextStyles.headingMedium.copyWith(fontSize: 16)),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(dialogContext),
+                        child: const Icon(Icons.close_rounded,
+                            color: CliinAppColors.textSecondary, size: 22),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: CliinAppConstants.spacingM),
+                _buildFilterRow(
+                  label: 'Type',
+                  children: GroupType.values.map((t) {
+                    final selected = _selectedType == t;
+                    return _buildPill(
+                      label: t.label,
+                      selected: selected,
+                      activeColor: CliinAppColors.primary,
+                      onTap: () {
+                        setState(() {
+                          _selectedType = selected ? null : t;
+                          _resetVisibleCount();
+                        });
+                        setModalState(() {});
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: CliinAppConstants.spacingM),
+                _buildFilterRow(
+                  label: 'Niveau d\'impact',
+                  children: _badgeCountOptions.map((count) {
+                    final selected = _selectedBadgeCount == count;
+                    return _buildPill(
+                      label: _badgeCountLabel(count),
+                      selected: selected,
+                      activeColor: CliinAppColors.primary,
+                      onTap: () {
+                        setState(() {
+                          _selectedBadgeCount = selected ? null : count;
+                          _resetVisibleCount();
+                        });
+                        setModalState(() {});
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: CliinAppConstants.spacingM),
+                _buildFilterRow(
+                  label: 'Trier par',
+                  children: [
+                    _buildSortPill(
+                      label: 'Plus proches',
+                      icon: Icons.near_me_rounded,
+                      option: _SortOption.proches,
+                      onChanged: () => setModalState(() {}),
                     ),
-                    const SizedBox(height: CliinAppConstants.spacingM),
-                    _buildFilterRow(
-                      label: 'Type',
-                      children: GroupType.values.map((t) {
-                        final selected = _selectedType == t;
-                        return _buildPill(
-                          label: t.label,
-                          selected: selected,
-                          activeColor: CliinAppColors.primary,
-                          onTap: () {
-                            setState(() {
-                              _selectedType = selected ? null : t;
-                              _resetVisibleCount();
-                            });
-                            setModalState(() {});
-                          },
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: CliinAppConstants.spacingM),
-                    _buildFilterRow(
-                      label: 'Niveau d\'impact',
-                      children: _badgeCountOptions.map((count) {
-                        final selected = _selectedBadgeCount == count;
-                        return _buildPill(
-                          label: _badgeCountLabel(count),
-                          selected: selected,
-                          activeColor: CliinAppColors.primary,
-                          onTap: () {
-                            setState(() {
-                              _selectedBadgeCount = selected ? null : count;
-                              _resetVisibleCount();
-                            });
-                            setModalState(() {});
-                          },
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: CliinAppConstants.spacingM),
-                    _buildFilterRow(
-                      label: 'Trier par',
-                      children: [
-                        _buildSortPill(
-                          label: 'Plus proches',
-                          icon: Icons.near_me_rounded,
-                          option: _SortOption.proches,
-                          onChanged: () => setModalState(() {}),
-                        ),
-                        _buildSortPill(
-                          label: 'Plus récents',
-                          icon: Icons.access_time_rounded,
-                          option: _SortOption.recents,
-                          onChanged: () => setModalState(() {}),
-                        ),
-                      ],
+                    _buildSortPill(
+                      label: 'Plus récents',
+                      icon: Icons.access_time_rounded,
+                      option: _SortOption.recents,
+                      onChanged: () => setModalState(() {}),
                     ),
                   ],
                 ),
-              ),
+              ],
             ),
           ),
         ),

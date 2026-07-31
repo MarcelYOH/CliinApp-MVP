@@ -19,6 +19,7 @@ import '../../../shared/widgets/report_card.dart'
 import '../../auth/auth_guard.dart';
 import '../../reports/pages/report_camera_page.dart';
 import '../models/group_model.dart';
+import 'group_contributors_page.dart';
 import '../widgets/group_about_tab.dart';
 import '../widgets/group_activities_tab.dart';
 import '../widgets/group_chat_tab.dart';
@@ -40,7 +41,15 @@ class GroupProfilePage extends StatefulWidget {
 
 class _GroupProfilePageState extends State<GroupProfilePage>
     with SingleTickerProviderStateMixin {
-  static const _tabLabels = ['À propos', 'Publications', 'Espace gestion', 'Chat'];
+  static const _tabLabels = [
+    'À propos', 'Publications', 'Nos contributeurs', 'Espace gestion', 'Chat',
+  ];
+  // Correction 1 — "Nos contributeurs" n'est pas un contenu embarqué dans
+  // ce panneau (les autres onglets swappent un widget dans _buildTabContent)
+  // mais un lanceur vers une page dédiée à part entière (flèche retour,
+  // plein écran) : null ici signale ce cas particulier. Les autres valeurs
+  // pointent vers l'index réel dans _buildTabContent (0..3), inchangé.
+  static const _tabContentIndex = [0, 1, null, 2, 3];
 
   int _selectedTab = 0;
 
@@ -396,7 +405,7 @@ class _GroupProfilePageState extends State<GroupProfilePage>
                     ),
                   ),
                 ),
-                _buildTabBar(),
+                _buildTabBar(group),
                 const SizedBox(height: CliinAppConstants.spacingS),
               ],
             ),
@@ -741,7 +750,7 @@ class _GroupProfilePageState extends State<GroupProfilePage>
   }
 
   // ── Onglets ─────────────────────────────────────────────────────
-  Widget _buildTabBar() {
+  Widget _buildTabBar(GroupModel group) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding:
@@ -751,17 +760,27 @@ class _GroupProfilePageState extends State<GroupProfilePage>
           for (var i = 0; i < _tabLabels.length; i++)
             Padding(
               padding: const EdgeInsets.only(right: CliinAppConstants.spacingL),
-              child: _buildTabItem(_tabLabels[i], i),
+              child: _buildTabItem(_tabLabels[i], i, group),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildTabItem(String label, int index) {
-    final selected = _selectedTab == index;
+  Widget _buildTabItem(String label, int tabBarIndex, GroupModel group) {
+    final contentIndex = _tabContentIndex[tabBarIndex];
+    final selected = contentIndex != null && _selectedTab == contentIndex;
     return GestureDetector(
-      onTap: () => setState(() => _selectedTab = index),
+      onTap: () {
+        if (contentIndex == null) {
+          Navigator.push(
+            context,
+            fastFadeRoute<void>(GroupContributorsPage(group: group)),
+          );
+          return;
+        }
+        setState(() => _selectedTab = contentIndex);
+      },
       child: Container(
         padding: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
