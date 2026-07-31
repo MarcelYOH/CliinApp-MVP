@@ -25,6 +25,11 @@ class CliinAppColors {
   static const Color podiumSilver   = Color(0xFF9AA3AC);
   static const Color podiumBronze   = Color(0xFFB2723D);
 
+  // Module Notifications — bleu/violet informatifs (page_notifications.jsx),
+  // absents de la palette jusqu'ici.
+  static const Color infoBlue       = Color(0xFF1E88E5);
+  static const Color accentPurple   = Color(0xFF8E24AA);
+
   // Textes
   static const Color textDark       = Color(0xFF1A1A2E);
   static const Color textSecondary  = Color(0xFF6B7280);

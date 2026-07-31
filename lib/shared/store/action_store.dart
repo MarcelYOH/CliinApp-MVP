@@ -4,12 +4,18 @@
 // Pour brancher Firebase : remplacer MockActionRepository par FirebaseActionRepository
 // sans toucher aux widgets ni aux pages
 
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
+import '../../core/utils/user_location_service.dart';
 import '../../features/actions/models/action_model.dart';
+import '../../features/notifications/models/notification_model.dart';
 import '../models/report_comment_model.dart';
 import '../repositories/action_repository.dart';
 import '../repositories/mock_action_repository.dart';
+import 'auth_store.dart';
+import 'group_store.dart';
+import 'notification_store.dart';
 
 class ActionStore extends ChangeNotifier {
   ActionStore._();
@@ -46,6 +52,50 @@ class ActionStore extends ChangeNotifier {
     } finally {
       _setLoading(false);
     }
+    _startReminderWatcher();
+  }
+
+  // Déclencheur 11 — rappel avant une action à laquelle l'utilisateur
+  // participe. Pas de job planifié possible sans backend : même principe
+  // que ReportStore._checkUpcomingExpiries (ticker périodique 1 min),
+  // alerte chaque participant une seule fois par action quand il reste
+  // ≤ 24h (J-1, alternative simple proposée pour ce MVP faute de vrai
+  // système de notification programmée).
+  static const _rappelWindow = Duration(hours: 24);
+  final Set<String> _reminderNotified = {};
+  Timer? _reminderTimer;
+
+  void _startReminderWatcher() {
+    _reminderTimer?.cancel();
+    _checkUpcomingActionReminders();
+    _reminderTimer = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => _checkUpcomingActionReminders(),
+    );
+  }
+
+  void _checkUpcomingActionReminders() {
+    final now = DateTime.now();
+    for (final action in _actions) {
+      if (action.statut != ActionStatus.aVenir) continue;
+      if (_reminderNotified.contains(action.id)) continue;
+      final remaining = action.date.difference(now);
+      if (remaining <= Duration.zero || remaining > _rappelWindow) continue;
+      _reminderNotified.add(action.id);
+      final participants = _participantIds[action.id] ?? const {};
+      for (final participantId in participants) {
+        NotificationStore.instance.ajouterNotification(NotificationModel(
+          id: generateNotificationId(),
+          type: NotificationType.actionRappel,
+          titre: 'Action demain',
+          texte: '"${action.type.label}" commence bientôt.',
+          destinataireUserId: participantId,
+          dateCreation: now,
+          referenceId: action.id,
+          referenceType: 'action',
+        ));
+      }
+    }
   }
 
   void _setLoading(bool value) {
@@ -72,7 +122,66 @@ class ActionStore extends ChangeNotifier {
     final added = await _repository.addAction(action);
     _actions = [..._actions, added];
     notifyListeners();
+    if (added.organisateurEstGroupe) {
+      _notifyActionOrganisee(added);
+    }
+    _notifyNouvelleActionIfRelevant(added);
     return added;
+  }
+
+  // Déclencheur 9 — tous les membres qui suivent le groupe organisateur,
+  // sauf l'organisateur (creeParId) lui-même.
+  void _notifyActionOrganisee(ActionModel action) {
+    final followerIds = GroupStore.instance.followerIdsOf(action.organisateurId)
+        .where((id) => id != action.creeParId);
+    for (final followerId in followerIds) {
+      NotificationStore.instance.ajouterNotification(NotificationModel(
+        id: generateNotificationId(),
+        type: NotificationType.actionOrganisee,
+        titre: 'Nouvelle publication du groupe',
+        texte: '${action.organisateurNom} a organisé "${action.type.label}" '
+            'au nom de ${action.organisateurNom}.',
+        destinataireUserId: followerId,
+        dateCreation: DateTime.now(),
+        referenceId: action.organisateurId,
+        referenceType: 'groupe',
+      ));
+    }
+  }
+
+  // Déclencheur 12 — "les utilisateurs concernés" (rayon 2km OU groupe
+  // suivi). ⚠️ Cette app mock ne connaît qu'un seul utilisateur réellement
+  // authentifiable (pas d'annuaire multi-utilisateurs, cf. Correction 1
+  // "Nos contributeurs" du lot précédent) : seul l'utilisateur COURANT peut
+  // donc être honnêtement évalué contre ces critères et notifié — jamais un
+  // id inventé pour simuler un "voisinage" qui n'existe pas dans ce mock.
+  void _notifyNouvelleActionIfRelevant(ActionModel action) {
+    final currentUser = AuthStore.instance.currentUser;
+    if (currentUser == null || currentUser.id == action.creeParId) return;
+
+    var concerned = false;
+    if (action.latitude != null && action.longitude != null) {
+      final meters = UserLocationService.instance
+          .distanceMetersTo(action.latitude, action.longitude);
+      if (meters != null && meters <= 2000) concerned = true;
+    }
+    if (!concerned && action.organisateurEstGroupe) {
+      concerned =
+          GroupStore.instance.isFollowing(action.organisateurId, currentUser.id);
+    }
+    if (!concerned) return;
+
+    NotificationStore.instance.ajouterNotification(NotificationModel(
+      id: generateNotificationId(),
+      type: NotificationType.nouvelleAction,
+      titre: 'Nouvelle action à proximité',
+      texte: '${action.organisateurNom} organise "${action.type.label}" '
+          'près de vous.',
+      destinataireUserId: currentUser.id,
+      dateCreation: DateTime.now(),
+      referenceId: action.id,
+      referenceType: 'action',
+    ));
   }
 
   Future<void> updateAction(ActionModel action) async {
@@ -104,6 +213,22 @@ class ActionStore extends ChangeNotifier {
         await _repository.joinAction(actionId: actionId, userId: userId);
     _replaceAction(updated);
     notifyListeners();
+    // Déclencheur 14 — organisateur notifié, sauf s'il participe lui-même
+    // à sa propre action.
+    if (updated.creeParId != userId) {
+      final participantName = AuthStore.instance.currentUser?.username ?? 'Un membre';
+      NotificationStore.instance.ajouterNotification(NotificationModel(
+        id: generateNotificationId(),
+        type: NotificationType.nouveauParticipant,
+        titre: 'Nouveau participant',
+        texte: '$participantName participe à votre action '
+            '"${updated.type.label}".',
+        destinataireUserId: updated.creeParId,
+        dateCreation: DateTime.now(),
+        referenceId: updated.id,
+        referenceType: 'action',
+      ));
+    }
   }
 
   Future<void> leaveAction(String actionId, String userId) async {
@@ -139,6 +264,21 @@ class ActionStore extends ChangeNotifier {
         await _repository.addComment(actionId: actionId, comment: comment);
     _replaceAction(updated);
     notifyListeners();
+    // Déclencheur 13 — organisateur notifié, sauf s'il commente lui-même
+    // son action.
+    if (updated.creeParId != comment.authorId) {
+      NotificationStore.instance.ajouterNotification(NotificationModel(
+        id: generateNotificationId(),
+        type: NotificationType.commentaireAction,
+        titre: 'Nouveau commentaire',
+        texte: '${comment.name} a commenté votre action '
+            '"${updated.type.label}".',
+        destinataireUserId: updated.creeParId,
+        dateCreation: DateTime.now(),
+        referenceId: updated.id,
+        referenceType: 'action',
+      ));
+    }
   }
 
   Future<void> editComment({

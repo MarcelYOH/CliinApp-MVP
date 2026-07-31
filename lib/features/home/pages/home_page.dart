@@ -12,6 +12,8 @@ import '../../../shared/models/user_model.dart';
 import '../../../shared/store/auth_store.dart';
 import '../../../shared/store/report_store.dart';
 import '../../../shared/store/group_store.dart';
+import '../../../shared/store/notification_store.dart';
+import '../../notifications/pages/notifications_page.dart';
 import '../../../core/utils/whatsapp_launcher.dart';
 import '../../auth/pages/auth_gate_sheet.dart';
 import '../widgets/home_quick_report.dart';
@@ -359,7 +361,7 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           children: [
             ListenableBuilder(
-              listenable: AuthStore.instance,
+              listenable: Listenable.merge([AuthStore.instance, NotificationStore.instance]),
               builder: (ctx, _) {
                 final authUser = AuthStore.instance.currentUser;
                 final isAuthed = AuthStore.instance.isAuthenticated;
@@ -398,17 +400,18 @@ class _HomePageState extends State<HomePage> {
                 }
 
                 return AppHeader(
-                  user: const UserModel(
+                  user: UserModel(
                     id: 'guest',
                     name: '',
                     avatarUrl: '',
-                    notificationCount: 0,
+                    notificationCount: NotificationStore.instance.nombreNonLues,
                   ),
                   greeting: greeting,
                   contextLine: contextLine,
                   avatarOverride: avatarContent,
                   onSearch: _onHomeSearch,
-                  onNotificationTap: () {},
+                  onNotificationTap: () => Navigator.push(
+                      context, fastFadeRoute<void>(const NotificationsPage())),
                   onAvatarTap: isAuthed
                       ? () => Navigator.push(
                           context,

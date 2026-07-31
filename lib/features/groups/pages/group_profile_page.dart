@@ -10,6 +10,7 @@ import '../../../shared/navigation/tab_navigation.dart';
 import '../../../shared/store/action_store.dart';
 import '../../../shared/store/auth_store.dart';
 import '../../../shared/store/group_store.dart';
+import '../../../shared/store/notification_store.dart';
 import '../../../shared/store/report_store.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../../shared/widgets/circle_icon_button.dart';
@@ -17,6 +18,7 @@ import '../../../shared/widgets/group_badge_chip.dart';
 import '../../../shared/widgets/report_card.dart'
     show buildReportImage, openFullScreenPhoto;
 import '../../auth/auth_guard.dart';
+import '../../notifications/pages/notifications_page.dart';
 import '../../reports/pages/report_camera_page.dart';
 import '../models/group_model.dart';
 import 'group_contributors_page.dart';
@@ -29,10 +31,17 @@ import 'edit_group_page.dart';
 
 class GroupProfilePage extends StatefulWidget {
   final String groupId;
+  // Onglet ouvert à l'arrivée (index dans _buildTabContent : 0=À propos,
+  // 1=Publications, 2=Espace gestion, 3=Chat) — utilisé par le module
+  // Notifications pour atterrir directement sur l'onglet concerné (ex:
+  // "Profil du groupe — Publications"). 0 = comportement inchangé partout
+  // où ce paramètre n'est pas fourni.
+  final int initialTab;
 
   const GroupProfilePage({
     super.key,
     required this.groupId,
+    this.initialTab = 0,
   });
 
   @override
@@ -51,7 +60,7 @@ class _GroupProfilePageState extends State<GroupProfilePage>
   // pointent vers l'index réel dans _buildTabContent (0..3), inchangé.
   static const _tabContentIndex = [0, 1, null, 2, 3];
 
-  int _selectedTab = 0;
+  late int _selectedTab = widget.initialTab;
 
   // "Aperçu public" (correction 1) — un administrateur peut masquer
   // temporairement ses propres contrôles pour voir exactement le rendu
@@ -501,6 +510,11 @@ class _GroupProfilePageState extends State<GroupProfilePage>
           ),
           Positioned(
             top: MediaQuery.of(context).padding.top + 12,
+            right: 64,
+            child: _buildNotificationBellButton(context),
+          ),
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 12,
             right: 16,
             child: _circleIconButton(
               icon: Icons.share,
@@ -566,6 +580,48 @@ class _GroupProfilePageState extends State<GroupProfilePage>
         ),
         child: Icon(icon, color: Colors.white, size: 20),
       ),
+    );
+  }
+
+  // Cloche notifications — même style/emplacement que le bouton partager
+  // juste à côté (variante adaptée sur fond non-blanc, cf. _circleIconButton
+  // ci-dessus), badge de comptage réel superposé.
+  Widget _buildNotificationBellButton(BuildContext context) {
+    return ListenableBuilder(
+      listenable: NotificationStore.instance,
+      builder: (context, _) {
+        final count = NotificationStore.instance.nombreNonLues;
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            _circleIconButton(
+              icon: Icons.notifications_none_rounded,
+              onTap: () =>
+                  Navigator.push(context, fastFadeRoute<void>(const NotificationsPage())),
+            ),
+            if (count > 0)
+              Positioned(
+                right: -2,
+                top: -2,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                  decoration: const BoxDecoration(
+                      color: CliinAppColors.alertRed, shape: BoxShape.circle),
+                  child: Center(
+                    child: Text(
+                      count > 9 ? '9+' : '$count',
+                      style: CliinAppTextStyles.badge.copyWith(
+                          color: CliinAppColors.textWhite,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 

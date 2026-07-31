@@ -8,7 +8,9 @@ import 'package:flutter/foundation.dart';
 import '../repositories/group_repository.dart';
 import '../repositories/mock_group_repository.dart';
 import '../../features/groups/models/group_model.dart';
+import '../../features/notifications/models/notification_model.dart';
 import 'auth_store.dart';
+import 'notification_store.dart';
 
 class GroupStore extends ChangeNotifier {
   GroupStore._();
@@ -312,6 +314,23 @@ class GroupStore extends ChangeNotifier {
     if (!followers.add(userId)) return;
     await _persist(current.copyWith(
         sympathisantsCount: current.sympathisantsCount + 1));
+    // Déclencheur 8 — tous les administrateurs, sauf le nouveau membre
+    // lui-même (garde-fou, n'arrive normalement jamais via ce chemin).
+    final followerName = AuthStore.instance.currentUser?.username ?? 'Un membre';
+    final admins =
+        cachedMembers(groupId).where((m) => m.estAdmin && m.id != userId);
+    for (final admin in admins) {
+      NotificationStore.instance.ajouterNotification(NotificationModel(
+        id: generateNotificationId(),
+        type: NotificationType.nouveauMembre,
+        titre: 'Nouveau membre',
+        texte: '$followerName a rejoint votre groupe ${current.nom}.',
+        destinataireUserId: admin.id,
+        dateCreation: DateTime.now(),
+        referenceId: groupId,
+        referenceType: 'groupe',
+      ));
+    }
   }
 
   Future<void> unfollowGroup(String groupId, String userId) async {
@@ -327,6 +346,11 @@ class GroupStore extends ChangeNotifier {
 
   bool isFollowing(String groupId, String userId) =>
       _followerIds[groupId]?.contains(userId) ?? false;
+
+  // Expose (lecture seule) — Déclencheur 9 (actionOrganisee), ActionStore
+  // en a besoin pour notifier les membres qui suivent le groupe.
+  Set<String> followerIdsOf(String groupId) =>
+      Set.unmodifiable(_followerIds[groupId] ?? const {});
 
   // ── Administrateurs ────────────────────────────────────────────
   // Rappel : la personne ajoutée doit déjà être membre du groupe

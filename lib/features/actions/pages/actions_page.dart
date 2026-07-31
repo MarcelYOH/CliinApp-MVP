@@ -9,10 +9,12 @@ import '../../../core/utils/user_location_service.dart';
 import '../../../shared/navigation/fast_page_route.dart';
 import '../../../shared/navigation/tab_navigation.dart';
 import '../../../shared/store/action_store.dart';
+import '../../../shared/store/notification_store.dart';
 import '../../../shared/utils/search_helper.dart';
 import '../../../shared/widgets/action_card.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
 import '../../auth/auth_guard.dart';
+import '../../notifications/pages/notifications_page.dart';
 import '../../reports/pages/report_camera_page.dart';
 import '../models/action_model.dart';
 import 'action_detail_page.dart';
@@ -351,9 +353,60 @@ class _ActionsPageState extends State<ActionsPage> {
             ),
           ),
           const SizedBox(width: CliinAppConstants.spacingM),
+          _buildNotificationBell(context),
+          const SizedBox(width: CliinAppConstants.spacingS),
           _buildCreateButton(),
         ],
       ),
+    );
+  }
+
+  // Correction — cloche notifications absente de cette page malgré la
+  // règle "accessible depuis toute icône cloche déjà présente" (Module
+  // Notifications, Lot 1) ; ajoutée ici pour la satisfaire, même style que
+  // l'icône déjà utilisée sur l'accueil (AppHeader).
+  Widget _buildNotificationBell(BuildContext context) {
+    return ListenableBuilder(
+      listenable: NotificationStore.instance,
+      builder: (context, _) {
+        final count = NotificationStore.instance.nombreNonLues;
+        return GestureDetector(
+          onTap: () => Navigator.push(context, fastFadeRoute<void>(const NotificationsPage())),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: const BoxDecoration(
+                    color: CliinAppColors.background, shape: BoxShape.circle),
+                child: const Icon(Icons.notifications_none_rounded,
+                    color: CliinAppColors.textDark, size: 20),
+              ),
+              if (count > 0)
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    decoration: const BoxDecoration(
+                        color: CliinAppColors.alertRed, shape: BoxShape.circle),
+                    child: Center(
+                      child: Text(
+                        count > 9 ? '9+' : '$count',
+                        style: CliinAppTextStyles.badge.copyWith(
+                            color: CliinAppColors.textWhite,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 

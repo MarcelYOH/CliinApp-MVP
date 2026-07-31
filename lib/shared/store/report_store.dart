@@ -10,6 +10,8 @@ import '../repositories/report_repository.dart';
 import '../repositories/mock_report_repository.dart';
 import '../../core/utils/user_location_service.dart';
 import '../../features/home/models/home_report_model.dart';
+import '../../features/notifications/models/notification_model.dart';
+import 'notification_store.dart';
 
 class ReportStore extends ChangeNotifier {
   // ── Singleton ─────────────────────────────────────────────────
@@ -232,11 +234,53 @@ class ReportStore extends ChangeNotifier {
 
   Future<void> _checkExpiredTakeovers() async {
     final expired = await _repository.expireOverdueTakeovers();
-    if (expired.isEmpty) return;
-    for (final report in expired) {
-      _replaceReport(report);
+    if (expired.isNotEmpty) {
+      for (final report in expired) {
+        _replaceReport(report);
+        // Déclencheur 5 (abandon automatique — délai 72h dépassé).
+        _notifyAbandonOrReject(report, report.intervenant, isAbandon: true);
+        _delaiExpireNotified.remove(report.id);
+      }
+      notifyListeners();
     }
-    notifyListeners();
+    _checkUpcomingExpiries();
+  }
+
+  // Déclencheur 6 — rappel avant expiration (délai 72h). Pas de job
+  // planifié possible sans backend : réutilise le même ticker périodique
+  // (1 min) que l'abandon automatique ci-dessus, alerte l'intervenant une
+  // seule fois par prise en charge quand il reste ≤ 6h (fenêtre alignée
+  // sur l'exemple déjà validé dans page_notifications.jsx : "Il vous reste
+  // 6h"). _delaiExpireNotified évite les rappels répétés à chaque tick ;
+  // remise à zéro dès qu'une nouvelle prise en charge démarre sur ce cas
+  // (voir takeCharge) ou qu'il expire (ci-dessus), pour permettre un
+  // nouveau rappel sur une future prise en charge du même cas.
+  static const _delaiRappelWindow = Duration(hours: 6);
+  final Set<String> _delaiExpireNotified = {};
+
+  void _checkUpcomingExpiries() {
+    final now = DateTime.now();
+    for (final r in _reports) {
+      if (r.status != ReportStatus.enCours) continue;
+      final intervenant = r.intervenant;
+      final takenAt = intervenant?.takenAt;
+      if (intervenant == null || takenAt == null) continue;
+      if (_delaiExpireNotified.contains(r.id)) continue;
+      final remaining = const Duration(hours: 72) - now.difference(takenAt);
+      if (remaining <= Duration.zero || remaining > _delaiRappelWindow) continue;
+      _delaiExpireNotified.add(r.id);
+      NotificationStore.instance.ajouterNotification(NotificationModel(
+        id: generateNotificationId(),
+        type: NotificationType.delaiExpire,
+        titre: 'Délai bientôt expiré',
+        texte: 'Il vous reste ${remaining.inHours}h pour soumettre une '
+            'preuve sur "${r.title}".',
+        destinataireUserId: intervenant.id,
+        dateCreation: now,
+        referenceId: r.id,
+        referenceType: 'signalement',
+      ));
+    }
   }
 
   // ── Rafraîchir manuellement la position (ex: pull-to-refresh) ──
@@ -282,6 +326,25 @@ class ReportStore extends ChangeNotifier {
       _replaceReport(updated);
       _error = null;
       notifyListeners();
+      // Nouvelle prise en charge sur ce cas — un futur rappel de délai
+      // (Déclencheur 6) doit pouvoir se déclencher à nouveau pour elle.
+      _delaiExpireNotified.remove(reportId);
+      // Déclencheur 1 — l'auteur est notifié, sauf s'il a pris en charge
+      // son propre cas (n'a normalement pas de sens, garde-fou quand même).
+      if (updated.signaleParId != null && updated.signaleParId != intervenant.id) {
+        final intervenantLabel = groupName ?? intervenant.name;
+        NotificationStore.instance.ajouterNotification(NotificationModel(
+          id: generateNotificationId(),
+          type: NotificationType.prisEnCharge,
+          titre: 'Votre cas a été pris en charge',
+          texte: '$intervenantLabel a pris en charge votre signalement '
+              '"${updated.title}".',
+          destinataireUserId: updated.signaleParId!,
+          dateCreation: DateTime.now(),
+          referenceId: updated.id,
+          referenceType: 'signalement',
+        ));
+      }
       return updated;
     } catch (e) {
       _error = e.toString();
@@ -322,11 +385,42 @@ class ReportStore extends ChangeNotifier {
       _replaceReport(updated);
       _error = null;
       notifyListeners();
+      // Déclencheur 5 (abandon volontaire) — updated.intervenant garde le
+      // même id/nom/groupName que l'intervenant d'origine (seul outcome
+      // change), pas besoin d'un snapshot "avant".
+      _notifyAbandonOrReject(updated, updated.intervenant, isAbandon: true);
       return updated;
     } catch (e) {
       _error = e.toString();
       rethrow;
     }
+  }
+
+  // Déclencheur 5 — factorisé, utilisé par abandon volontaire, abandon
+  // automatique (délai dépassé) et rejet de preuve : même texte EXACT
+  // demandé, même garde-fou (jamais notifié s'il est lui-même
+  // l'intervenant concerné).
+  void _notifyAbandonOrReject(
+    HomeReportModel updated,
+    IntervenantModel? intervenant, {
+    required bool isAbandon,
+  }) {
+    final authorId = updated.signaleParId;
+    if (authorId == null) return;
+    if (authorId == intervenant?.id) return;
+    final intervenantLabel = intervenant?.groupName ?? intervenant?.name ?? 'un intervenant';
+    final verbe = isAbandon ? 'abandonné' : 'rejeté';
+    NotificationStore.instance.ajouterNotification(NotificationModel(
+      id: generateNotificationId(),
+      type: isAbandon ? NotificationType.abandonne : NotificationType.rejete,
+      titre: 'Cas à nouveau disponible',
+      texte: 'Votre cas signalé, pris en charge par $intervenantLabel, a été '
+          '$verbe et est à nouveau disponible.',
+      destinataireUserId: authorId,
+      dateCreation: DateTime.now(),
+      referenceId: updated.id,
+      referenceType: 'signalement',
+    ));
   }
 
   // ── Toggle WhatsApp ───────────────────────────────────────────
@@ -370,8 +464,43 @@ class ReportStore extends ChangeNotifier {
       // validée (statut -> traité) que rejetée (statut -> disponible) —
       // dans les deux cas le store doit refléter le nouveau statut.
       if (result.updatedReport != null) {
-        _replaceReport(result.updatedReport!);
+        final r = result.updatedReport!;
+        _replaceReport(r);
         notifyListeners();
+        if (result.status == ProofVerificationStatus.valid) {
+          // Déclencheur 2 — preuve validée, cas traité. Destinataire :
+          // l'auteur du signalement.
+          if (r.signaleParId != null) {
+            NotificationStore.instance.ajouterNotification(NotificationModel(
+              id: generateNotificationId(),
+              type: NotificationType.traite,
+              titre: 'Cas traité avec succès',
+              texte: 'Votre cas "${r.title}" a été marqué comme traité.',
+              destinataireUserId: r.signaleParId!,
+              dateCreation: DateTime.now(),
+              referenceId: r.id,
+              referenceType: 'signalement',
+            ));
+          }
+        } else if (result.status == ProofVerificationStatus.rejectedDistance) {
+          // Déclencheur 5 (rejet — preuve hors tolérance) pour l'auteur +
+          // Déclencheur 7 pour l'intervenant dont la preuve est rejetée.
+          _notifyAbandonOrReject(r, r.intervenant, isAbandon: false);
+          final intervenant = r.intervenant;
+          if (intervenant != null) {
+            NotificationStore.instance.ajouterNotification(NotificationModel(
+              id: generateNotificationId(),
+              type: NotificationType.preuveRejetee,
+              titre: 'Preuve refusée',
+              texte: 'Votre preuve pour "${r.title}" n\'est pas conforme '
+                  '(écart GPS).',
+              destinataireUserId: intervenant.id,
+              dateCreation: DateTime.now(),
+              referenceId: r.id,
+              referenceType: 'signalement',
+            ));
+          }
+        }
       }
       _error = null;
       return result;
@@ -466,6 +595,20 @@ class ReportStore extends ChangeNotifier {
       _replaceReport(updated);
       _error = null;
       notifyListeners();
+      // Déclencheur 4 — auteur du signalement notifié, sauf s'il commente
+      // lui-même son propre cas.
+      if (updated.signaleParId != null && updated.signaleParId != comment.authorId) {
+        NotificationStore.instance.ajouterNotification(NotificationModel(
+          id: generateNotificationId(),
+          type: NotificationType.commentaire,
+          titre: 'Nouveau commentaire',
+          texte: '${comment.name} a commenté votre cas "${updated.title}".',
+          destinataireUserId: updated.signaleParId!,
+          dateCreation: DateTime.now(),
+          referenceId: updated.id,
+          referenceType: 'signalement',
+        ));
+      }
       return updated;
     } catch (e) {
       _error = e.toString();
