@@ -22,12 +22,17 @@ class ReportPreviewPage extends StatefulWidget {
   // les textes propres à un cas d'insalubrité.
   final bool isAvatarMode;
 
+  // Cf. ReportCameraPage — transmis tel quel jusqu'à ReportUploadPage
+  // (Correction 1).
+  final String? preselectedGroupId;
+
   const ReportPreviewPage({
     super.key,
     required this.imagePath,
     required this.address,
     this.replaceMode = false,
     this.isAvatarMode = false,
+    this.preselectedGroupId,
   });
 
   @override
@@ -454,6 +459,7 @@ class _ReportPreviewPageState extends State<ReportPreviewPage> {
                         builder: (_) => ReportFormPage(
                           imagePath: widget.imagePath,
                           address: _currentAddress, // ✅ adresse modifiée
+                          preselectedGroupId: widget.preselectedGroupId,
                         ),
                       ),
                     );

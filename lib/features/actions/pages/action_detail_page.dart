@@ -2,6 +2,7 @@
 // Page de détail d'une action — module Actions Terrain, Lot 2/3.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../core/constants/app_colors.dart';
@@ -13,6 +14,7 @@ import '../../../shared/navigation/profile_navigation.dart';
 import '../../../shared/navigation/tab_navigation.dart';
 import '../../../shared/store/action_store.dart';
 import '../../../shared/store/auth_store.dart';
+import '../../../shared/store/content_report_store.dart';
 import '../../../shared/store/favorite_store.dart';
 import '../../../shared/store/group_store.dart';
 import '../../../shared/store/report_store.dart';
@@ -28,6 +30,7 @@ import '../../groups/models/group_model.dart';
 import '../../groups/widgets/group_profile_widgets.dart' show GroupThemeSection;
 import '../../reports/pages/report_camera_page.dart';
 import '../models/action_model.dart';
+import 'create_action_page.dart';
 
 class ActionDetailPage extends StatefulWidget {
   final ActionModel data;
@@ -73,12 +76,213 @@ class _ActionDetailPageState extends State<ActionDetailPage> {
     ActionStore.instance.recordShare(_data.id);
   }
 
+  // Correction 12 — menu "3 points" : 4 options réellement fonctionnelles.
+  // creeParId (pas organisateurId, qui porte l'id du GROUPE quand l'action
+  // est organisée en son nom) identifie l'organisateur réel.
   void _onMore() {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text('Bientôt disponible'),
-      behavior: SnackBarBehavior.floating,
-      duration: Duration(seconds: 2),
-    ));
+    final userId = AuthStore.instance.currentUser?.id;
+    final isOrganizer = userId != null && userId == _data.creeParId;
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => Container(
+        decoration: const BoxDecoration(
+          color: CliinAppColors.cardWhite,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(CliinAppConstants.radiusLarge),
+            topRight: Radius.circular(CliinAppConstants.radiusLarge),
+          ),
+        ),
+        padding: const EdgeInsets.fromLTRB(CliinAppConstants.pagePadding,
+            CliinAppConstants.spacingM, CliinAppConstants.pagePadding, 0),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: CliinAppConstants.spacingM),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: CliinAppColors.divider,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              if (isOrganizer)
+                _moreMenuOption(
+                  icon: Icons.edit_outlined,
+                  label: 'Modifier',
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _onEditAction();
+                  },
+                ),
+              if (isOrganizer)
+                _moreMenuOption(
+                  icon: Icons.delete_outline_rounded,
+                  label: 'Supprimer',
+                  color: CliinAppColors.alertRed,
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _onDeleteAction();
+                  },
+                ),
+              _moreMenuOption(
+                icon: Icons.link_rounded,
+                label: 'Copier le lien',
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _onCopyLink();
+                },
+              ),
+              if (!isOrganizer)
+                _moreMenuOption(
+                  icon: Icons.flag_outlined,
+                  label: 'Signaler ce contenu',
+                  color: CliinAppColors.alertRed,
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _onReportContent();
+                  },
+                ),
+              const SizedBox(height: CliinAppConstants.spacingS),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _moreMenuOption({
+    required IconData icon,
+    required String label,
+    Color? color,
+    required VoidCallback onTap,
+  }) {
+    final effectiveColor = color ?? CliinAppColors.textDark;
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(children: [
+          Icon(icon, color: effectiveColor, size: 20),
+          const SizedBox(width: CliinAppConstants.spacingM),
+          Text(label,
+              style: CliinAppTextStyles.bodyMedium
+                  .copyWith(color: effectiveColor, fontWeight: FontWeight.w600)),
+        ]),
+      ),
+    );
+  }
+
+  void _onEditAction() {
+    Navigator.push(
+      context,
+      fastFadeRoute<void>(CreateActionPage(actionId: _data.id)),
+    );
+  }
+
+  Future<void> _onDeleteAction() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium)),
+        title: const Text('Supprimer cette action ?'),
+        content: const Text(
+          'Cette action est irréversible. L\'action sera définitivement supprimée.',
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Supprimer',
+                style: TextStyle(color: CliinAppColors.alertRed)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await ActionStore.instance.deleteAction(_data.id);
+      if (mounted) Navigator.pop(context);
+    }
+  }
+
+  Future<void> _onCopyLink() async {
+    await Clipboard.setData(
+        ClipboardData(text: 'https://cliinapp.app/action/${_data.id}'));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Lien copié'), behavior: SnackBarBehavior.floating),
+    );
+  }
+
+  Future<void> _onReportContent() async {
+    if (!await requireAuth(context)) return;
+    if (!mounted) return;
+    const reasons = ['Contenu inapproprié', 'Fausse information', 'Spam', 'Autre'];
+    final reason = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => Container(
+        decoration: const BoxDecoration(
+          color: CliinAppColors.cardWhite,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(CliinAppConstants.radiusLarge),
+            topRight: Radius.circular(CliinAppConstants.radiusLarge),
+          ),
+        ),
+        padding: const EdgeInsets.fromLTRB(CliinAppConstants.pagePadding,
+            CliinAppConstants.spacingM, CliinAppConstants.pagePadding, CliinAppConstants.spacingL),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: CliinAppConstants.spacingM),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: CliinAppColors.divider,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Text('Signaler ce contenu', style: CliinAppTextStyles.headingMedium),
+              const SizedBox(height: 4),
+              Text('Pourquoi signalez-vous cette publication ?',
+                  style: CliinAppTextStyles.bodySmall),
+              const SizedBox(height: CliinAppConstants.spacingS),
+              for (final r in reasons)
+                GestureDetector(
+                  onTap: () => Navigator.pop(sheetContext, r),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Text(r, style: CliinAppTextStyles.bodyMedium),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (reason == null || !mounted) return;
+    final userId = AuthStore.instance.currentUser!.id;
+    ContentReportStore.instance
+        .reportAction(actionId: _data.id, reporterId: userId, reason: reason);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+          content: Text('Signalement envoyé, merci.'),
+          behavior: SnackBarBehavior.floating),
+    );
   }
 
   Future<void> _onToggleFavorite() async {

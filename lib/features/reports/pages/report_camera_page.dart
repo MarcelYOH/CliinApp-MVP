@@ -30,10 +30,18 @@ class ReportCameraPage extends StatefulWidget {
   // replaceMode est false.
   final bool isAvatarMode;
 
+  // Renseigné lorsque la page est ouverte depuis le bouton "Publier" >
+  // "Signaler un cas d'insalubrité" du profil d'un groupe (Correction 1) —
+  // pré-sélectionne l'attribution "Au nom d'un groupe" avec ce groupe
+  // précis, sans écran de choix d'attribution. Null = flux normal
+  // (attribution choisie normalement à la fin du flow).
+  final String? preselectedGroupId;
+
   const ReportCameraPage({
     super.key,
     this.replaceMode = false,
     this.isAvatarMode = false,
+    this.preselectedGroupId,
   });
 
   @override
@@ -305,6 +313,7 @@ class _ReportCameraPageState extends State<ReportCameraPage>
           address: _address,
           replaceMode: widget.replaceMode,
           isAvatarMode: widget.isAvatarMode,
+          preselectedGroupId: widget.preselectedGroupId,
         ),
       ),
     ).then((result) {

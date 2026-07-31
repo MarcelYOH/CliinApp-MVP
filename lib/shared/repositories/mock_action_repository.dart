@@ -38,6 +38,7 @@ class MockActionRepository implements ActionRepository {
         // "Organisé par" résout la fiche groupe réelle via cet id).
         organisateurId: 'grp_clean_riviera',
         organisateurEstGroupe: true,
+        creeParId: 'seed_admin_clean_riviera',
         createdAt: now.subtract(const Duration(days: 2)),
         viewsCount: 34,
         commentsCount: 2,
@@ -76,6 +77,7 @@ class MockActionRepository implements ActionRepository {
         // Correspond au vrai groupe seedé par MockGroupRepository.
         organisateurId: 'grp_green_city',
         organisateurEstGroupe: true,
+        creeParId: 'seed_admin_green_city',
         createdAt: now.subtract(const Duration(days: 1)),
         viewsCount: 51,
         commentsCount: 0,
@@ -95,6 +97,7 @@ class MockActionRepository implements ActionRepository {
         // Correspond au vrai groupe seedé par MockGroupRepository.
         organisateurId: 'grp_eco_jeunes',
         organisateurEstGroupe: true,
+        creeParId: 'seed_admin_eco_jeunes',
         createdAt: now.subtract(const Duration(hours: 6)),
         viewsCount: 22,
         commentsCount: 0,
@@ -115,6 +118,7 @@ class MockActionRepository implements ActionRepository {
         statut: ActionStatus.terminee,
         organisateurNom: 'Anonyme',
         organisateurId: 'seed_user_anonyme_1',
+        creeParId: 'seed_user_anonyme_1',
         isAnonyme: true,
         createdAt: now.subtract(const Duration(days: 11)),
         viewsCount: 15,
@@ -133,6 +137,7 @@ class MockActionRepository implements ActionRepository {
         statut: ActionStatus.aVenir,
         organisateurNom: 'Kouassi Aya',
         organisateurId: 'seed_user_kouassi',
+        creeParId: 'seed_user_kouassi',
         createdAt: now.subtract(const Duration(hours: 20)),
         viewsCount: 9,
         commentsCount: 0,

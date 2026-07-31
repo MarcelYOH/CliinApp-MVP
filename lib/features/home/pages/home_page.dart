@@ -214,11 +214,13 @@ class _HomePageState extends State<HomePage> {
     ));
   }
 
+  // Correction 8 — les cartes factices "À proximité"/"Cas récents" mènent
+  // désormais à un vrai détail (ReportDetailPage accepte déjà les données
+  // directement, sans lecture ReportStore obligatoire) ; les actions qui
+  // muteraient réellement le store (Prendre en charge, Contacter, Partager,
+  // vue) restent interceptées à l'intérieur de la page elle-même — jamais
+  // de navigation vers un faux détail qui planterait au premier tap dessus.
   void _onCardTap(HomeReportModel report) {
-    if (HomeDummyData.isFakeReport(report)) {
-      _showFakeReportNotice();
-      return;
-    }
     Navigator.push(
       context,
       fastFadeRoute<void>(ReportDetailPage(data: report)),

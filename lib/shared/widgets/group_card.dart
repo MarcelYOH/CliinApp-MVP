@@ -27,10 +27,20 @@ class GroupCard extends StatefulWidget {
   // habituelle (cardWidth), inchangée partout ailleurs.
   final double? width;
 
+  // Override d'affichage du bouton Suivre/Suivi (Correction 7) — une carte
+  // factice n'existe jamais dans GroupStore, donc `isFollowing` renvoie
+  // toujours faux même dans "Mes groupes" (où, par définition, tout groupe
+  // affiché est censé être suivi) : incohérent visuellement. null = état
+  // réel via GroupStore (comportement inchangé partout ailleurs, y compris
+  // pour les cartes factices des sections "Découvrir"/"Groupes actifs", où
+  // "Suivre" reste correct).
+  final bool? forceFollowingState;
+
   const GroupCard({
     super.key,
     required this.data,
     this.width,
+    this.forceFollowingState,
   });
 
   static const double cardWidth = 260;
@@ -421,8 +431,8 @@ class _GroupCardState extends State<GroupCard> {
 
   Widget _buildFollowButton() {
     final userId = AuthStore.instance.currentUser?.id;
-    final isFollowing = userId != null &&
-        GroupStore.instance.isFollowing(widget.data.id, userId);
+    final isFollowing = widget.forceFollowingState ??
+        (userId != null && GroupStore.instance.isFollowing(widget.data.id, userId));
     return GestureDetector(
       onTap: _toggleFollow,
       child: AnimatedContainer(

@@ -31,12 +31,16 @@ class ReportFormPage extends StatefulWidget {
   final String? imagePath;
   final String? address;
   final HomeReportModel? existingReport;
+  // Cf. ReportCameraPage — transmis tel quel jusqu'à ReportUploadPage
+  // (Correction 1).
+  final String? preselectedGroupId;
 
   const ReportFormPage({
     super.key,
     this.imagePath,
     this.address,
     this.existingReport,
+    this.preselectedGroupId,
   }) : assert(
           existingReport != null || (imagePath != null && address != null),
           'ReportFormPage requires either existingReport or imagePath+address',
@@ -272,8 +276,11 @@ class _ReportFormPageState extends State<ReportFormPage> {
       positionApproximative: isApproximate,
       createdAt: DateTime.now(),
     );
-    Navigator.push(context,
-        MaterialPageRoute(builder: (_) => ReportUploadPage(report: report)));
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (_) => ReportUploadPage(
+                report: report, preselectedGroupId: widget.preselectedGroupId)));
   }
 
   Future<void> _saveEdit() async {

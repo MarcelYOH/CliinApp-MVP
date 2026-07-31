@@ -19,6 +19,8 @@ import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../shared/navigation/fast_page_route.dart';
 import '../../../shared/navigation/profile_navigation.dart';
 import '../../../shared/store/action_store.dart';
+import '../../../shared/store/auth_store.dart';
+import '../../../shared/store/group_store.dart';
 import '../../../shared/store/report_store.dart';
 import '../../../shared/utils/search_helper.dart';
 import '../../../shared/widgets/action_card.dart';
@@ -29,6 +31,7 @@ import '../../actions/pages/create_action_page.dart';
 import '../../auth/auth_guard.dart';
 import '../../home/models/home_report_model.dart';
 import '../../reports/pages/intervenant_detail_page.dart';
+import '../../reports/pages/report_camera_page.dart';
 import '../../reports/pages/report_detail_page.dart';
 import '../../reports/widgets/take_charge_flow.dart';
 import '../models/group_model.dart';
@@ -56,7 +59,12 @@ class _ReportFeedItem extends _FeedItem {
 
 class GroupActivitiesTab extends StatefulWidget {
   final GroupModel group;
-  const GroupActivitiesTab({super.key, required this.group});
+  // Détermine si "Organiser une action terrain" (bouton "Publier",
+  // Correction 1.4) est accessible — réservé aux administrateurs, même
+  // règle déjà en place pour la gestion des prises en charge au nom du
+  // groupe.
+  final bool isAdmin;
+  const GroupActivitiesTab({super.key, required this.group, required this.isAdmin});
 
   @override
   State<GroupActivitiesTab> createState() => _GroupActivitiesTabState();
@@ -104,6 +112,173 @@ class _GroupActivitiesTabState extends State<GroupActivitiesTab> {
         fastFadeRoute<void>(CreateActionPage(preselectedGroupId: widget.group.id)),
       );
     }
+  }
+
+  // ── Correction 1 — bouton "Publier" : bottom sheet à 2 options ──────
+  void _showPublishSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => Container(
+        decoration: const BoxDecoration(
+          color: CliinAppColors.cardWhite,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(CliinAppConstants.radiusLarge),
+            topRight: Radius.circular(CliinAppConstants.radiusLarge),
+          ),
+        ),
+        padding: const EdgeInsets.fromLTRB(CliinAppConstants.pagePadding,
+            CliinAppConstants.spacingM, CliinAppConstants.pagePadding, 0),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: CliinAppConstants.spacingL),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: CliinAppColors.divider,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Text('Publier', style: CliinAppTextStyles.headingMedium),
+              const SizedBox(height: CliinAppConstants.spacingM),
+              _publishOption(
+                icon: Icons.campaign_rounded,
+                title: 'Signaler un cas d\'insalubrité',
+                subtitle: 'Publié au nom de ce groupe',
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _onSignalerTap(context);
+                },
+              ),
+              const SizedBox(height: CliinAppConstants.spacingM),
+              _publishOption(
+                icon: Icons.bolt_rounded,
+                title: 'Organiser une action terrain',
+                subtitle: 'Publié au nom de ce groupe',
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _onOrganiserTap(context);
+                },
+              ),
+              const SizedBox(height: CliinAppConstants.spacingM),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _publishOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(CliinAppConstants.spacingM),
+        decoration: BoxDecoration(
+          color: CliinAppColors.background,
+          borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
+        ),
+        child: Row(children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration:
+                const BoxDecoration(color: CliinAppColors.primary, shape: BoxShape.circle),
+            child: Icon(icon, color: CliinAppColors.textWhite, size: 20),
+          ),
+          const SizedBox(width: CliinAppConstants.spacingM),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: CliinAppTextStyles.bodyMedium.copyWith(
+                        fontWeight: FontWeight.w600, color: CliinAppColors.textDark)),
+                Text(subtitle, style: CliinAppTextStyles.bodySmall),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right_rounded, color: CliinAppColors.textSecondary),
+        ]),
+      ),
+    );
+  }
+
+  // Correction 1.3 — accessible à tout membre qui SUIT le groupe (pas
+  // besoin d'être administrateur) ; invite à suivre d'abord sinon. Aucun
+  // écran de choix d'attribution : "au nom du groupe" est automatique
+  // (ReportCameraPage.preselectedGroupId, cf. ReportUploadPage).
+  Future<void> _onSignalerTap(BuildContext context) async {
+    if (!await requireAuth(context)) return;
+    if (!context.mounted) return;
+    final userId = AuthStore.instance.currentUser!.id;
+    final isFollowing = GroupStore.instance.isFollowing(widget.group.id, userId);
+    if (!isFollowing) {
+      final shouldFollow = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium)),
+          title: const Text('Suivez ce groupe pour publier'),
+          content: const Text(
+            'Seuls les membres qui suivent ce groupe peuvent signaler un cas '
+            'en son nom. Voulez-vous le suivre maintenant ?',
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Annuler')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Suivre',
+                  style: TextStyle(
+                      color: CliinAppColors.primary, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      );
+      if (shouldFollow != true) return;
+      await GroupStore.instance.followGroup(widget.group.id, userId);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vous suivez maintenant ce groupe — appuyez de nouveau '
+              'sur Publier pour signaler un cas.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    Navigator.push(
+      context,
+      fastFadeRoute<void>(ReportCameraPage(preselectedGroupId: widget.group.id)),
+    );
+  }
+
+  // Correction 1.4 — réservé aux administrateurs.
+  void _onOrganiserTap(BuildContext context) {
+    if (!widget.isAdmin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Seuls les administrateurs du groupe peuvent organiser une action en son nom.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    _openCreateAction(context);
   }
 
   void _openActionDetail(BuildContext context, ActionModel action) {
@@ -209,7 +384,7 @@ class _GroupActivitiesTabState extends State<GroupActivitiesTab> {
             Padding(
               padding: const EdgeInsets.all(CliinAppConstants.pagePadding),
               child: GestureDetector(
-                onTap: () => _openCreateAction(context),
+                onTap: () => _showPublishSheet(context),
                 child: CustomPaint(
                   painter: const GroupDashedRectPainter(
                       color: CliinAppColors.primary,
@@ -223,7 +398,7 @@ class _GroupActivitiesTabState extends State<GroupActivitiesTab> {
                         const Icon(Icons.add_rounded,
                             color: CliinAppColors.primary, size: 18),
                         const SizedBox(width: 6),
-                        Text('Organiser une action',
+                        Text('Publier',
                             style: CliinAppTextStyles.link.copyWith(fontSize: 13)),
                       ],
                     ),

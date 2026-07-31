@@ -133,6 +133,13 @@ class ActionModel {
   final String organisateurNom;
   final String organisateurId;
   final bool organisateurEstGroupe;
+  // Identifiant de l'utilisateur qui a réellement créé l'action — distinct
+  // d'organisateurId, qui porte l'id du GROUPE (pas de l'utilisateur) quand
+  // organisateurEstGroupe est vrai. Même principe que
+  // HomeReportModel.signaleParId vs groupId. Permet de tracer la
+  // contribution personnelle d'un administrateur ayant organisé une action
+  // au nom de son groupe (Mes contributions, Correction 2).
+  final String creeParId;
   final bool isAnonyme;
   final List<String> casPrisEnChargeIds;
   final DateTime createdAt;
@@ -167,6 +174,7 @@ class ActionModel {
     required this.organisateurNom,
     required this.organisateurId,
     this.organisateurEstGroupe = false,
+    required this.creeParId,
     this.isAnonyme = false,
     this.casPrisEnChargeIds = const [],
     required this.createdAt,
@@ -195,6 +203,7 @@ class ActionModel {
     String? organisateurNom,
     String? organisateurId,
     bool? organisateurEstGroupe,
+    String? creeParId,
     bool? isAnonyme,
     List<String>? casPrisEnChargeIds,
     DateTime? createdAt,
@@ -222,6 +231,7 @@ class ActionModel {
       organisateurNom: organisateurNom ?? this.organisateurNom,
       organisateurId: organisateurId ?? this.organisateurId,
       organisateurEstGroupe: organisateurEstGroupe ?? this.organisateurEstGroupe,
+      creeParId: creeParId ?? this.creeParId,
       isAnonyme: isAnonyme ?? this.isAnonyme,
       casPrisEnChargeIds: casPrisEnChargeIds ?? this.casPrisEnChargeIds,
       createdAt: createdAt ?? this.createdAt,
@@ -251,6 +261,7 @@ class ActionModel {
     'organisateurNom': organisateurNom,
     'organisateurId': organisateurId,
     'organisateurEstGroupe': organisateurEstGroupe,
+    'creeParId': creeParId,
     'isAnonyme': isAnonyme,
     'casPrisEnChargeIds': casPrisEnChargeIds,
     'createdAt': createdAt.toIso8601String(),
@@ -283,6 +294,7 @@ class ActionModel {
     organisateurNom: json['organisateurNom'],
     organisateurId: json['organisateurId'],
     organisateurEstGroupe: json['organisateurEstGroupe'] ?? false,
+    creeParId: json['creeParId'] ?? json['organisateurId'],
     isAnonyme: json['isAnonyme'] ?? false,
     casPrisEnChargeIds: (json['casPrisEnChargeIds'] as List?)
             ?.map((e) => e.toString())

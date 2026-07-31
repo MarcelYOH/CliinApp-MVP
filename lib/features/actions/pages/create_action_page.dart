@@ -64,6 +64,15 @@ class _CreateActionPageState extends State<CreateActionPage> {
   ActionType? _selectedType;
   DateTime _selectedDate = DateTime.now();
   TimeOfDay _selectedTime = TimeOfDay.now();
+  // Correction 10 — la date/l'heure par défaut (instant de création) ne
+  // doit jamais être publiée sans que l'utilisateur les ait consciemment
+  // choisies lui-même : un état dédié (pas juste "valeur non nulle", qui
+  // vaudrait toujours vrai vu les valeurs par défaut ci-dessus) détecte
+  // une vraie interaction avec les sélecteurs. Toujours vrai en
+  // modification (valeurs héritées d'une action déjà validée à sa
+  // création, jamais à re-choisir à chaque édition).
+  bool _dateManuallySet = false;
+  bool _timeManuallySet = false;
   double? _latitude;
   double? _longitude;
   bool _isDetectingLieu = false;
@@ -114,6 +123,8 @@ class _CreateActionPageState extends State<CreateActionPage> {
         _financementController.text = existing.besoinFinancement ?? '';
         _materielController.text = existing.besoinMateriel ?? '';
         _selectedCasIds.addAll(existing.casPrisEnChargeIds);
+        _dateManuallySet = true;
+        _timeManuallySet = true;
         // Reconstruit l'attribution depuis le modèle existant — organisateurId
         // porte l'id du groupe quand organisateurEstGroupe, sinon l'id de
         // l'organisateur individuel (même convention que _submit ci-dessous).
@@ -224,12 +235,22 @@ class _CreateActionPageState extends State<CreateActionPage> {
       firstDate: DateTime.now().subtract(const Duration(days: 1)),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    if (picked != null) setState(() => _selectedDate = picked);
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+        _dateManuallySet = true;
+      });
+    }
   }
 
   Future<void> _pickTime() async {
     final picked = await showTimePicker(context: context, initialTime: _selectedTime);
-    if (picked != null) setState(() => _selectedTime = picked);
+    if (picked != null) {
+      setState(() {
+        _selectedTime = picked;
+        _timeManuallySet = true;
+      });
+    }
   }
 
   // Réutilise exactement le composant déjà implémenté pour l'attribution des
@@ -260,6 +281,20 @@ class _CreateActionPageState extends State<CreateActionPage> {
 
   Future<void> _submit() async {
     if (!_canSubmit) return;
+    // Correction 10 — bloque la publication (avec message clair) tant que
+    // la date ET l'heure n'ont pas été explicitement choisies par
+    // l'utilisateur, plutôt que de publier silencieusement avec l'instant
+    // de création par défaut.
+    if (!_isEditMode && (!_dateManuallySet || !_timeManuallySet)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content:
+              Text('Choisissez la date et l\'heure de l\'action avant de publier.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
     setState(() => _isSubmitting = true);
     try {
       final user = AuthStore.instance.currentUser!;
@@ -306,6 +341,9 @@ class _CreateActionPageState extends State<CreateActionPage> {
           organisateurNom: attribution.signaleParNom,
           organisateurId: attribution.groupId ?? attribution.signaleParId,
           organisateurEstGroupe: attribution.groupId != null,
+          // Préservé (pas le compte de la personne qui édite) — la
+          // contribution personnelle reste attachée au créateur d'origine.
+          creeParId: existing.creeParId,
           isAnonyme: attribution.isAnonyme,
           casPrisEnChargeIds: _selectedCasIds.toList(),
           createdAt: existing.createdAt,
@@ -333,6 +371,10 @@ class _CreateActionPageState extends State<CreateActionPage> {
           organisateurNom: attribution.signaleParNom,
           organisateurId: attribution.groupId ?? attribution.signaleParId,
           organisateurEstGroupe: attribution.groupId != null,
+          // Toujours l'utilisateur réellement authentifié qui publie —
+          // jamais le groupe, même quand organisateurEstGroupe est vrai
+          // (Correction 2/3 — trace la contribution personnelle réelle).
+          creeParId: user.id,
           isAnonyme: attribution.isAnonyme,
           casPrisEnChargeIds: _selectedCasIds.toList(),
           createdAt: DateTime.now(),

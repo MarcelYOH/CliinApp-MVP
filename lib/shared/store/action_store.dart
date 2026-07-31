@@ -178,4 +178,46 @@ class ActionStore extends ChangeNotifier {
 
     return candidates.map((e) => e.action).toList();
   }
+
+  // ── Statistiques personnelles — Profil individuel (Correction 3) ────
+  // Actions organisées EN NOM PERSONNEL uniquement (jamais au nom d'un
+  // groupe, qui relève de la contribution groupe ci-dessous) — même
+  // convention que ReportStore.casPubliesCount (groupId == null).
+  int myActionsOrganiseesCount(String userId) => _actions
+      .where((a) => !a.organisateurEstGroupe && a.creeParId == userId)
+      .length;
+
+  // ── Statistiques groupe — "Notre impact" (À propos), Correction 4/5 ──
+  int actionsCountForGroup(String groupId) => _actions
+      .where((a) => a.organisateurEstGroupe && a.organisateurId == groupId)
+      .length;
+
+  // Participants cumulés ÷ nombre d'actions du groupe — null si aucune
+  // action (évite une division par zéro / un "0" trompeur affiché comme
+  // une vraie moyenne).
+  double? mobilisationMoyenneForGroup(String groupId) {
+    final groupActions = _actions
+        .where((a) => a.organisateurEstGroupe && a.organisateurId == groupId)
+        .toList();
+    if (groupActions.isEmpty) return null;
+    final totalParticipants =
+        groupActions.fold<int>(0, (sum, a) => sum + a.participantsCount);
+    return totalParticipants / groupActions.length;
+  }
+
+  // ── Statistiques "Mes contributions" — actions organisées au nom d'un
+  // groupe, par groupe ET tous groupes (Correction 2 — même structure que
+  // ReportStore.casSignalesCountForUserInGroup / TotalForUserAllGroups,
+  // jamais dupliquée sous une forme différente).
+  int actionsOrganiseesCountForUserInGroup(String groupId, String userId) =>
+      _actions
+          .where((a) =>
+              a.organisateurEstGroupe &&
+              a.organisateurId == groupId &&
+              a.creeParId == userId)
+          .length;
+
+  int actionsOrganiseesTotalForUserAllGroups(String userId) => _actions
+      .where((a) => a.organisateurEstGroupe && a.creeParId == userId)
+      .length;
 }

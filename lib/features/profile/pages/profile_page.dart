@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../shared/store/action_store.dart';
 import '../../../shared/store/auth_store.dart';
 import '../../../shared/store/report_store.dart';
 import '../../../shared/models/auth_user_model.dart';
@@ -145,7 +146,8 @@ class _ProfilePageState extends State<ProfilePage> {
         top: false,
         bottom: false,
         child: ListenableBuilder(
-          listenable: Listenable.merge([AuthStore.instance, ReportStore.instance]),
+          listenable: Listenable.merge(
+              [AuthStore.instance, ReportStore.instance, ActionStore.instance]),
           builder: (ctx, _) {
             final user = AuthStore.instance.currentUser;
             return Column(
@@ -391,6 +393,11 @@ class _ProfilePageState extends State<ProfilePage> {
     final casPublies = userId != null ? store.casPubliesCount(userId) : 0;
     final prisEnCharge = userId != null ? store.prisEnChargeCount(userId) : 0;
     final casTraites = userId != null ? store.casTraitesCount(userId) : 0;
+    // Correction 3 — actions organisées en nom personnel uniquement (les
+    // actions organisées au nom d'un groupe relèvent de Mes contributions,
+    // Correction 2, jamais comptées deux fois ici).
+    final actionsOrganisees =
+        userId != null ? ActionStore.instance.myActionsOrganiseesCount(userId) : 0;
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -419,6 +426,13 @@ class _ProfilePageState extends State<ProfilePage> {
               '$casTraites',
               'Cas traités',
               const Color(0xFF1E88E5),
+            ),
+            const VerticalDivider(width: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+            _buildStatItem(
+              Icons.bolt_rounded,
+              '$actionsOrganisees',
+              'Actions organisées',
+              CliinAppColors.levelEngage,
             ),
           ],
         ),

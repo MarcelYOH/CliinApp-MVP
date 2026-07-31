@@ -10,6 +10,7 @@ import '../../../core/constants/app_text_styles.dart';
 import '../../../features/groups/models/group_model.dart';
 import '../../../features/groups/pages/group_profile_page.dart';
 import '../../../shared/navigation/fast_page_route.dart';
+import '../../../shared/store/action_store.dart';
 import '../../../shared/store/auth_store.dart';
 import '../../../shared/store/group_store.dart';
 import '../../../shared/store/report_store.dart';
@@ -22,12 +23,14 @@ class _GroupContribution {
   final GroupModel group;
   final int casSignales;
   final int prisesEnCharge;
+  final int actionsOrganisees;
   const _GroupContribution({
     required this.group,
     required this.casSignales,
     required this.prisesEnCharge,
+    required this.actionsOrganisees,
   });
-  int get total => casSignales + prisesEnCharge;
+  int get total => casSignales + prisesEnCharge + actionsOrganisees;
 }
 
 class MesContributionsPage extends StatefulWidget {
@@ -57,11 +60,16 @@ class _MesContributionsPageState extends State<MesContributionsPage> {
           ReportStore.instance.casSignalesCountForUserInGroup(group.id, userId);
       final prisesEnCharge = ReportStore.instance
           .prisEnChargeCountForUserInGroup(group.nom, userId);
-      if (signales + prisesEnCharge > 0) {
+      // Correction 2 — même structure que cas signalés/prises en charge,
+      // jamais dupliquée sous une forme différente.
+      final actionsOrganisees = ActionStore.instance
+          .actionsOrganiseesCountForUserInGroup(group.id, userId);
+      if (signales + prisesEnCharge + actionsOrganisees > 0) {
         result.add(_GroupContribution(
           group: group,
           casSignales: signales,
           prisesEnCharge: prisesEnCharge,
+          actionsOrganisees: actionsOrganisees,
         ));
       }
     }
@@ -88,8 +96,12 @@ class _MesContributionsPageState extends State<MesContributionsPage> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge(
-          [ReportStore.instance, GroupStore.instance, AuthStore.instance]),
+      listenable: Listenable.merge([
+        ReportStore.instance,
+        GroupStore.instance,
+        AuthStore.instance,
+        ActionStore.instance,
+      ]),
       builder: (context, _) {
         final userId = AuthStore.instance.currentUser?.id;
         final allContributions = _allContributions;
@@ -100,6 +112,9 @@ class _MesContributionsPageState extends State<MesContributionsPage> {
         final totalPrisesEnCharge = userId == null
             ? 0
             : ReportStore.instance.prisEnChargeTotalForUserAllGroups(userId);
+        final totalActionsOrganisees = userId == null
+            ? 0
+            : ActionStore.instance.actionsOrganiseesTotalForUserAllGroups(userId);
 
         return Scaffold(
           backgroundColor: CliinAppColors.background,
@@ -113,7 +128,7 @@ class _MesContributionsPageState extends State<MesContributionsPage> {
                   padding: const EdgeInsets.symmetric(
                       horizontal: CliinAppConstants.pagePadding),
                   child: _buildSummaryCard(
-                      totalCasSignales, totalPrisesEnCharge),
+                      totalCasSignales, totalPrisesEnCharge, totalActionsOrganisees),
                 ),
                 const SizedBox(height: CliinAppConstants.spacingL),
                 Padding(
@@ -174,7 +189,8 @@ class _MesContributionsPageState extends State<MesContributionsPage> {
     );
   }
 
-  Widget _buildSummaryCard(int totalCasSignales, int totalPrisesEnCharge) {
+  Widget _buildSummaryCard(
+      int totalCasSignales, int totalPrisesEnCharge, int totalActionsOrganisees) {
     return Container(
       padding: const EdgeInsets.symmetric(
           horizontal: CliinAppConstants.spacingL,
@@ -200,6 +216,17 @@ class _MesContributionsPageState extends State<MesContributionsPage> {
             child: _buildSummaryColumn(
               value: totalPrisesEnCharge,
               label: 'Prises en charge\n(tous groupes)',
+            ),
+          ),
+          Container(
+            width: 1,
+            height: 44,
+            color: CliinAppColors.textWhite.withValues(alpha: 0.25),
+          ),
+          Expanded(
+            child: _buildSummaryColumn(
+              value: totalActionsOrganisees,
+              label: 'Actions organisées\n(tous groupes)',
             ),
           ),
         ],
@@ -385,6 +412,16 @@ class _MesContributionsPageState extends State<MesContributionsPage> {
                     label: 'Prises en charge',
                     bg: CliinAppColors.alertOrange.withValues(alpha: 0.1),
                     color: CliinAppColors.alertOrange,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildMiniStat(
+                    icon: Icons.bolt_rounded,
+                    value: c.actionsOrganisees,
+                    label: 'Actions organisées',
+                    bg: CliinAppColors.levelEngage.withValues(alpha: 0.1),
+                    color: CliinAppColors.levelEngage,
                   ),
                 ),
               ],

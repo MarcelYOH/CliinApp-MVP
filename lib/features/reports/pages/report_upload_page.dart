@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../shared/store/auth_store.dart';
+import '../../../../shared/store/group_store.dart';
 import '../models/report_model.dart';
 import '../data/report_dummy_data.dart';
 import '../widgets/report_stepper.dart';
@@ -24,7 +26,12 @@ String _generateReportCode() {
 
 class ReportUploadPage extends StatefulWidget {
   final ReportModel report;
-  const ReportUploadPage({super.key, required this.report});
+  // Renseigné depuis le profil groupe ("Publier" > "Signaler un cas
+  // d'insalubrité", Correction 1) — l'attribution "au nom du groupe" est
+  // alors automatique et implicite : AUCUN écran de choix d'attribution ne
+  // doit apparaître. Null = flux normal (attribution choisie ci-dessous).
+  final String? preselectedGroupId;
+  const ReportUploadPage({super.key, required this.report, this.preselectedGroupId});
 
   @override
   State<ReportUploadPage> createState() => _ReportUploadPageState();
@@ -82,7 +89,7 @@ class _ReportUploadPageState extends State<ReportUploadPage>
     await Future.delayed(const Duration(milliseconds: 500));
     if (!mounted) return;
 
-    final attribution = await showAttributionChoiceSheet(context);
+    final attribution = await _resolveAttribution();
     if (!mounted) return;
 
     final attributedReport = publishedReport.copyWith(
@@ -98,6 +105,26 @@ class _ReportUploadPageState extends State<ReportUploadPage>
         builder: (_) => ReportSuccessPage(report: attributedReport),
       ),
     );
+  }
+
+  // Correction 1 — depuis le profil d'un groupe, l'attribution "au nom du
+  // groupe" est automatique et implicite (aucun écran de choix). Repli sur
+  // l'écran de choix habituel si le groupe préselectionné n'existe plus
+  // (ou hors contexte groupe, comportement normal inchangé).
+  Future<ReportAttribution> _resolveAttribution() async {
+    final groupId = widget.preselectedGroupId;
+    if (groupId != null) {
+      final group = GroupStore.instance.groupById(groupId);
+      final user = AuthStore.instance.currentUser;
+      if (group != null && user != null) {
+        return ReportAttribution(
+          signaleParNom: group.nom,
+          signaleParId: user.id,
+          groupId: group.id,
+        );
+      }
+    }
+    return showAttributionChoiceSheet(context);
   }
 
   double get _progressValue =>

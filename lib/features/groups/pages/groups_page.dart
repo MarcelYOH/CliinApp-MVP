@@ -220,8 +220,19 @@ class _GroupsPageState extends State<GroupsPage> {
                       itemCount: visibleResults.length,
                       separatorBuilder: (_, _) =>
                           const SizedBox(height: CliinAppConstants.spacingM),
-                      itemBuilder: (_, i) =>
-                          GroupCard(data: visibleResults[i], width: double.infinity),
+                      itemBuilder: (_, i) => GroupCard(
+                        data: visibleResults[i],
+                        width: double.infinity,
+                        // Correction 7 — "Mes groupes" ne contient par
+                        // définition que des groupes déjà suivis ; ses
+                        // cartes factices (jamais dans GroupStore, donc
+                        // jamais "suivies" au sens réel) doivent afficher
+                        // "Suivi", pas "Suivre".
+                        forceFollowingState: _selectedTab == _GroupsTab.mesgroupes &&
+                                GroupsDummyData.isFakeGroup(visibleResults[i])
+                            ? true
+                            : null,
+                      ),
                     ),
             ),
           ],

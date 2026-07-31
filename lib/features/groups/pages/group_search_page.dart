@@ -225,6 +225,13 @@ class _GroupSearchPageState extends State<GroupSearchPage> {
                       itemBuilder: (_, i) => GroupCard(
                         data: visibleResults[i],
                         width: double.infinity,
+                        // Correction 7 — mêmes raisons que groups_page.dart :
+                        // "Mes groupes" n'affiche que des groupes suivis, ses
+                        // cartes factices doivent refléter "Suivi".
+                        forceFollowingState: widget.origine == 'mesgroupes' &&
+                                GroupsDummyData.isFakeGroup(visibleResults[i])
+                            ? true
+                            : null,
                       ),
                     ),
             ),

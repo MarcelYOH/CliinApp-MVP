@@ -73,7 +73,7 @@ class ReportDummyData {
       'Complétez les informations pour publier votre signalement.';
   static const String formDescriptionHint =
       'Décrivez brièvement le problème...';
-  static const int formDescriptionMaxLength = 250;
+  static const int formDescriptionMaxLength = 500;
   static const String formImportantInfoTitle = 'Informations importantes';
   static const String formImportantInfoText =
       'Votre signalement sera visible par toute la communauté.\nNe partagez pas d\'informations personnelles.';

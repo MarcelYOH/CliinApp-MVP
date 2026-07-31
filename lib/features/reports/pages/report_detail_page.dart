@@ -7,6 +7,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/utils/whatsapp_launcher.dart';
+import '../../../features/home/data/home_dummy_data.dart';
 import '../../../features/home/models/home_report_model.dart';
 import '../../../shared/navigation/profile_navigation.dart';
 import '../../../shared/widgets/report_card.dart'
@@ -51,6 +52,24 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
   HomeReportModel get _data =>
       ReportStore.instance.reportById(widget.data.id) ?? widget.data;
 
+  // Correction 8 — carte factice "accroche" (jamais dans ReportStore) :
+  // toute action qui muterait réellement le store (vue, prise en charge,
+  // contact, partage) planterait silencieusement dessus (recordView/
+  // recordShare lèvent une exception "introuvable") — interceptée avec le
+  // même message explicatif qu'au niveau de la carte, jamais exécutée.
+  bool get _isFake => HomeDummyData.isFakeReport(_data);
+
+  void _showFakeNotice() {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text(
+        'Ceci est un exemple. Soyez le premier à signaler un cas réel dans '
+        'votre zone !',
+      ),
+      behavior: SnackBarBehavior.floating,
+      duration: Duration(seconds: 3),
+    ));
+  }
+
   @override
   void initState() {
     super.initState();
@@ -60,7 +79,9 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
     // fiable côté utilisateur, donc pas de vue enregistrée.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final currentUserId = AuthStore.instance.currentUser?.id;
-      if (currentUserId != null && currentUserId != _data.signaleParId) {
+      if (!_isFake &&
+          currentUserId != null &&
+          currentUserId != _data.signaleParId) {
         ReportStore.instance
             .recordView(reportId: _data.id, userId: currentUserId);
       }
@@ -68,6 +89,10 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
   }
 
   void _onTakeCharge() async {
+    if (_isFake) {
+      _showFakeNotice();
+      return;
+    }
     if (await requireAuth(context)) {
       if (!mounted) return;
       showTakeChargeFlow(
@@ -86,6 +111,10 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
   }
 
   void _onContact() {
+    if (_isFake) {
+      _showFakeNotice();
+      return;
+    }
     openWhatsApp(context: context, intervenant: _data.intervenant);
   }
 
@@ -101,6 +130,10 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
   // l'envoi a réellement abouti (spec : "pas de vérification de l'envoi
   // réel").
   Future<void> _onShare() async {
+    if (_isFake) {
+      _showFakeNotice();
+      return;
+    }
     await Share.share(
       'Découvrez ce cas signalé sur CliinApp : ${_data.title} '
       '(${_data.reference})\n'

@@ -7,6 +7,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/navigation/fast_page_route.dart';
 import '../../../shared/navigation/tab_navigation.dart';
+import '../../../shared/store/action_store.dart';
 import '../../../shared/store/auth_store.dart';
 import '../../../shared/store/group_store.dart';
 import '../../../shared/store/report_store.dart';
@@ -93,6 +94,9 @@ class _GroupProfilePageState extends State<GroupProfilePage>
     // ReportStore (casPrisEnChargeCountForGroup) — doit se rafraîchir dès
     // qu'une attribution change, sans attendre une réouverture de la page.
     ReportStore.instance.addListener(_onStoreUpdate);
+    // "Actions"/"Mobilisation moyenne" (onglet À propos, Correction 4/5)
+    // + feed "Publications" — mêmes raisons.
+    ActionStore.instance.addListener(_onStoreUpdate);
     _panelAnimController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 260),
@@ -114,6 +118,7 @@ class _GroupProfilePageState extends State<GroupProfilePage>
     GroupStore.instance.removeListener(_onStoreUpdate);
     AuthStore.instance.removeListener(_onStoreUpdate);
     ReportStore.instance.removeListener(_onStoreUpdate);
+    ActionStore.instance.removeListener(_onStoreUpdate);
     _panelAnimController.dispose();
     super.dispose();
   }
@@ -419,7 +424,7 @@ class _GroupProfilePageState extends State<GroupProfilePage>
   Widget _buildTabContent(GroupModel group, bool isAdmin) {
     return switch (_selectedTab) {
       0 => GroupAboutTab(group: group, isAdmin: isAdmin),
-      1 => GroupActivitiesTab(group: group),
+      1 => GroupActivitiesTab(group: group, isAdmin: isAdmin),
       2 => GroupManagementTab(group: group, isAdmin: isAdmin),
       _ => const GroupChatTab(),
     };

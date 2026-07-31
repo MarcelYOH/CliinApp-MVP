@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../shared/store/action_store.dart';
 import '../../../shared/store/group_store.dart';
 import '../../../shared/store/report_store.dart';
 import '../../../shared/widgets/report_card.dart' show buildReportImage;
@@ -191,14 +192,18 @@ class GroupAboutTab extends StatelessWidget {
   }
 
   Widget _buildImpactCarousel() {
-    // Correction 1 — les 3 premières cartes sont désormais calculées en
-    // direct depuis ReportStore (mêmes prédicats que "Nos cas signalés" /
-    // "Nos prises en charge", group_management_tab.dart), plutôt que depuis
-    // les champs statiques GroupModel.casSignalesCount/casTraitesCount,
-    // jamais incrémentés par un événement réel.
-    // "Actions" et "Mobilisation moyenne/action" dépendent du module Actions
-    // Terrain, pas encore implémenté — chemin de branchement prêt, valeur
-    // "0"/"—" en attendant plutôt qu'une donnée inventée.
+    // Correction 1 — les 3 premières cartes sont calculées en direct depuis
+    // ReportStore (mêmes prédicats que "Nos cas signalés" / "Nos prises en
+    // charge", group_management_tab.dart), plutôt que depuis les champs
+    // statiques GroupModel.casSignalesCount/casTraitesCount, jamais
+    // incrémentés par un événement réel.
+    // "Actions" et "Mobilisation moyenne/action" (Correction 4/5/6) — module
+    // Actions Terrain désormais implémenté, mêmes prédicats que le feed
+    // "Publications" (organisateurEstGroupe && organisateurId == group.id).
+    // "—" uniquement si le groupe n'a encore organisé aucune action (jamais
+    // une moyenne calculée sur zéro action).
+    final mobilisationMoyenne =
+        ActionStore.instance.mobilisationMoyenneForGroup(group.id);
     final cards = [
       (
         Icons.campaign_rounded,
@@ -215,8 +220,18 @@ class GroupAboutTab extends StatelessWidget {
         '${ReportStore.instance.prisEnChargeTotalCountForGroup(group.nom)}',
         'Pris en charge',
       ),
-      (Icons.bolt_rounded, '0', 'Actions'),
-      (Icons.groups_rounded, '—', 'Mobilisation\nmoyenne/action'),
+      (
+        Icons.bolt_rounded,
+        '${ActionStore.instance.actionsCountForGroup(group.id)}',
+        'Actions',
+      ),
+      (
+        Icons.groups_rounded,
+        mobilisationMoyenne == null
+            ? '—'
+            : mobilisationMoyenne.toStringAsFixed(1),
+        'Mobilisation\nmoyenne/action',
+      ),
     ];
     return SizedBox(
       height: 108,
