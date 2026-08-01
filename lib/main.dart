@@ -20,7 +20,10 @@ Future<void> main() async {
   // edge-to-edge/la barre système transparente, laissant un bandeau noir
   // résiduel sous la bottom bar jusqu'à ce qu'un rebuild ultérieur (ex. une
   // action de l'utilisateur) coïncide avec l'application effective du style.
+  // DEBUG TEMPORAIRE (diagnostic bandeau noir) — à retirer après validation.
+  debugPrint('[SYSUI-DEBUG] main() — avant restoreEdgeToEdge (premier lancement)');
   await SystemUiHelper.restoreEdgeToEdge();
+  debugPrint('[SYSUI-DEBUG] main() — après restoreEdgeToEdge, avant runApp');
 
   GoogleFonts.config.allowRuntimeFetching = false;
 

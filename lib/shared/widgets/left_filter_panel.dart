@@ -16,6 +16,9 @@ Future<void> showLeftFilterPanel(
   required WidgetBuilder builder,
 }) {
   final width = MediaQuery.of(context).size.width * 0.82;
+  // DEBUG TEMPORAIRE (diagnostic Correction 2) — à retirer après validation.
+  debugPrint('[FILTER-DEBUG] showLeftFilterPanel() — alignment=Alignment.centerLeft, '
+      'width=$width (82% de ${MediaQuery.of(context).size.width})');
   return showGeneralDialog<void>(
     context: context,
     barrierDismissible: true,

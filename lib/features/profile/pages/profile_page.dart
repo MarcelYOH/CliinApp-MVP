@@ -22,6 +22,8 @@ import 'mes_prises_en_charge_page.dart';
 import 'mes_contributions_page.dart';
 import 'mes_favoris_page.dart';
 import 'mes_actions_page.dart';
+import 'cas_suivis_page.dart';
+import 'aide_support_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -564,7 +566,10 @@ class _ProfilePageState extends State<ProfilePage> {
             iconColor: const Color(0xFF2DB84B),
             title: 'Cas suivis',
             subtitle: 'Cas dont vous suivez l\'évolution',
-            onTap: () => _showComingSoon(context),
+            onTap: () => Navigator.push(
+              context,
+              fastFadeRoute<void>(const CasSuivisPage()),
+            ),
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),
           _buildMenuItem(
@@ -584,7 +589,10 @@ class _ProfilePageState extends State<ProfilePage> {
             iconColor: const Color(0xFFFF9800),
             title: 'Notifications',
             subtitle: 'Gérez vos préférences de notifications',
-            onTap: () => _showComingSoon(context),
+            onTap: () => Navigator.push(
+              context,
+              fastFadeRoute<void>(const NotificationsPage()),
+            ),
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),
           _buildMenuItem(
@@ -593,7 +601,10 @@ class _ProfilePageState extends State<ProfilePage> {
             iconColor: const Color(0xFF2DB84B),
             title: 'Aide et support',
             subtitle: 'FAQ, guides et contactez-nous',
-            onTap: () => _showComingSoon(context),
+            onTap: () => Navigator.push(
+              context,
+              fastFadeRoute<void>(const AideSupportPage()),
+            ),
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),
           _buildMenuItem(

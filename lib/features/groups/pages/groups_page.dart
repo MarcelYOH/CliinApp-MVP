@@ -476,6 +476,9 @@ class _GroupsPageState extends State<GroupsPage> {
   // ligne horizontale scrollable), avec un bouton "Appliquer" en bas pour
   // fermer le panneau.
   void _showFiltersSheet() {
+    // DEBUG TEMPORAIRE (diagnostic Correction 2) — à retirer après validation.
+    debugPrint('[FILTER-DEBUG] groups_page._showFiltersSheet() — tab=$_selectedTab '
+        '— appel showLeftFilterPanel (Alignment.centerLeft, cf. left_filter_panel.dart)');
     showLeftFilterPanel(
       context,
       builder: (dialogContext) => StatefulBuilder(

@@ -18,7 +18,11 @@ class SystemUiHelper {
   );
 
   static Future<void> restoreEdgeToEdge() async {
+    // DEBUG TEMPORAIRE (diagnostic bandeau noir sous la bottom bar) — à
+    // retirer seulement après validation du diagnostic par l'utilisateur.
+    debugPrint('[SYSUI-DEBUG] restoreEdgeToEdge() appelé — avant setEnabledSystemUIMode');
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setSystemUIOverlayStyle(edgeToEdgeStyle);
+    debugPrint('[SYSUI-DEBUG] restoreEdgeToEdge() terminé — edgeToEdge + style transparent appliqués');
   }
 }

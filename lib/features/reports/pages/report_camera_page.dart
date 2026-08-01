@@ -76,6 +76,7 @@ class _ReportCameraPageState extends State<ReportCameraPage>
   @override
   void initState() {
     super.initState();
+    debugPrint('[SYSUI-DEBUG] ReportCameraPage.initState()');
     WidgetsBinding.instance.addObserver(this);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _initCamera();
@@ -84,6 +85,7 @@ class _ReportCameraPageState extends State<ReportCameraPage>
 
   @override
   void dispose() {
+    debugPrint('[SYSUI-DEBUG] ReportCameraPage.dispose() — appelle restoreEdgeToEdge');
     WidgetsBinding.instance.removeObserver(this);
     SystemUiHelper.restoreEdgeToEdge();
     _controller?.dispose();
@@ -92,6 +94,7 @@ class _ReportCameraPageState extends State<ReportCameraPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    debugPrint('[SYSUI-DEBUG] ReportCameraPage.didChangeAppLifecycleState($state)');
     // Android efface le mode immersif (et réaffiche la barre de statut,
     // qui recouvre alors le header) dès qu'un dialogue système apparaît
     // par-dessus l'app — ce qui arrive systématiquement ici via les

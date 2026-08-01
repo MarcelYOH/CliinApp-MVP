@@ -393,6 +393,10 @@ class _GroupSearchPageState extends State<GroupSearchPage> {
   // les pilules reflètent immédiatement la sélection dans le panneau
   // (setState du State parent ne reconstruit pas, seul, sa route).
   void _showFiltersSheet() {
+    // DEBUG TEMPORAIRE (diagnostic Correction 2) — à retirer après validation.
+    debugPrint('[FILTER-DEBUG] group_search_page._showFiltersSheet() — '
+        'origine=${widget.origine} — appel showLeftFilterPanel '
+        '(Alignment.centerLeft, cf. left_filter_panel.dart)');
     showLeftFilterPanel(
       context,
       builder: (dialogContext) => StatefulBuilder(

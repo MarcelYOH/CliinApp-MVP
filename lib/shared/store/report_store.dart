@@ -71,6 +71,12 @@ class ReportStore extends ChangeNotifier {
   Set<String> followerIdsOfReport(String reportId) =>
       Set.unmodifiable(_reportFollowerIds[reportId] ?? const {});
 
+  // Correction 3 (Profil — "Cas suivis") — tous les cas que cet utilisateur
+  // suit actuellement, source unique pour cas_suivis_page.dart.
+  List<HomeReportModel> followedReportsFor(String userId) => _reports
+      .where((r) => _reportFollowerIds[r.id]?.contains(userId) ?? false)
+      .toList();
+
   // ── Getters publics ───────────────────────────────────────────
   List<HomeReportModel> get reports => List.unmodifiable(_reports);
   bool get isLoading => _isLoading;
