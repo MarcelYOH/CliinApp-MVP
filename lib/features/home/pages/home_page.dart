@@ -56,19 +56,12 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-// DEBUG TEMPORAIRE (diagnostic bandeau noir sous la bottom bar, Correction 1)
-// — WidgetsBindingObserver ajouté UNIQUEMENT pour tracer le cycle de vie ici
-// (aucune réaction fonctionnelle à AppLifecycleState pour l'instant, par
-// design : le but est d'observer si/quand HomePage voit un resume, avant de
-// décider où appliquer un correctif). À retirer après validation.
-class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
+class _HomePageState extends State<HomePage> {
   int _currentNavIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    debugPrint('[SYSUI-DEBUG] HomePage.initState()');
-    WidgetsBinding.instance.addObserver(this);
     ReportStore.instance.addListener(_onStoreUpdate);
     GroupStore.instance.addListener(_onStoreUpdate);
     pendingHomeTabIndex.addListener(_onPendingTabIndex);
@@ -77,16 +70,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     ReportStore.instance.removeListener(_onStoreUpdate);
     GroupStore.instance.removeListener(_onStoreUpdate);
     pendingHomeTabIndex.removeListener(_onPendingTabIndex);
     super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    debugPrint('[SYSUI-DEBUG] HomePage.didChangeAppLifecycleState($state)');
   }
 
   void _onStoreUpdate() {
@@ -297,7 +284,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('[SYSUI-DEBUG] HomePage.build()');
     final store = ReportStore.instance;
 
     // Priorité systématique aux vrais signalements du ReportStore — les

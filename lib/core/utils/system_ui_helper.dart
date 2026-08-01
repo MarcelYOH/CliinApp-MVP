@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-// Style plein écran transparent commun à toute l'app (main.dart). Les pages
+// Style plein écran transparent commun à toute l'app (main.dart, et à
+// chaque retour au premier plan via CliinApp._CliinAppState). Les pages
 // caméra basculent temporairement en SystemUiMode.immersiveSticky puis
 // reviennent à edgeToEdge sans réappliquer ce style — sur Android, ce
 // basculement remet la status bar / nav bar système en noir opaque tant que
@@ -18,11 +19,7 @@ class SystemUiHelper {
   );
 
   static Future<void> restoreEdgeToEdge() async {
-    // DEBUG TEMPORAIRE (diagnostic bandeau noir sous la bottom bar) — à
-    // retirer seulement après validation du diagnostic par l'utilisateur.
-    debugPrint('[SYSUI-DEBUG] restoreEdgeToEdge() appelé — avant setEnabledSystemUIMode');
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setSystemUIOverlayStyle(edgeToEdgeStyle);
-    debugPrint('[SYSUI-DEBUG] restoreEdgeToEdge() terminé — edgeToEdge + style transparent appliqués');
   }
 }

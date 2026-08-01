@@ -15,15 +15,13 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Affichage plein écran : l'app s'étend derrière la status bar et la nav
-  // bar. Attendu (pas fire-and-forget) — Correction 6.2 : sans await, le
-  // tout premier frame pouvait être peint avant que l'OS n'applique le mode
-  // edge-to-edge/la barre système transparente, laissant un bandeau noir
-  // résiduel sous la bottom bar jusqu'à ce qu'un rebuild ultérieur (ex. une
-  // action de l'utilisateur) coïncide avec l'application effective du style.
-  // DEBUG TEMPORAIRE (diagnostic bandeau noir) — à retirer après validation.
-  debugPrint('[SYSUI-DEBUG] main() — avant restoreEdgeToEdge (premier lancement)');
+  // bar. Attendu (pas fire-and-forget), mais l'await seul ne suffit pas à
+  // garantir que le rendu système Android soit terminé avant la 1re frame
+  // Flutter (diagnostic confirmé par logs+captures d'écran réelles) — voir
+  // _CliinAppState.didChangeAppLifecycleState ci-dessous, qui réapplique ce
+  // même style à chaque retour au premier plan (y compris le tout premier,
+  // juste après ce lancement), ce qui couvre ce cas comme les suivants.
   await SystemUiHelper.restoreEdgeToEdge();
-  debugPrint('[SYSUI-DEBUG] main() — après restoreEdgeToEdge, avant runApp');
 
   GoogleFonts.config.allowRuntimeFetching = false;
 
@@ -37,8 +35,45 @@ Future<void> main() async {
   runApp(const CliinApp());
 }
 
-class CliinApp extends StatelessWidget {
+class CliinApp extends StatefulWidget {
   const CliinApp({super.key});
+
+  @override
+  State<CliinApp> createState() => _CliinAppState();
+}
+
+// Bandeau noir sous la bottom bar (diagnostic par logs + captures d'écran
+// réelles) : SystemUiHelper.restoreEdgeToEdge() n'était appelé qu'au tout
+// premier lancement (ci-dessus) et dans ReportCameraPage.dispose() — jamais
+// réappliqué par ailleurs, alors qu'Android réinitialise l'apparence de la
+// barre système à chaque retour au premier plan. Un unique observateur au
+// niveau de l'app entière (et non d'une page précise) couvre les deux
+// symptômes observés (premier lancement ET reprise après mise en veille)
+// par le même mécanisme, sans dépendre de la page affichée à ce moment-là.
+// Sans effet sur ReportCameraPage : son propre WidgetsBindingObserver est
+// enregistré plus tard (à l'ouverture de la caméra, après celui-ci) et Flutter
+// notifie les observateurs dans leur ordre d'enregistrement — son propre
+// SystemUiMode.immersiveSticky est donc réappliqué juste après, sans
+// changement de comportement pour ce flux.
+class _CliinAppState extends State<CliinApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      SystemUiHelper.restoreEdgeToEdge();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
