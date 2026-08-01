@@ -27,6 +27,12 @@ class IntervenantModel {
   final String? whatsAppNumber;
   final bool whatsAppVisible;
   final InterventionOutcome outcome;
+  // Correction 5 (cohérence avec signalement/action) — prise en charge
+  // anonyme : name porte déjà 'Anonyme' (même convention que
+  // HomeReportModel.signalePar/isAnonyme), id reste le vrai utilisateur
+  // (flux de gestion strictement inchangé). Ce flag ne sert qu'à empêcher
+  // la navigation vers le profil public (voir profile_navigation.dart).
+  final bool isAnonyme;
 
   const IntervenantModel({
     required this.id,
@@ -39,6 +45,7 @@ class IntervenantModel {
     this.whatsAppNumber,
     this.whatsAppVisible = false, // OFF par défaut
     this.outcome = InterventionOutcome.none,
+    this.isAnonyme = false,
   });
 
   // Bouton "Contacter" public visible uniquement si :
@@ -57,6 +64,7 @@ class IntervenantModel {
     String? whatsAppNumber,
     bool? whatsAppVisible,
     InterventionOutcome? outcome,
+    bool? isAnonyme,
   }) {
     return IntervenantModel(
       id: id ?? this.id,
@@ -69,6 +77,7 @@ class IntervenantModel {
       whatsAppNumber: whatsAppNumber ?? this.whatsAppNumber,
       whatsAppVisible: whatsAppVisible ?? this.whatsAppVisible,
       outcome: outcome ?? this.outcome,
+      isAnonyme: isAnonyme ?? this.isAnonyme,
     );
   }
 
@@ -80,6 +89,7 @@ class IntervenantModel {
     'treatedAt': treatedAt?.toIso8601String(),
     'whatsAppNumber': whatsAppNumber,
     'whatsAppVisible': whatsAppVisible,
+    'isAnonyme': isAnonyme,
   };
 
   factory IntervenantModel.fromJson(Map<String, dynamic> json) =>
@@ -95,5 +105,6 @@ class IntervenantModel {
             : null,
         whatsAppNumber: json['whatsAppNumber'] as String?,
         whatsAppVisible: json['whatsAppVisible'] as bool? ?? false,
+        isAnonyme: json['isAnonyme'] as bool? ?? false,
       );
 }

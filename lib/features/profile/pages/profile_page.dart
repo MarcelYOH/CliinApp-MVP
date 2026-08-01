@@ -10,6 +10,7 @@ import '../../../shared/store/report_store.dart';
 import '../../../shared/store/notification_store.dart';
 import '../../../shared/models/auth_user_model.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
+import '../../../shared/widgets/profile_stats_row.dart';
 import '../../../shared/navigation/tab_navigation.dart';
 import '../../../shared/navigation/fast_page_route.dart';
 import '../../notifications/pages/notifications_page.dart';
@@ -163,7 +164,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     children: [
                       _buildIdentityCard(context, user),
                       const SizedBox(height: 16),
-                      _buildStatsCard(user?.id),
+                      ProfileStatsRow(userId: user?.id),
                       const SizedBox(height: 16),
                       _buildMenuCard(context, user),
                       const SizedBox(height: 16),
@@ -406,73 +407,6 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatsCard(String? userId) {
-    final store = ReportStore.instance;
-    final casPublies = userId != null ? store.casPubliesCount(userId) : 0;
-    final prisEnCharge = userId != null ? store.prisEnChargeCount(userId) : 0;
-    final casTraites = userId != null ? store.casTraitesCount(userId) : 0;
-    // Correction 3 — actions organisées en nom personnel uniquement (les
-    // actions organisées au nom d'un groupe relèvent de Mes contributions,
-    // Correction 2, jamais comptées deux fois ici).
-    final actionsOrganisees =
-        userId != null ? ActionStore.instance.myActionsOrganiseesCount(userId) : 0;
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      child: IntrinsicHeight(
-        child: Row(
-          children: [
-            _buildStatItem(
-              Icons.description_outlined,
-              '$casPublies',
-              'Cas publiés',
-              const Color(0xFF2DB84B),
-            ),
-            const VerticalDivider(width: 1, thickness: 1, color: Color(0xFFE0E0E0)),
-            _buildStatItem(
-              Icons.volunteer_activism_outlined,
-              '$prisEnCharge',
-              'Pris en charge',
-              const Color(0xFFFF9800),
-            ),
-            const VerticalDivider(width: 1, thickness: 1, color: Color(0xFFE0E0E0)),
-            _buildStatItem(
-              Icons.check_circle_outline_rounded,
-              '$casTraites',
-              'Cas traités',
-              const Color(0xFF1E88E5),
-            ),
-            const VerticalDivider(width: 1, thickness: 1, color: Color(0xFFE0E0E0)),
-            _buildStatItem(
-              Icons.bolt_rounded,
-              '$actionsOrganisees',
-              'Actions organisées',
-              CliinAppColors.levelEngage,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatItem(IconData icon, String value, String label, Color color) {
-    return Expanded(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(height: 8),
-          Text(value, style: CliinAppTextStyles.headingMedium.copyWith(fontSize: 22)),
-          const SizedBox(height: 4),
-          Text(label, style: CliinAppTextStyles.bodySmall, textAlign: TextAlign.center),
         ],
       ),
     );

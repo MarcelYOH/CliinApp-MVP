@@ -9,12 +9,24 @@ import '../../../../shared/store/auth_store.dart';
 import '../../../../shared/store/group_store.dart';
 import '../../../../features/home/models/home_report_model.dart';
 import '../../../../shared/widgets/phone_country_field.dart';
+import 'attribution_choice_sheet.dart';
 
+// Correction 5 — cohérence entre les 3 actions principales (signaler,
+// organiser une action, prendre en charge) : l'écran de choix d'attribution
+// ("En mon nom" / "Au nom d'un groupe" / "Anonyme") est désormais
+// EXACTEMENT le même composant déjà utilisé pour la création de
+// signalement et l'organisation d'une action (showAttributionChoiceSheet),
+// plutôt qu'un choix "Moi-même"/"Au nom d'un groupe" dupliqué localement
+// sans option Anonyme. Demandé AVANT d'ouvrir l'assistant de prise en
+// charge (même séquence que create_action_page.dart), qui démarre donc
+// directement à l'ancienne étape 2 (coordonnées WhatsApp).
 Future<void> showTakeChargeFlow({
   required BuildContext context,
   required HomeReportModel report,
   required void Function(HomeReportModel updated) onSuccess,
 }) async {
+  final attribution = await showAttributionChoiceSheet(context);
+  if (!context.mounted) return;
   await showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -25,6 +37,7 @@ Future<void> showTakeChargeFlow({
       ),
       child: _TakeChargeSheet(
         report: report,
+        attribution: attribution,
         onSuccess: onSuccess,
       ),
     ),
@@ -33,10 +46,12 @@ Future<void> showTakeChargeFlow({
 
 class _TakeChargeSheet extends StatefulWidget {
   final HomeReportModel report;
+  final ReportAttribution attribution;
   final void Function(HomeReportModel updated) onSuccess;
 
   const _TakeChargeSheet({
     required this.report,
+    required this.attribution,
     required this.onSuccess,
   });
 
@@ -45,10 +60,12 @@ class _TakeChargeSheet extends StatefulWidget {
 }
 
 class _TakeChargeSheetState extends State<_TakeChargeSheet> {
-  int _step = 1;
-
-  bool _isSelf = true;
-  String? _selectedGroup;
+  // Démarre directement à l'étape 2 (coordonnées WhatsApp) — l'ancienne
+  // étape 1 (choix d'attribution) est désormais demandée AVANT l'ouverture
+  // de ce sheet (voir showTakeChargeFlow ci-dessus), les numéros d'étape
+  // 2/3 restent donc inchangés pour ne pas retoucher _Step2Sheet/
+  // _Step3Sheet ni le reste de la logique de transition.
+  int _step = 2;
 
   final TextEditingController _phoneController = TextEditingController();
   bool _whatsAppConsent = false;
@@ -57,28 +74,16 @@ class _TakeChargeSheetState extends State<_TakeChargeSheet> {
 
   String _dialCode = '+225';
 
-  // Vrais groupes dont l'utilisateur connecté est administrateur — jamais
-  // une liste factice (voir GroupStore.adminGroups).
-  List<String> get _myGroups {
-    final userId = AuthStore.instance.currentUser?.id;
-    if (userId == null) return const [];
-    return GroupStore.instance.adminGroups(userId).map((g) => g.nom).toList();
-  }
-
   @override
   void dispose() {
     _phoneController.dispose();
     super.dispose();
   }
 
-  void _next() => setState(() => _step++);
-  void _back() => setState(() {
-    _step--;
-    _errorMessage = null;
-  });
-
-  bool get _step1Valid =>
-      _isSelf || (_selectedGroup != null && _selectedGroup!.isNotEmpty);
+  // L'attribution est déjà choisie avant l'ouverture de ce sheet (voir
+  // showTakeChargeFlow) — il n'y a donc plus d'étape antérieure vers
+  // laquelle revenir : "Retour" annule la prise en charge.
+  void _back() => Navigator.pop(context);
 
   String get _fullPhoneNumber {
     final local = _phoneController.text.trim();
@@ -111,13 +116,26 @@ class _TakeChargeSheetState extends State<_TakeChargeSheet> {
     try {
       final user = AuthStore.instance.currentUser!;
       final fullNumber = _whatsAppConsent ? _fullPhoneNumber : null;
+      final attribution = widget.attribution;
+      // "Au nom d'un groupe" et "Anonyme" sont mutuellement exclusifs dans
+      // l'écran de choix réutilisé (attribution_choice_sheet.dart) — comme
+      // pour un signalement/une action, groupId est toujours null quand
+      // isAnonyme est vrai.
+      final groupName = attribution.groupId != null
+          ? GroupStore.instance.groupById(attribution.groupId!)?.nom
+          : null;
 
       final intervenant = IntervenantModel(
         id: user.id,
-        name: user.username,
+        // Même convention que HomeReportModel.signalePar : le nom affiché
+        // porte déjà 'Anonyme', id reste le vrai utilisateur (flux de
+        // gestion strictement inchangé — délai 72h, abandon, historique
+        // privé, notifications, cf. Correction 5).
+        name: attribution.isAnonyme ? 'Anonyme' : user.username,
         logoAsset: null,
         whatsAppNumber: fullNumber?.isNotEmpty == true ? fullNumber : null,
         whatsAppVisible: _whatsAppConsent,
+        isAnonyme: attribution.isAnonyme,
       );
 
       final updated = await ReportStore.instance.takeCharge(
@@ -125,7 +143,7 @@ class _TakeChargeSheetState extends State<_TakeChargeSheet> {
         intervenant: intervenant,
         whatsAppConsent: _whatsAppConsent,
         whatsAppNumber: fullNumber?.isNotEmpty == true ? fullNumber : null,
-        groupName: _isSelf ? null : _selectedGroup,
+        groupName: groupName,
       );
 
       if (mounted) {
@@ -178,21 +196,6 @@ class _TakeChargeSheetState extends State<_TakeChargeSheet> {
     }
 
     return switch (_step) {
-        1 => _Step1Sheet(
-            key: const ValueKey(1),
-            isSelf: _isSelf,
-            selectedGroup: _selectedGroup,
-            groups: _myGroups,
-            isValid: _step1Valid,
-            onSelfSelected: () => setState(() {
-              _isSelf = true;
-              _selectedGroup = null;
-            }),
-            onGroupSelected: () => setState(() => _isSelf = false),
-            onGroupChanged: (g) => setState(() => _selectedGroup = g),
-            onCancel: () => Navigator.pop(context),
-            onContinue: _next,
-          ),
         2 => _Step2Sheet(
             key: const ValueKey(2),
             phoneController: _phoneController,
@@ -212,160 +215,6 @@ class _TakeChargeSheetState extends State<_TakeChargeSheet> {
             onGoHome: _onGoHome,
           ),
     };
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────
-// ÉTAPE 1
-// ─────────────────────────────────────────────────────────────────
-class _Step1Sheet extends StatelessWidget {
-  final bool isSelf;
-  final String? selectedGroup;
-  final List<String> groups;
-  final bool isValid;
-  final VoidCallback onSelfSelected;
-  final VoidCallback onGroupSelected;
-  final void Function(String?) onGroupChanged;
-  final VoidCallback onCancel;
-  final VoidCallback onContinue;
-
-  const _Step1Sheet({
-    super.key,
-    required this.isSelf,
-    required this.selectedGroup,
-    required this.groups,
-    required this.isValid,
-    required this.onSelfSelected,
-    required this.onGroupSelected,
-    required this.onGroupChanged,
-    required this.onCancel,
-    required this.onContinue,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return _SheetWrapper(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _SheetHandle(),
-          const SizedBox(height: CliinAppConstants.spacingL),
-          Text('Prendre ce cas en charge',
-              style: GoogleFonts.poppins(
-                  fontSize: 18, fontWeight: FontWeight.bold,
-                  color: CliinAppColors.textDark)),
-          Text('Qui intervient sur ce cas signalé ?',
-              style: GoogleFonts.inter(
-                  fontSize: 13, color: CliinAppColors.textSecondary)),
-          const SizedBox(height: CliinAppConstants.spacingL),
-          _ChoiceCard(
-            selected: isSelf,
-            icon: Icons.person_rounded,
-            title: 'Moi-même',
-            subtitle: 'Je prends ce cas en charge en mon nom.',
-            onTap: onSelfSelected,
-          ),
-          if (groups.isNotEmpty) ...[
-            const SizedBox(height: CliinAppConstants.spacingM),
-            _ChoiceCard(
-              selected: !isSelf,
-              icon: Icons.group_rounded,
-              title: 'Au nom d\'un groupe',
-              subtitle: 'Intervenir au nom d\'un groupe auquel j\'appartiens.',
-              onTap: onGroupSelected,
-            ),
-          ],
-          if (!isSelf && groups.isNotEmpty) ...[
-            const SizedBox(height: CliinAppConstants.spacingS),
-            Container(
-              padding: const EdgeInsets.all(CliinAppConstants.spacingM),
-              decoration: BoxDecoration(
-                color: CliinAppColors.primaryLight,
-                borderRadius: BorderRadius.circular(CliinAppConstants.radiusSmall),
-              ),
-              child: Row(children: [
-                const Icon(Icons.shield_outlined,
-                    color: CliinAppColors.primary, size: 16),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Vous devez être administrateur ou responsable d\'un groupe pour intervenir en son nom.',
-                    style: GoogleFonts.inter(
-                        fontSize: 11, color: CliinAppColors.textDark),
-                  ),
-                ),
-              ]),
-            ),
-            const SizedBox(height: CliinAppConstants.spacingM),
-            Text('Sélectionner un groupe',
-                style: GoogleFonts.poppins(
-                    fontSize: 13, fontWeight: FontWeight.w600,
-                    color: CliinAppColors.textDark)),
-            const SizedBox(height: CliinAppConstants.spacingS),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: CliinAppColors.cardWhite,
-                borderRadius: BorderRadius.circular(CliinAppConstants.radiusSmall),
-                border: Border.all(color: CliinAppColors.divider),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: selectedGroup,
-                  isExpanded: true,
-                  hint: Text('Choisir un groupe',
-                      style: GoogleFonts.inter(
-                          fontSize: 13, color: CliinAppColors.textSecondary)),
-                  items: groups.map((g) => DropdownMenuItem(
-                    value: g,
-                    child: Text(g, style: GoogleFonts.inter(fontSize: 13)),
-                  )).toList(),
-                  onChanged: onGroupChanged,
-                ),
-              ),
-            ),
-          ],
-          const SizedBox(height: CliinAppConstants.spacingXL),
-          Row(children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: onCancel,
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: CliinAppColors.divider),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                child: Text('Annuler',
-                    style: GoogleFonts.poppins(
-                        fontSize: 14, fontWeight: FontWeight.w600,
-                        color: CliinAppColors.textSecondary)),
-              ),
-            ),
-            const SizedBox(width: CliinAppConstants.spacingM),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: isValid ? onContinue : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: CliinAppColors.primary,
-                  disabledBackgroundColor: CliinAppColors.divider,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  elevation: 0,
-                ),
-                child: Text('Continuer',
-                    style: GoogleFonts.poppins(
-                        fontSize: 14, fontWeight: FontWeight.w600,
-                        color: CliinAppColors.textWhite)),
-              ),
-            ),
-          ]),
-          SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
-        ],
-      ),
-    );
   }
 }
 
@@ -741,64 +590,6 @@ class _SheetHandle extends StatelessWidget {
         color: CliinAppColors.divider,
         borderRadius: BorderRadius.circular(2),
       ),
-    ),
-  );
-}
-
-class _ChoiceCard extends StatelessWidget {
-  final bool selected;
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  const _ChoiceCard({
-    required this.selected, required this.icon,
-    required this.title, required this.subtitle, required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      padding: const EdgeInsets.all(CliinAppConstants.spacingL),
-      decoration: BoxDecoration(
-        color: selected ? CliinAppColors.primaryLight : CliinAppColors.cardWhite,
-        borderRadius: BorderRadius.circular(CliinAppConstants.radiusMedium),
-        border: Border.all(
-          color: selected ? CliinAppColors.primary : CliinAppColors.divider,
-          width: selected ? 1.5 : 1.0,
-        ),
-      ),
-      child: Row(children: [
-        Container(
-          width: 40, height: 40,
-          decoration: BoxDecoration(
-            color: selected ? CliinAppColors.primary : CliinAppColors.background,
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon,
-              color: selected ? CliinAppColors.textWhite : CliinAppColors.textSecondary,
-              size: 20),
-        ),
-        const SizedBox(width: CliinAppConstants.spacingM),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title,
-                style: GoogleFonts.poppins(
-                    fontSize: 14, fontWeight: FontWeight.w600,
-                    color: CliinAppColors.textDark)),
-            Text(subtitle,
-                style: GoogleFonts.inter(
-                    fontSize: 12, color: CliinAppColors.textSecondary)),
-          ]),
-        ),
-        Icon(
-          selected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
-          color: selected ? CliinAppColors.primary : CliinAppColors.textSecondary,
-        ),
-      ]),
     ),
   );
 }

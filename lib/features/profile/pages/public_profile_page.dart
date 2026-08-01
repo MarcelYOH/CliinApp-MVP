@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../shared/store/auth_store.dart';
-import '../../../shared/store/report_store.dart';
 import '../../../shared/widgets/app_bottom_nav.dart';
+import '../../../shared/widgets/profile_stats_row.dart';
 import '../../../shared/navigation/tab_navigation.dart';
 import '../../reports/pages/report_camera_page.dart';
 import '../../../shared/navigation/fast_page_route.dart';
@@ -74,21 +74,6 @@ class PublicProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildStatItem(IconData icon, String value, String label, Color color) {
-    return Expanded(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(height: 8),
-          Text(value, style: CliinAppTextStyles.headingMedium.copyWith(fontSize: 22)),
-          const SizedBox(height: 4),
-          Text(label, style: CliinAppTextStyles.bodySmall, textAlign: TextAlign.center),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final own = _isOwnProfile;
@@ -101,14 +86,6 @@ class PublicProfilePage extends StatelessWidget {
     final joinedText = own && currentUser != null
         ? 'Citoyen actif depuis ${_formatDate(currentUser.createdAt)}'
         : null;
-
-    final store = ReportStore.instance;
-    final casPublies =
-        effectiveUserId != null ? store.casPubliesCount(effectiveUserId) : 0;
-    final prisEnCharge =
-        effectiveUserId != null ? store.prisEnChargeCount(effectiveUserId) : 0;
-    final casTraites =
-        effectiveUserId != null ? store.casTraitesCount(effectiveUserId) : 0;
 
     return Scaffold(
       backgroundColor: CliinAppColors.background,
@@ -218,47 +195,7 @@ class PublicProfilePage extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                   ],
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    child: IntrinsicHeight(
-                      child: Row(
-                        children: [
-                          _buildStatItem(
-                            Icons.description_outlined,
-                            '$casPublies',
-                            'Cas publiés',
-                            const Color(0xFF2DB84B),
-                          ),
-                          const VerticalDivider(width: 1, thickness: 1, color: Color(0xFFE0E0E0)),
-                          _buildStatItem(
-                            Icons.volunteer_activism_outlined,
-                            '$prisEnCharge',
-                            'Pris en charge',
-                            const Color(0xFFFF9800),
-                          ),
-                          const VerticalDivider(width: 1, thickness: 1, color: Color(0xFFE0E0E0)),
-                          _buildStatItem(
-                            Icons.check_circle_outline_rounded,
-                            '$casTraites',
-                            'Cas traités',
-                            const Color(0xFF1E88E5),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  if (own) ...[
-                    const SizedBox(height: 16),
-                    Text(
-                      'Ceci est ce que les autres utilisateurs voient lorsqu\'ils consultent votre profil (par exemple depuis un cas signalé publié à votre nom).',
-                      style: CliinAppTextStyles.bodySmall,
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+                  ProfileStatsRow(userId: effectiveUserId),
                 ],
               ),
             ),

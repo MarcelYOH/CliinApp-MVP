@@ -60,10 +60,13 @@ void openAuthorProfile(BuildContext context, HomeReportModel report) {
 
 /// Ouvre le profil de l'intervenant qui a pris en charge un cas — profil de
 /// groupe si l'intervention a été faite au nom d'un groupe, sinon profil
-/// individuel.
+/// individuel. Ne fait rien si l'intervenant est anonyme (Correction 5 —
+/// l'appelant doit déjà filtrer ce cas pour ne pas rendre le nom cliquable,
+/// ce guard n'est qu'une sécurité).
 void openIntervenantProfile(BuildContext context, HomeReportModel report) {
   final intervenant = report.intervenant;
   if (intervenant == null) return;
+  if (intervenant.isAnonyme) return;
   if (intervenant.groupName != null) {
     final group = GroupStore.instance.groupByName(intervenant.groupName!);
     if (group == null) return;
