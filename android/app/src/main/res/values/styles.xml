@@ -13,19 +13,26 @@
 
          This Theme is only used starting with V2 of Flutter's Android embedding. -->
     <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <!-- Bandeau noir au démarrage/reprise (diagnostic confirmé par logs +
+             captures d'écran réelles, appareil à RAM très contrainte) : ce
+             thème (hérité de Theme.Black.NoTitleBar à l'origine, donc fond
+             de fenêtre NOIR) s'affiche brièvement avant que Flutter n'ait
+             peint sa première frame — au premier lancement ET après un
+             retour au premier plan (l'OS tue souvent le process en
+             arrière-plan faute de RAM, ce qui relance un démarrage à froid
+             plutôt qu'une vraie reprise). windowBackground opaque CLAIR
+             appliqué nativement dès la création de la fenêtre : plus aucune
+             dépendance au rendu Flutter ni au timing d'un appel SystemChrome
+             côté Dart. statusBarColor/navigationBarColor restent
+             transparents (comportement d'origine, voir
+             lib/core/utils/system_ui_helper.dart) : de nombreuses pages
+             (profil groupe, détail action, création de signalement, écrans
+             d'inscription...) s'appuient dessus pour laisser leur propre
+             contenu s'étendre sous ces barres — les opacifier casse ce
+             plein écran partout (régression déjà constatée une fois). -->
         <item name="android:windowBackground">@color/app_background</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
-        <!-- Bandeau noir sous la bottom bar (diagnostic confirmé par logs +
-             captures d'écran réelles) : sur cet appareil (RAM très
-             contrainte), une barre de navigation transparente peut laisser
-             apparaître un fond noir tant que Flutter n'a pas encore peint de
-             contenu derrière — au premier lancement ET après un retour au
-             premier plan (l'OS tue souvent le process en arrière-plan faute
-             de RAM, ce qui relance un démarrage à froid plutôt qu'une vraie
-             reprise). Couleur opaque appliquée nativement dès la création de
-             la fenêtre : plus aucune dépendance au rendu Flutter ni au
-             timing d'un appel SystemChrome côté Dart. -->
-        <item name="android:statusBarColor">@color/app_background</item>
-        <item name="android:navigationBarColor">@color/app_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 </resources>

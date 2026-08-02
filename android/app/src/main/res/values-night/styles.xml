@@ -21,7 +21,10 @@
     <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
         <item name="android:windowBackground">@color/app_background</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
-        <item name="android:statusBarColor">@color/app_background</item>
-        <item name="android:navigationBarColor">@color/app_background</item>
+        <!-- statusBarColor/navigationBarColor transparents : voir
+             values/styles.xml (comportement d'origine, plusieurs pages en
+             dépendent pour leur plein écran). -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 </resources>
