@@ -9,6 +9,7 @@ import 'shared/store/auth_store.dart';
 import 'shared/store/group_store.dart';
 import 'shared/store/action_store.dart';
 import 'shared/store/notification_store.dart';
+import 'shared/navigation/home_route_observer.dart';
 import 'features/home/pages/home_page.dart';
 
 Future<void> main() async {
@@ -80,6 +81,7 @@ class _CliinAppState extends State<CliinApp> with WidgetsBindingObserver {
     return MaterialApp(
       title: 'CliinApp',
       debugShowCheckedModeBanner: false,
+      navigatorObservers: [HomeRouteObserver.instance],
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(

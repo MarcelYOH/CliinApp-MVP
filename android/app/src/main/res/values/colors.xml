@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Doit rester identique à CliinAppColors.background (lib/core/constants/app_colors.dart)
+         — couleur de fond opaque appliquée nativement à la barre de statut/navigation
+         dès la création de la fenêtre (avant même le premier rendu Flutter), pour éviter
+         tout flash noir pendant le démarrage/la reprise sur les appareils lents. -->
+    <color name="app_background">#FFF4F4F2</color>
+</resources>

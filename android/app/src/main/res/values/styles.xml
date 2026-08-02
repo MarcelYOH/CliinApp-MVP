@@ -13,9 +13,19 @@
 
          This Theme is only used starting with V2 of Flutter's Android embedding. -->
     <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
-        <item name="android:windowBackground">?android:colorBackground</item>
+        <item name="android:windowBackground">@color/app_background</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <!-- Bandeau noir sous la bottom bar (diagnostic confirmé par logs +
+             captures d'écran réelles) : sur cet appareil (RAM très
+             contrainte), une barre de navigation transparente peut laisser
+             apparaître un fond noir tant que Flutter n'a pas encore peint de
+             contenu derrière — au premier lancement ET après un retour au
+             premier plan (l'OS tue souvent le process en arrière-plan faute
+             de RAM, ce qui relance un démarrage à froid plutôt qu'une vraie
+             reprise). Couleur opaque appliquée nativement dès la création de
+             la fenêtre : plus aucune dépendance au rendu Flutter ni au
+             timing d'un appel SystemChrome côté Dart. -->
+        <item name="android:statusBarColor">@color/app_background</item>
+        <item name="android:navigationBarColor">@color/app_background</item>
     </style>
 </resources>

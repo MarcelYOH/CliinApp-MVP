@@ -39,6 +39,8 @@ import '../../groups/data/groups_dummy_data.dart';
 import '../../auth/auth_guard.dart';
 import '../../profile/pages/profile_page.dart';
 import '../../actions/pages/actions_page.dart';
+import '../utils/home_city_label_controller.dart';
+import '../../../shared/navigation/home_route_observer.dart';
 
 // Salutation selon l'heure du téléphone :
 // 00h-11h59 -> Bonjour · 12h-17h59 -> Bon après-midi · 18h-23h59 -> Bonsoir
@@ -56,24 +58,76 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage>
+    with WidgetsBindingObserver, RouteAware {
   int _currentNavIndex = 0;
+
+  // Nom de ville dynamique du message d'accueil (voir
+  // home_city_label_controller.dart) — flux totalement indépendant du
+  // calcul de distance des cas à proximité (UserLocationService, jamais
+  // touché ici). Actif uniquement tant que cette page est visible ET
+  // l'application au premier plan (_isTopRoute + AppLifecycleState).
+  final HomeCityLabelController _cityLabelController = HomeCityLabelController();
+  bool _isTopRoute = true;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     ReportStore.instance.addListener(_onStoreUpdate);
     GroupStore.instance.addListener(_onStoreUpdate);
     pendingHomeTabIndex.addListener(_onPendingTabIndex);
+    _cityLabelController.addListener(_onStoreUpdate);
+    _cityLabelController.start();
     // init() est déjà appelé dans main() avant runApp() — ne pas rappeler ici
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    HomeRouteObserver.instance.subscribe(this, ModalRoute.of(context)!);
+  }
+
+  @override
   void dispose() {
+    HomeRouteObserver.instance.unsubscribe(this);
+    WidgetsBinding.instance.removeObserver(this);
     ReportStore.instance.removeListener(_onStoreUpdate);
     GroupStore.instance.removeListener(_onStoreUpdate);
     pendingHomeTabIndex.removeListener(_onPendingTabIndex);
+    _cityLabelController.removeListener(_onStoreUpdate);
+    _cityLabelController.dispose();
     super.dispose();
+  }
+
+  // ── Visibilité de la page (RouteAware) ─────────────────────────────
+  // Une autre page est poussée par-dessus l'accueil : plus la peine de
+  // continuer à lire le GPS pour un texte qui n'est plus affiché.
+  @override
+  void didPushNext() {
+    _isTopRoute = false;
+    _cityLabelController.pause();
+  }
+
+  // Retour sur l'accueil (pop de la page qui le recouvrait) : reprend
+  // immédiatement, avec une position fraîche (jamais l'ancienne valeur).
+  @override
+  void didPopNext() {
+    _isTopRoute = true;
+    _cityLabelController.start();
+  }
+
+  // ── Cycle de vie de l'application ───────────────────────────────────
+  // Mise en veille : arrête le flux (aucune lecture GPS en arrière-plan).
+  // Retour au premier plan : reprend UNIQUEMENT si l'accueil est bien la
+  // page actuellement visible (pas si une autre page est poussée dessus).
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (_isTopRoute) _cityLabelController.start();
+    } else {
+      _cityLabelController.pause();
+    }
   }
 
   void _onStoreUpdate() {
@@ -369,9 +423,14 @@ class _HomePageState extends State<HomePage> {
                 final greeting = isAuthed
                     ? '${_greetingByHour()}, ${authUser!.username.split(' ').first}'
                     : 'Bienvenue !';
-                final locationLabel = (isAuthed && authUser!.zone.isNotEmpty)
-                    ? authUser.zone
-                    : 'Votre position';
+                // Correction — nom de ville dynamique (recalculé en continu
+                // tant que cette page est visible, cf.
+                // HomeCityLabelController), plus jamais une valeur figée
+                // capturée une seule fois à l'inscription
+                // (AuthUser.zone, désormais ignoré ici). Texte de repli
+                // neutre tant qu'aucune position n'a pu être résolue.
+                final locationLabel =
+                    _cityLabelController.cityLabel ?? 'Position en cours...';
                 // Compteur indépendant des 2 cartes affichées — tous
                 // statuts confondus dans le rayon de 2km.
                 final contextLine =

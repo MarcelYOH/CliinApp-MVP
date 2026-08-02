@@ -94,11 +94,28 @@ class _CreateActionPageState extends State<CreateActionPage> {
   // formulaire est facultatif ou pré-rempli.
   bool get _canSubmit => _selectedType != null && !_isSubmitting;
 
-  // Cas de l'utilisateur connecté actuellement "En cours" (pris en charge en
-  // son nom personnel) — même filtre que ReportStore.prisEnChargeCount /
-  // mes_cas_signales_page.dart, jamais les cas pris en charge au nom d'un
-  // groupe (intervenant.groupName != null).
+  // Cas actuellement "En cours" proposables pour cette action — dépend de
+  // l'attribution sélectionnée (Correction — la section n'était jamais
+  // branchée sur les cas pris en charge au nom d'un groupe) :
+  // - Attribution "Au nom d'un groupe" (_attribution.groupId != null, y
+  //   compris le flux verrouillé depuis le profil groupe) : les cas pris en
+  //   charge par CE groupe — même filtre exact que
+  //   group_management_tab.dart._isGroupPriseEnCharge / group_contributors_
+  //   page.dart (intervenant.groupName == group.nom), jamais dupliqué sous
+  //   une autre forme.
+  // - Sinon : cas pris en charge en son nom personnel — même filtre que
+  //   mes_prises_en_charge_page.dart._myTakeovers (sans filterOverride).
   List<HomeReportModel> get _myCasEnCours {
+    final groupId = _attribution?.groupId;
+    if (groupId != null) {
+      final group = GroupStore.instance.groupById(groupId);
+      if (group == null) return const [];
+      return ReportStore.instance.reports
+          .where((r) =>
+              r.intervenant?.groupName == group.nom &&
+              r.status == ReportStatus.enCours)
+          .toList();
+    }
     final userId = AuthStore.instance.currentUser?.id;
     if (userId == null) return const [];
     return ReportStore.instance.reports
@@ -265,7 +282,14 @@ class _CreateActionPageState extends State<CreateActionPage> {
   // "Au nom d'un groupe" / "Anonyme", jamais dupliquée localement.
   Future<void> _pickAttribution() async {
     final result = await showAttributionChoiceSheet(context);
-    if (mounted) setState(() => _attribution = result);
+    if (!mounted) return;
+    // Changer l'attribution change le propriétaire des cas proposables
+    // ci-dessous (personnel <-> groupe, ou d'un groupe à l'autre) — une
+    // sélection faite pour l'ancienne attribution n'a plus de sens pour la
+    // nouvelle, sans quoi des ids invisibles resteraient publiés dans
+    // casPrisEnChargeIds.
+    if (result.groupId != _attribution?.groupId) _selectedCasIds.clear();
+    setState(() => _attribution = result);
   }
 
   void _toggleCas(String id) {
